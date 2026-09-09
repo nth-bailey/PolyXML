@@ -146,6 +146,19 @@ const schema = {
 const obj = deserialize('<Item id="7"><name>Motor</name></Item>', schema);
 ```
 
+### Java 22+ (Project Panama FFI)
+```java
+import io.polyxml.PolyXML;
+
+try (var schema = new PolyXML.SchemaBuilder("Sensor")
+        .addField("id", "id", PolyXML.FieldKind.ATTRIBUTE, PolyXML.ScalarType.INT)
+        .addField("name", "name", PolyXML.FieldKind.ELEMENT, PolyXML.ScalarType.STRING)
+        .build()) {
+
+    System.out.println("PolyXML Native Version: " + PolyXML.version());
+}
+```
+
 ---
 
 ## Repository Structure
