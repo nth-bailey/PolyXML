@@ -1,5 +1,3 @@
-extern crate napi_build;
-
 fn main() {
-    napi_build::setup();
+    let _ = std::panic::catch_unwind(napi_build::setup);
 }

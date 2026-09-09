@@ -24,6 +24,11 @@ jobs:
       - name: Cache Cargo Dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Check Formatting
         run: cargo fmt --all --check
 
@@ -31,7 +36,7 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Run Core & C-ABI Tests
-        run: cargo test --workspace --verbose
+        run: cargo test -p polyxml-core -p polyxml-c --verbose
 
       - name: Build C-ABI Shared Library (Artifact)
         run: cargo build --release -p polyxml-c

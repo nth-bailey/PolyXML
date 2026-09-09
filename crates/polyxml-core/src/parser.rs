@@ -29,7 +29,7 @@ impl StackFrame {
         }
     }
 
-    fn finish(mut self) -> Result<PolyValue> {
+    fn finish(self) -> Result<PolyValue> {
         let mut obj = HashMap::with_capacity(self.schema.fields.len());
 
         for (idx, val) in self.scalar_values {

@@ -4,7 +4,7 @@ use thiserror::Error;
 pub enum PolyXmlError {
     #[error("XML reader error at position {position}: {source}")]
     XmlSyntaxError {
-        position: usize,
+        position: u64,
         #[source]
         source: quick_xml::Error,
     },

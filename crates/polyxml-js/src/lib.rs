@@ -1,4 +1,5 @@
 use napi::bindgen_prelude::*;
+use napi::JsUnknown;
 use napi_derive::napi;
 use std::sync::Arc;
 
@@ -59,7 +60,7 @@ fn poly_value_to_js(env: &Env, val: &PolyValue) -> Result<JsUnknown> {
                 let js_item = poly_value_to_js(env, item)?;
                 arr.set(idx as u32, js_item)?;
             }
-            Ok(arr.into_unknown())
+            Ok(arr.coerce_to_object()?.into_unknown())
         }
         PolyValue::Object(map) => {
             let mut obj = env.create_object()?;

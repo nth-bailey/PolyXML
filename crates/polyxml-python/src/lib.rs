@@ -1,3 +1,7 @@
+#![allow(clippy::type_complexity)]
+#![allow(clippy::only_used_in_recursion)]
+#![allow(clippy::useless_conversion)]
+
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyString, PyType};
 use std::collections::HashMap;
@@ -27,10 +31,14 @@ fn resolve_scalar_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<
         "XmlTime" => Ok(ScalarType::XmlTime),
         "XmlDuration" => Ok(ScalarType::XmlDuration),
         _ => {
-            if let Ok(true) = type_obj.is_instance_of::<pyo3::types::PyType>() {
-                if let Ok(enum_cls) = py.import_bound("enum")?.getattr("Enum") {
-                    if let Ok(true) = type_obj.call_method1("__subclasscheck__", (&type_obj,)) {
-                        return Ok(ScalarType::Any);
+            if let Ok(py_type) = type_obj.downcast::<PyType>() {
+                if let Ok(enum_module) = py.import_bound("enum") {
+                    if let Ok(enum_cls) = enum_module.getattr("Enum") {
+                        if let Ok(py_enum) = enum_cls.downcast::<PyType>() {
+                            if py_type.is_subclass(py_enum).unwrap_or(false) {
+                                return Ok(ScalarType::Any);
+                            }
+                        }
                     }
                 }
             }
@@ -174,7 +182,7 @@ fn get_or_create_schema<'py>(cls: &Bound<'py, PyType>) -> PyResult<(Arc<ModelSch
     }
 
     let schema = extract_schema_from_class(cls)?;
-    let py_cls_obj = cls.as_unbound().clone_ref(cls.py());
+    let py_cls_obj: PyObject = cls.clone().into_any().unbind();
 
     {
         let mut cache = SCHEMA_CACHE.write().unwrap_or_else(|p| p.into_inner());
