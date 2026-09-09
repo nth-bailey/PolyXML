@@ -1,0 +1,37 @@
+# Maintainer: Bailey Nguyen <bailey.tan.nguyen@gmail.com>
+pkgname=polyxml
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="High-performance, polyglot native XML data-binding engine built in Rust"
+arch=('x86_64' 'aarch64')
+url="https://github.com/nth-bailey/PolyXML"
+license=('MIT')
+depends=('gcc-libs')
+makedepends=('cargo' 'cmake')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/nth-bailey/PolyXML/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('ac4ec8256f88ccc4696c9902b288e2cb5347094e9a09421e065994c1574167e4')
+
+build() {
+  cd "$srcdir/PolyXML-$pkgver"
+  cargo build --release -p polyxml-c
+  cmake -B bindings/cpp/build -S bindings/cpp -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+  cmake --build bindings/cpp/build
+}
+
+check() {
+  cd "$srcdir/PolyXML-$pkgver"
+  cargo test -p polyxml -p polyxml-c
+}
+
+package() {
+  cd "$srcdir/PolyXML-$pkgver"
+  # Install C headers and shared library
+  install -Dm644 crates/polyxml-c/include/polyxml.h "$pkgdir/usr/include/polyxml.h"
+  install -Dm755 target/release/libpolyxml.so "$pkgdir/usr/lib/libpolyxml.so"
+
+  # Install C++ headers via CMake
+  DESTDIR="$pkgdir" cmake --install bindings/cpp/build
+
+  # Install license
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -70,3 +70,44 @@ Package manager for macOS and desktop Linux developers.
    ```bash
    brew install polyxml
    ```
+
+---
+
+## 4. ConanCenter (`conan`)
+
+The decentralized C and C++ package manager.
+
+- **Recipe Location**: `conan/recipes/polyxml/all/`
+- **Target Repository**: [`conan-io/conan-center-index`](https://github.com/conan-io/conan-center-index)
+- **Active PR**: [#30940](https://github.com/conan-io/conan-center-index/pull/30940)
+
+### Installation:
+```bash
+conan install --requires="polyxml/0.1.0"
+```
+
+---
+
+## 5. Arch User Repository (`AUR`)
+
+Arch Linux, Manjaro, and EndeavourOS native package repository.
+
+- **Package Location**: `packaging/aur/`
+- **Target Repository**: `ssh://aur@aur.archlinux.org/polyxml.git`
+
+### Submission Steps:
+1. Register on [aur.archlinux.org](https://aur.archlinux.org/register) and add your SSH key.
+2. Clone repository: `git clone ssh://aur@aur.archlinux.org/polyxml.git`
+3. Copy `packaging/aur/PKGBUILD` and `packaging/aur/.SRCINFO` into the cloned repo.
+4. Commit and push:
+   ```bash
+   git add PKGBUILD .SRCINFO
+   git commit -m "feat: initial release 0.1.0"
+   git push origin master
+   ```
+5. Users can install via AUR helpers:
+   ```bash
+   yay -S polyxml
+   # or
+   paru -S polyxml
+   ```

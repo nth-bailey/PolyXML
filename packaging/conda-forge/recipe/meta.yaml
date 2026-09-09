@@ -6,12 +6,12 @@ package:
   version: {{ version }}
 
 source:
-  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: 9eea8459c0895b1f268a91acd1c4813fbc7e5c82897b5bb7aa76cdaec33cd4e4
+  url: https://github.com/nth-bailey/PolyXML/archive/refs/tags/v{{ version }}.tar.gz
+  sha256: ac4ec8256f88ccc4696c9902b288e2cb5347094e9a09421e065994c1574167e4
 
 build:
   number: 0
-  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  script: cd crates/polyxml-python && {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
 
 requirements:
   build:
