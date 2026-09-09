@@ -1,8 +1,12 @@
 """PolyXML: High-performance, polyglot XML data-binding engine."""
 
-from polyxml._polyxml import (  # type: ignore[import-not-found]
+from polyxml._polyxml import (
     deserialize as _deserialize,
+)  # type: ignore[import-not-found]
+from polyxml._polyxml import (
     serialize as _serialize,
+)
+from polyxml._polyxml import (
     version as _version,
 )
 

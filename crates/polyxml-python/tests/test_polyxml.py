@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
-import pytest
-from pydantic import BaseModel, Field
 
 import polyxml
+import pytest
+from pydantic import BaseModel, Field
 
 
 def test_version():
@@ -59,7 +59,9 @@ class ChildNode:
 @dataclass
 class ContainerNode:
     title: str = field(metadata={"type": "Element"})
-    children: list[ChildNode] = field(default_factory=list, metadata={"type": "Element", "name": "child"})
+    children: list[ChildNode] = field(
+        default_factory=list, metadata={"type": "Element", "name": "child"}
+    )
 
 
 def test_nested_dataclasses():
