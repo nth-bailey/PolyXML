@@ -20,7 +20,10 @@
   <a href="https://www.npmjs.com/package/polyxml"><img src="https://img.shields.io/npm/v/polyxml.svg?logo=npm&color=CB3837&label=npm" alt="npm: polyxml"></a>
   <a href="https://central.sonatype.com/artifact/io.github.nth-bailey/polyxml"><img src="https://img.shields.io/maven-central/v/io.github.nth-bailey/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven" alt="Maven Central"></a>
   <a href="https://pkg.go.dev/github.com/nth-bailey/PolyXML/bindings/go"><img src="https://pkg.go.dev/badge/github.com/nth-bailey/PolyXML/bindings/go.svg" alt="Go Reference"></a>
-  <a href="https://github.com/nth-bailey/PolyXML/releases"><img src="https://img.shields.io/github/v/release/nth-bailey/PolyXML?logo=github&color=333333&label=Release" alt="GitHub Release"></a>
+  <a href="https://github.com/nth-bailey/homebrew-polyxml"><img src="https://img.shields.io/badge/Homebrew-polyxml-FBB040.svg?logo=homebrew&logoColor=black" alt="Homebrew"></a>
+  <a href="https://github.com/conan-io/conan-center-index/pull/30940"><img src="https://img.shields.io/badge/Conan-PR%20%2330940-004B87.svg?logo=conan" alt="ConanCenter PR"></a>
+  <a href="https://github.com/conda-forge/staged-recipes/pull/34791"><img src="https://img.shields.io/badge/conda--forge-PR%20%2334791-000000.svg?logo=conda-forge" alt="conda-forge PR"></a>
+  <a href="https://github.com/microsoft/vcpkg/pull/53866"><img src="https://img.shields.io/badge/vcpkg-PR%20%2353866-5C2D91.svg?logo=microsoft" alt="vcpkg PR"></a>
 </p>
 
 <p align="center">
