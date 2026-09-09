@@ -6,9 +6,29 @@
 
 <p align="center">
   <a href="https://github.com/nth-bailey/PolyXML/actions"><img src="https://img.shields.io/github/actions/workflow/status/nth-bailey/PolyXML/ci.yml?branch=main&label=CI&logo=github" alt="CI"></a>
-  <a href="https://crates.io/crates/polyxml"><img src="https://img.shields.io/crates/v/polyxml.svg?logo=rust" alt="crates.io"></a>
-  <a href="https://pypi.org/project/polyxml/"><img src="https://img.shields.io/pypi/v/polyxml.svg?logo=python" alt="PyPI"></a>
+  <a href="https://nth-bailey.github.io/PolyXML/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg?logo=gitbook" alt="Docs"></a>
+  <a href="https://github.com/nth-bailey/PolyXML/blob/main/crates/polyxml-python/pyproject.toml"><img src="https://img.shields.io/badge/coverage-100%25-brightgreen.svg?logo=pytest" alt="Coverage: 100%"></a>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
+  <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white" alt="pre-commit"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+</p>
+
+<p align="center">
+  <a href="https://crates.io/crates/polyxml"><img src="https://img.shields.io/crates/v/polyxml.svg?logo=rust&label=crates.io" alt="crates.io: polyxml"></a>
+  <a href="https://crates.io/crates/polyxml-c"><img src="https://img.shields.io/crates/v/polyxml-c.svg?logo=rust&label=polyxml-c" alt="crates.io: polyxml-c"></a>
+  <a href="https://pypi.org/project/polyxml/"><img src="https://img.shields.io/pypi/v/polyxml.svg?logo=pypi&label=PyPI" alt="PyPI: polyxml"></a>
+  <a href="https://www.npmjs.com/package/polyxml"><img src="https://img.shields.io/npm/v/polyxml.svg?logo=npm&color=CB3837&label=npm" alt="npm: polyxml"></a>
+  <a href="https://central.sonatype.com/artifact/io.github.nth-bailey/polyxml"><img src="https://img.shields.io/maven-central/v/io.github.nth-bailey/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven" alt="Maven Central"></a>
+  <a href="https://github.com/nth-bailey/PolyXML/releases"><img src="https://img.shields.io/github/v/release/nth-bailey/PolyXML?logo=github&color=333333&label=Release" alt="GitHub Release"></a>
+</p>
+
+<p align="center">
+  <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/Rust-1.80%2B-orange.svg?logo=rust" alt="Rust: 1.80+"></a>
+  <a href="https://www.python.org"><img src="https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB.svg?logo=python&logoColor=white" alt="Python: 3.12 | 3.13"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-20%20%7C%2022-339933.svg?logo=node.js&logoColor=white" alt="Node.js: 20 | 22"></a>
+  <a href="https://openjdk.org/projects/panama/"><img src="https://img.shields.io/badge/Java-22%2B%20Panama-ED8B00.svg?logo=openjdk&logoColor=white" alt="Java: 22+ Panama"></a>
+  <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-1.22%2B-00ADD8.svg?logo=go&logoColor=white" alt="Go: 1.22+"></a>
+  <a href="https://en.cppreference.com/w/cpp/20"><img src="https://img.shields.io/badge/C%2B%2B-20-00599C.svg?logo=c%2B%2B" alt="C++: 20"></a>
 </p>
 
 ---
@@ -60,11 +80,11 @@ While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critic
 
 | Ecosystem / Language | Package / Registry | Installation | Interop Tech | Status |
 | :--- | :--- | :--- | :--- | :---: |
-| **Rust (Core)** | `polyxml` (crates.io) | `cargo add polyxml` | Native Zero-Copy | 🟢 Stable |
-| **Rust (C-ABI)** | `polyxml-c` (crates.io) | `cargo add polyxml-c` | C-ABI Shared Lib | 🟢 Stable |
-| **Python** | `polyxml` (PyPI) | `pip install polyxml` | PyO3 (`abi3-py312`) | 🟢 Stable |
-| **TypeScript / Node** | `polyxml` (npm) | `npm install polyxml` | `napi-rs` Native Addon | 🟢 Stable |
-| **Java** | `io.github.nth-bailey:polyxml` (Maven) | `<artifactId>polyxml</artifactId>` | Java 22+ Panama FFI | 🟢 Stable |
+| **Rust (Core)** | [![crates.io](https://img.shields.io/crates/v/polyxml.svg?logo=rust&label=crates.io)](https://crates.io/crates/polyxml) | `cargo add polyxml` | Native Zero-Copy | 🟢 Stable |
+| **Rust (C-ABI)** | [![crates.io](https://img.shields.io/crates/v/polyxml-c.svg?logo=rust&label=crates.io)](https://crates.io/crates/polyxml-c) | `cargo add polyxml-c` | C-ABI Shared Lib | 🟢 Stable |
+| **Python** | [![PyPI](https://img.shields.io/pypi/v/polyxml.svg?logo=pypi&label=PyPI)](https://pypi.org/project/polyxml/) | `pip install polyxml` | PyO3 (`abi3-py312`) | 🟢 Stable |
+| **TypeScript / Node** | [![npm](https://img.shields.io/npm/v/polyxml.svg?logo=npm&color=CB3837&label=npm)](https://www.npmjs.com/package/polyxml) | `npm install polyxml` | `napi-rs` Native Addon | 🟢 Stable |
+| **Java** | [![Maven Central](https://img.shields.io/maven-central/v/io.github.nth-bailey/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven)](https://central.sonatype.com/artifact/io.github.nth-bailey/polyxml) | `<artifactId>polyxml</artifactId>` | Java 22+ Panama FFI | 🟢 Stable |
 | **Go** | `github.com/nth-bailey/PolyXML/bindings/go` | `go get github.com/nth-bailey/PolyXML/bindings/go` | Cgo (`polyxml.h`) | 🟢 Stable |
 | **Modern C++20** | `bindings/cpp` (`polyxml_cpp`) | CMake `target_link_libraries` | Header-Only C++20 | 🟢 Stable |
 
