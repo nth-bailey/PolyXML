@@ -120,13 +120,23 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd crates/polyxml-js
+          publish_npm() {
+            local output
+            output=$(npm publish --access public --provenance 2>&1) && { echo "$output"; return 0; }
+            if echo "$output" | grep -q "cannot publish over the previously published"; then
+              echo "Version already published on npm — skipping."
+              return 0
+            fi
+            echo "$output" >&2
+            return 1
+          }
           if [ -n "$NODE_AUTH_TOKEN" ]; then
             echo "Attempting publish with NPM_TOKEN..."
-            NODE_AUTH_TOKEN="$NODE_AUTH_TOKEN" npm publish --access public --provenance || {
+            NODE_AUTH_TOKEN="$NODE_AUTH_TOKEN" publish_npm || {
               echo "Token publish failed; attempting tokenless npm Trusted Publishing (OIDC)..."
-              NODE_AUTH_TOKEN="" npm publish --access public --provenance
+              NODE_AUTH_TOKEN="" publish_npm
             }
           else
             echo "Publishing via tokenless npm Trusted Publishing (OIDC)..."
-            npm publish --access public --provenance
+            publish_npm
           fi
