@@ -1,0 +1,11 @@
+<Order id="ORD-2026-99">
+    <customer>Aerospace Systems Corp</customer>
+    <item id="1">
+        <sku>SN-001</sku>
+        <price>450.00</price>
+    </item>
+    <item id="2">
+        <sku>SN-002</sku>
+        <price>890.50</price>
+    </item>
+</Order>

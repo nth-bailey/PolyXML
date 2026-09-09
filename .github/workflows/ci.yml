@@ -1,0 +1,199 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # -------------------------------------------------------------
+  # 1. Rust Workspace: Formatter, Clippy & Workspace Tests
+  # -------------------------------------------------------------
+  rust-check:
+    name: Rust (Format, Clippy & Tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check Formatting
+        run: cargo fmt --check
+
+      - name: Clippy Linter
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Run Core & C-ABI Tests
+        run: cargo test --workspace --verbose
+
+      - name: Build C-ABI Shared Library (Artifact)
+        run: cargo build --release -p polyxml-c
+
+      - name: Upload Native Lib
+        uses: actions/upload-artifact@v4
+        with:
+          name: polyxml-native-linux
+          path: target/release/libpolyxml.so
+
+  # -------------------------------------------------------------
+  # 2. Python Matrix: 100% Coverage on Linux, macOS, Windows
+  # -------------------------------------------------------------
+  python-check:
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    needs: rust-check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Build and Install PolyXML Python Extension
+        working-directory: crates/polyxml-python
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Ruff Linter
+        working-directory: crates/polyxml-python
+        run: ruff check python/ tests/
+
+      - name: Pytest with 100% Coverage Enforcement
+        working-directory: crates/polyxml-python
+        run: pytest --cov=polyxml --cov-branch --cov-fail-under=100 -v
+
+  # -------------------------------------------------------------
+  # 3. C++20 Bindings: CMake Build & CTest
+  # -------------------------------------------------------------
+  cpp-check:
+    name: C++20 Bindings
+    needs: rust-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Native Library
+        run: cargo build --release -p polyxml-c
+
+      - name: Configure CMake
+        working-directory: bindings/cpp
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build C++ Test
+        working-directory: bindings/cpp
+        run: cmake --build build --config Release
+
+      - name: Run C++ Test Suite
+        working-directory: bindings/cpp/build
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/target/release
+        run: ./test_polyxml
+
+  # -------------------------------------------------------------
+  # 4. Go Bindings: Cgo Build & Test
+  # -------------------------------------------------------------
+  go-check:
+    name: Go Bindings
+    needs: rust-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Native Library
+        run: cargo build --release -p polyxml-c
+
+      - name: Run Go Tests
+        working-directory: bindings/go
+        env:
+          CGO_LDFLAGS: "-L${{ github.workspace }}/target/release -lpolyxml"
+          LD_LIBRARY_PATH: "${{ github.workspace }}/target/release"
+        run: go test -v ./...
+
+  # -------------------------------------------------------------
+  # 5. Node.js / TypeScript: NAPI Build & Test
+  # -------------------------------------------------------------
+  node-check:
+    name: Node.js ${{ matrix.node-version }}
+    needs: rust-check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install NAPI CLI
+        run: npm install -g @napi-rs/cli
+
+      - name: Build NAPI Addon
+        working-directory: crates/polyxml-js
+        run: napi build --platform --release
+
+      - name: Run Node.js Tests
+        working-directory: crates/polyxml-js
+        run: npm test
+
+  # -------------------------------------------------------------
+  # 6. Java Bindings: OpenJDK 22 & Maven Test (Panama FFI)
+  # -------------------------------------------------------------
+  java-check:
+    name: Java 22 (Panama FFI)
+    needs: rust-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 22
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "22"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Native Library
+        run: cargo build --release -p polyxml-c
+
+      - name: Run Maven Tests
+        working-directory: bindings/java
+        run: mvn test -Djava.library.path=${{ github.workspace }}/target/release

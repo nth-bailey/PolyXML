@@ -1,0 +1,15 @@
+[package]
+name = "polyxml-c"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Standard C-ABI shared library and headers for PolyXML"
+
+[lib]
+name = "polyxml"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+polyxml-core = { path = "../polyxml-core" }

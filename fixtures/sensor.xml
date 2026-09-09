@@ -1,0 +1,5 @@
+<Sensor id="101">
+    <name>Barometric Altimeter</name>
+    <reading>1013.25</reading>
+    <calibrated>true</calibrated>
+</Sensor>

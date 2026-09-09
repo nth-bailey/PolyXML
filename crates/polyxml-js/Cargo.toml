@@ -1,0 +1,19 @@
+[package]
+name = "polyxml-js"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Node.js and TypeScript native addon bindings for PolyXML"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+polyxml-core = { path = "../polyxml-core" }
+napi = { version = "2.16", default-features = false, features = ["napi4"] }
+napi-derive = "2.16"
+
+[build-dependencies]
+napi-build = "2.1"
