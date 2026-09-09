@@ -152,18 +152,16 @@ fn extract_schema_from_class<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<Mode
             let mut kind = FieldKind::Element;
 
             if let Ok(meta) = field_obj.getattr("metadata") {
-                if let Ok(m_dict) = meta.downcast::<PyDict>() {
-                    if let Some(t) = m_dict.get_item("type")? {
-                        let t_str: String = t.extract().unwrap_or_default();
-                        match t_str.as_str() {
-                            "Attribute" => kind = FieldKind::Attribute,
-                            "Text" => kind = FieldKind::Text,
-                            _ => kind = FieldKind::Element,
-                        }
+                if let Ok(t) = meta.get_item("type") {
+                    let t_str: String = t.extract().unwrap_or_default();
+                    match t_str.as_str() {
+                        "Attribute" => kind = FieldKind::Attribute,
+                        "Text" => kind = FieldKind::Text,
+                        _ => kind = FieldKind::Element,
                     }
-                    if let Some(n) = m_dict.get_item("name")? {
-                        xml_name = n.extract().unwrap_or(py_name.clone());
-                    }
+                }
+                if let Ok(n) = meta.get_item("name") {
+                    xml_name = n.extract().unwrap_or(py_name.clone());
                 }
             }
 
