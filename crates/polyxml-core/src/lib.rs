@@ -36,10 +36,30 @@ mod tests {
     fn test_roundtrip_serialization_deserialization() {
         // 1. Build schema
         let schema = ModelSchema::builder("User")
-            .field(FieldSchema::new("id", b"id", FieldKind::Attribute, ValueType::Scalar(ScalarType::Int)))
-            .field(FieldSchema::new("name", b"name", FieldKind::Element, ValueType::Scalar(ScalarType::String)))
-            .field(FieldSchema::new("score", b"score", FieldKind::Element, ValueType::Scalar(ScalarType::Float)))
-            .field(FieldSchema::new("active", b"active", FieldKind::Element, ValueType::Scalar(ScalarType::Bool)))
+            .field(FieldSchema::new(
+                "id",
+                b"id",
+                FieldKind::Attribute,
+                ValueType::Scalar(ScalarType::Int),
+            ))
+            .field(FieldSchema::new(
+                "name",
+                b"name",
+                FieldKind::Element,
+                ValueType::Scalar(ScalarType::String),
+            ))
+            .field(FieldSchema::new(
+                "score",
+                b"score",
+                FieldKind::Element,
+                ValueType::Scalar(ScalarType::Float),
+            ))
+            .field(FieldSchema::new(
+                "active",
+                b"active",
+                FieldKind::Element,
+                ValueType::Scalar(ScalarType::Bool),
+            ))
             .build();
 
         let xml = br#"<User id="101"><name>Ada Lovelace</name><score>99.5</score><active>true</active></User>"#;
@@ -47,7 +67,10 @@ mod tests {
         // 2. Deserialize
         let val = deserialize(xml, Arc::clone(&schema)).expect("deserialization failed");
         assert_eq!(val.get("id"), Some(&PolyValue::Int(101)));
-        assert_eq!(val.get("name"), Some(&PolyValue::String("Ada Lovelace".into())));
+        assert_eq!(
+            val.get("name"),
+            Some(&PolyValue::String("Ada Lovelace".into()))
+        );
         assert_eq!(val.get("score"), Some(&PolyValue::Float(99.5)));
         assert_eq!(val.get("active"), Some(&PolyValue::Bool(true)));
 
@@ -62,20 +85,41 @@ mod tests {
         assert!(output_str.contains("<active>true</active>"));
 
         // 5. Re-deserialize from generated XML
-        let val2 = deserialize(&output_xml, Arc::clone(&schema)).expect("re-deserialization failed");
+        let val2 =
+            deserialize(&output_xml, Arc::clone(&schema)).expect("re-deserialization failed");
         assert_eq!(val, val2);
     }
 
     #[test]
     fn test_nested_elements_and_lists() {
         let item_schema = ModelSchema::builder("Item")
-            .field(FieldSchema::new("title", b"title", FieldKind::Element, ValueType::Scalar(ScalarType::String)))
-            .field(FieldSchema::new("qty", b"qty", FieldKind::Attribute, ValueType::Scalar(ScalarType::Int)))
+            .field(FieldSchema::new(
+                "title",
+                b"title",
+                FieldKind::Element,
+                ValueType::Scalar(ScalarType::String),
+            ))
+            .field(FieldSchema::new(
+                "qty",
+                b"qty",
+                FieldKind::Attribute,
+                ValueType::Scalar(ScalarType::Int),
+            ))
             .build();
 
         let order_schema = ModelSchema::builder("Order")
-            .field(FieldSchema::new("order_id", b"id", FieldKind::Attribute, ValueType::Scalar(ScalarType::String)))
-            .field(FieldSchema::new("items", b"item", FieldKind::Element, ValueType::List(Box::new(ValueType::Nested(Arc::clone(&item_schema))))))
+            .field(FieldSchema::new(
+                "order_id",
+                b"id",
+                FieldKind::Attribute,
+                ValueType::Scalar(ScalarType::String),
+            ))
+            .field(FieldSchema::new(
+                "items",
+                b"item",
+                FieldKind::Element,
+                ValueType::List(Box::new(ValueType::Nested(Arc::clone(&item_schema)))),
+            ))
             .build();
 
         let xml = br#"
@@ -85,14 +129,24 @@ mod tests {
         </Order>
         "#;
 
-        let val = deserialize(xml, Arc::clone(&order_schema)).expect("nested deserialization failed");
-        assert_eq!(val.get("order_id"), Some(&PolyValue::String("ORD-999".into())));
+        let val =
+            deserialize(xml, Arc::clone(&order_schema)).expect("nested deserialization failed");
+        assert_eq!(
+            val.get("order_id"),
+            Some(&PolyValue::String("ORD-999".into()))
+        );
 
         let items = val.get("items").unwrap().as_list().unwrap();
         assert_eq!(items.len(), 2);
-        assert_eq!(items[0].get("title"), Some(&PolyValue::String("Widget A".into())));
+        assert_eq!(
+            items[0].get("title"),
+            Some(&PolyValue::String("Widget A".into()))
+        );
         assert_eq!(items[0].get("qty"), Some(&PolyValue::Int(2)));
-        assert_eq!(items[1].get("title"), Some(&PolyValue::String("Widget B".into())));
+        assert_eq!(
+            items[1].get("title"),
+            Some(&PolyValue::String("Widget B".into()))
+        );
         assert_eq!(items[1].get("qty"), Some(&PolyValue::Int(5)));
     }
 }

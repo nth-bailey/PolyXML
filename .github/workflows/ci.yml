@@ -25,7 +25,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Check Formatting
-        run: cargo fmt --check
+        run: cargo fmt --all --check
 
       - name: Clippy Linter
         run: cargo clippy --workspace --all-targets -- -D warnings

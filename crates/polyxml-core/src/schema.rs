@@ -39,7 +39,12 @@ pub struct FieldSchema {
 }
 
 impl FieldSchema {
-    pub fn new(name: impl Into<String>, xml_name: &[u8], kind: FieldKind, val_type: ValueType) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        xml_name: &[u8],
+        kind: FieldKind,
+        val_type: ValueType,
+    ) -> Self {
         Self {
             name: name.into(),
             xml_name: xml_name.to_vec(),

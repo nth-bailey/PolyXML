@@ -97,7 +97,11 @@ impl XmlDeserializer {
                             match &field.val_type {
                                 ValueType::Scalar(st) => {
                                     if is_nil {
-                                        stack.last_mut().unwrap().scalar_values.insert(field_idx, PolyValue::Null);
+                                        stack
+                                            .last_mut()
+                                            .unwrap()
+                                            .scalar_values
+                                            .insert(field_idx, PolyValue::Null);
                                     } else {
                                         active_scalar_field = Some((field_idx, st.clone(), false));
                                         text_buf.clear();
@@ -106,21 +110,30 @@ impl XmlDeserializer {
                                 ValueType::List(inner) => match inner.as_ref() {
                                     ValueType::Scalar(st) => {
                                         if is_nil {
-                                            stack.last_mut().unwrap().list_values.entry(field_idx).or_default().push(PolyValue::Null);
+                                            stack
+                                                .last_mut()
+                                                .unwrap()
+                                                .list_values
+                                                .entry(field_idx)
+                                                .or_default()
+                                                .push(PolyValue::Null);
                                         } else {
-                                            active_scalar_field = Some((field_idx, st.clone(), true));
+                                            active_scalar_field =
+                                                Some((field_idx, st.clone(), true));
                                             text_buf.clear();
                                         }
                                     }
                                     ValueType::Nested(sub_schema) => {
-                                        let mut frame = StackFrame::new(Arc::clone(sub_schema), local_name);
+                                        let mut frame =
+                                            StackFrame::new(Arc::clone(sub_schema), local_name);
                                         Self::parse_attributes(e, &mut frame)?;
                                         stack.push(frame);
                                     }
                                     _ => {}
                                 },
                                 ValueType::Nested(sub_schema) => {
-                                    let mut frame = StackFrame::new(Arc::clone(sub_schema), local_name);
+                                    let mut frame =
+                                        StackFrame::new(Arc::clone(sub_schema), local_name);
                                     Self::parse_attributes(e, &mut frame)?;
                                     stack.push(frame);
                                 }
@@ -142,27 +155,57 @@ impl XmlDeserializer {
                             let field = &current_schema.fields[field_idx];
                             match &field.val_type {
                                 ValueType::Scalar(_) => {
-                                    let val = if is_nil { PolyValue::Null } else { PolyValue::String(String::new()) };
-                                    stack.last_mut().unwrap().scalar_values.insert(field_idx, val);
+                                    let val = if is_nil {
+                                        PolyValue::Null
+                                    } else {
+                                        PolyValue::String(String::new())
+                                    };
+                                    stack
+                                        .last_mut()
+                                        .unwrap()
+                                        .scalar_values
+                                        .insert(field_idx, val);
                                 }
                                 ValueType::List(inner) => match inner.as_ref() {
                                     ValueType::Scalar(_) => {
-                                        let val = if is_nil { PolyValue::Null } else { PolyValue::String(String::new()) };
-                                        stack.last_mut().unwrap().list_values.entry(field_idx).or_default().push(val);
+                                        let val = if is_nil {
+                                            PolyValue::Null
+                                        } else {
+                                            PolyValue::String(String::new())
+                                        };
+                                        stack
+                                            .last_mut()
+                                            .unwrap()
+                                            .list_values
+                                            .entry(field_idx)
+                                            .or_default()
+                                            .push(val);
                                     }
                                     ValueType::Nested(sub_schema) => {
-                                        let mut frame = StackFrame::new(Arc::clone(sub_schema), local_name);
+                                        let mut frame =
+                                            StackFrame::new(Arc::clone(sub_schema), local_name);
                                         Self::parse_attributes(e, &mut frame)?;
                                         let instance = frame.finish()?;
-                                        stack.last_mut().unwrap().list_values.entry(field_idx).or_default().push(instance);
+                                        stack
+                                            .last_mut()
+                                            .unwrap()
+                                            .list_values
+                                            .entry(field_idx)
+                                            .or_default()
+                                            .push(instance);
                                     }
                                     _ => {}
                                 },
                                 ValueType::Nested(sub_schema) => {
-                                    let mut frame = StackFrame::new(Arc::clone(sub_schema), local_name);
+                                    let mut frame =
+                                        StackFrame::new(Arc::clone(sub_schema), local_name);
                                     Self::parse_attributes(e, &mut frame)?;
                                     let instance = frame.finish()?;
-                                    stack.last_mut().unwrap().scalar_values.insert(field_idx, instance);
+                                    stack
+                                        .last_mut()
+                                        .unwrap()
+                                        .scalar_values
+                                        .insert(field_idx, instance);
                                 }
                             }
                         }
@@ -187,12 +230,18 @@ impl XmlDeserializer {
                     }
                 }
                 Ok(Event::End(ref e)) => {
-                    if let Some((field_idx, ref scalar_type, is_list)) = active_scalar_field.take() {
+                    if let Some((field_idx, ref scalar_type, is_list)) = active_scalar_field.take()
+                    {
                         let field_name = &stack.last().unwrap().schema.fields[field_idx].name;
-                        let parsed_val = ValueConverter::parse_scalar(scalar_type, &text_buf, field_name)?;
+                        let parsed_val =
+                            ValueConverter::parse_scalar(scalar_type, &text_buf, field_name)?;
                         let frame = stack.last_mut().unwrap();
                         if is_list {
-                            frame.list_values.entry(field_idx).or_default().push(parsed_val);
+                            frame
+                                .list_values
+                                .entry(field_idx)
+                                .or_default()
+                                .push(parsed_val);
                         } else {
                             frame.scalar_values.insert(field_idx, parsed_val);
                         }
@@ -205,7 +254,11 @@ impl XmlDeserializer {
                         if let Some(&field_idx) = parent.schema.element_map.get(&local_name) {
                             let field = &parent.schema.fields[field_idx];
                             if matches!(field.val_type, ValueType::List(_)) {
-                                parent.list_values.entry(field_idx).or_default().push(instance);
+                                parent
+                                    .list_values
+                                    .entry(field_idx)
+                                    .or_default()
+                                    .push(instance);
                             } else {
                                 parent.scalar_values.insert(field_idx, instance);
                             }
@@ -227,7 +280,9 @@ impl XmlDeserializer {
             buf.clear();
         }
 
-        Err(PolyXmlError::SchemaError("Unexpected end of XML stream".to_string()))
+        Err(PolyXmlError::SchemaError(
+            "Unexpected end of XML stream".to_string(),
+        ))
     }
 
     fn parse_attributes(e: &BytesStart, frame: &mut StackFrame) -> Result<()> {

@@ -37,15 +37,12 @@ While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critic
                   │   - Zero-copy streaming state       │
                   └─────────┬───────────────┬───────────┘
                             │               │
-            ┌───────────────┴────┐     ┌────┴────────────────┐
-            │   AVAILABLE NOW    │     │      ROADMAP        │
-            ▼                    ▼     ▼                     ▼
-     ┌──────────────┐     ┌───────────┐ ┌──────────┐  ┌─────────────┐
-     │  polyxml-rs  │     │  Python   │ │    Go    │  │    C++20    │
-     │ Native Rust  │     │  (PyO3)   │ │  (Cgo)   │  │    (cxx)    │
-     │ Core Engine  │     │Dataclasses│ │ [Planned]│  │  [Planned]  │
-     └──────────────┘     │& Pydantic │ └──────────┘  └─────────────┘
-                          └───────────┘
+           ┌────────────────┼───────────────┼────────────────┐
+           ▼                ▼               ▼                ▼
+    ┌──────────────┐ ┌─────────────┐ ┌─────────────┐  ┌─────────────┐
+    │  Rust / Core │ │   Python    │ │  C++ & Go   │  │ Node / Wasm │
+    │ Direct Crate │ │ (PyO3 abi3) │ │(C-ABI / Cgo)│  │  (napi-rs)  │
+    └──────────────┘ └─────────────┘ └─────────────┘  └─────────────┘
 ```
 
 ---

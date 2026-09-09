@@ -24,7 +24,11 @@ pub fn trim_bytes(mut b: &[u8]) -> &[u8] {
 pub struct ValueConverter;
 
 impl ValueConverter {
-    pub fn parse_scalar(scalar_type: &ScalarType, bytes: &[u8], field_name: &str) -> Result<PolyValue> {
+    pub fn parse_scalar(
+        scalar_type: &ScalarType,
+        bytes: &[u8],
+        field_name: &str,
+    ) -> Result<PolyValue> {
         match scalar_type {
             ScalarType::String => {
                 let s = std::str::from_utf8(bytes)?;
@@ -32,20 +36,22 @@ impl ValueConverter {
             }
             ScalarType::Int => {
                 let trimmed = trim_bytes(bytes);
-                let val: i64 = lexical_core::parse(trimmed).map_err(|_| PolyXmlError::ScalarParseError {
-                    field: field_name.to_string(),
-                    expected: "integer",
-                    value: String::from_utf8_lossy(bytes).to_string(),
-                })?;
+                let val: i64 =
+                    lexical_core::parse(trimmed).map_err(|_| PolyXmlError::ScalarParseError {
+                        field: field_name.to_string(),
+                        expected: "integer",
+                        value: String::from_utf8_lossy(bytes).to_string(),
+                    })?;
                 Ok(PolyValue::Int(val))
             }
             ScalarType::Float => {
                 let trimmed = trim_bytes(bytes);
-                let val: f64 = lexical_core::parse(trimmed).map_err(|_| PolyXmlError::ScalarParseError {
-                    field: field_name.to_string(),
-                    expected: "float",
-                    value: String::from_utf8_lossy(bytes).to_string(),
-                })?;
+                let val: f64 =
+                    lexical_core::parse(trimmed).map_err(|_| PolyXmlError::ScalarParseError {
+                        field: field_name.to_string(),
+                        expected: "float",
+                        value: String::from_utf8_lossy(bytes).to_string(),
+                    })?;
                 Ok(PolyValue::Float(val))
             }
             ScalarType::Bool => {

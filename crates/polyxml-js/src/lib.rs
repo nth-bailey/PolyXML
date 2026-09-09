@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
+use std::sync::Arc;
 
 use polyxml_core::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
 use polyxml_core::value::PolyValue;
@@ -36,7 +36,12 @@ fn convert_js_schema(schema: &JsModelSchema) -> Arc<ModelSchema> {
             "xml_datetime" => ScalarType::XmlDateTime,
             _ => ScalarType::String,
         };
-        builder = builder.field(FieldSchema::new(&f.name, f.xml_name.as_bytes(), kind, ValueType::Scalar(sc)));
+        builder = builder.field(FieldSchema::new(
+            &f.name,
+            f.xml_name.as_bytes(),
+            kind,
+            ValueType::Scalar(sc),
+        ));
     }
     builder.build()
 }
@@ -68,7 +73,11 @@ fn poly_value_to_js(env: &Env, val: &PolyValue) -> Result<JsUnknown> {
 }
 
 #[napi]
-pub fn deserialize(env: Env, xml: Either<String, Buffer>, schema: JsModelSchema) -> Result<JsUnknown> {
+pub fn deserialize(
+    env: Env,
+    xml: Either<String, Buffer>,
+    schema: JsModelSchema,
+) -> Result<JsUnknown> {
     let xml_bytes: &[u8] = match &xml {
         Either::A(s) => s.as_bytes(),
         Either::B(b) => b.as_ref(),

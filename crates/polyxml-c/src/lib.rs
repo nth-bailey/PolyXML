@@ -2,7 +2,9 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::sync::Arc;
 
-use polyxml_core::schema::{FieldKind, FieldSchema, ModelSchema, ModelSchemaBuilder, ScalarType, ValueType};
+use polyxml_core::schema::{
+    FieldKind, FieldSchema, ModelSchema, ModelSchemaBuilder, ScalarType, ValueType,
+};
 use polyxml_core::value::PolyValue;
 
 // Opaque types
@@ -40,7 +42,9 @@ pub enum PolyXmlErrorCode {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn polyxml_schema_builder_create(name: *const c_char) -> *mut PolyXmlSchemaBuilder {
+pub unsafe extern "C" fn polyxml_schema_builder_create(
+    name: *const c_char,
+) -> *mut PolyXmlSchemaBuilder {
     if name.is_null() {
         return std::ptr::null_mut();
     }
@@ -48,7 +52,9 @@ pub unsafe extern "C" fn polyxml_schema_builder_create(name: *const c_char) -> *
         Ok(s) => s,
         Err(_) => return std::ptr::null_mut(),
     };
-    Box::into_raw(Box::new(PolyXmlSchemaBuilder(ModelSchema::builder(name_str))))
+    Box::into_raw(Box::new(PolyXmlSchemaBuilder(ModelSchema::builder(
+        name_str,
+    ))))
 }
 
 #[no_mangle]
@@ -91,7 +97,9 @@ pub unsafe extern "C" fn polyxml_schema_builder_add_field(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn polyxml_schema_builder_build(builder: *mut PolyXmlSchemaBuilder) -> *mut PolyXmlSchema {
+pub unsafe extern "C" fn polyxml_schema_builder_build(
+    builder: *mut PolyXmlSchemaBuilder,
+) -> *mut PolyXmlSchema {
     if builder.is_null() {
         return std::ptr::null_mut();
     }
@@ -126,8 +134,12 @@ pub unsafe extern "C" fn polyxml_deserialize(
             *out_value = Box::into_raw(Box::new(PolyXmlValue(val)));
             PolyXmlErrorCode::Ok
         }
-        Err(polyxml_core::error::PolyXmlError::XmlSyntaxError { .. }) => PolyXmlErrorCode::ErrSyntax,
-        Err(polyxml_core::error::PolyXmlError::ScalarParseError { .. }) => PolyXmlErrorCode::ErrScalar,
+        Err(polyxml_core::error::PolyXmlError::XmlSyntaxError { .. }) => {
+            PolyXmlErrorCode::ErrSyntax
+        }
+        Err(polyxml_core::error::PolyXmlError::ScalarParseError { .. }) => {
+            PolyXmlErrorCode::ErrScalar
+        }
         Err(_) => PolyXmlErrorCode::ErrSchema,
     }
 }
@@ -141,7 +153,12 @@ pub unsafe extern "C" fn polyxml_serialize(
     out_bytes: *mut *mut u8,
     out_len: *mut usize,
 ) -> PolyXmlErrorCode {
-    if root_name.is_null() || value.is_null() || schema.is_null() || out_bytes.is_null() || out_len.is_null() {
+    if root_name.is_null()
+        || value.is_null()
+        || schema.is_null()
+        || out_bytes.is_null()
+        || out_len.is_null()
+    {
         return PolyXmlErrorCode::ErrNullPtr;
     }
 
@@ -150,7 +167,11 @@ pub unsafe extern "C" fn polyxml_serialize(
         Err(_) => return PolyXmlErrorCode::ErrUtf8,
     };
 
-    let indent_opt = if indent > 0 { Some(indent as usize) } else { None };
+    let indent_opt = if indent > 0 {
+        Some(indent as usize)
+    } else {
+        None
+    };
     let val = &(*value).0;
     let s = &(*schema).0;
 
@@ -174,7 +195,10 @@ pub unsafe extern "C" fn polyxml_bytes_free(bytes: *mut u8, len: usize) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn polyxml_value_get_field(val: *const PolyXmlValue, key: *const c_char) -> *const PolyXmlValue {
+pub unsafe extern "C" fn polyxml_value_get_field(
+    val: *const PolyXmlValue,
+    key: *const c_char,
+) -> *const PolyXmlValue {
     if val.is_null() || key.is_null() {
         return std::ptr::null();
     }
@@ -196,7 +220,10 @@ pub unsafe extern "C" fn polyxml_value_get_field(val: *const PolyXmlValue, key: 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn polyxml_value_get_int(val: *const PolyXmlValue, out_int: *mut i64) -> PolyXmlErrorCode {
+pub unsafe extern "C" fn polyxml_value_get_int(
+    val: *const PolyXmlValue,
+    out_int: *mut i64,
+) -> PolyXmlErrorCode {
     if val.is_null() || out_int.is_null() {
         return PolyXmlErrorCode::ErrNullPtr;
     }
@@ -209,7 +236,10 @@ pub unsafe extern "C" fn polyxml_value_get_int(val: *const PolyXmlValue, out_int
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn polyxml_value_get_float(val: *const PolyXmlValue, out_float: *mut f64) -> PolyXmlErrorCode {
+pub unsafe extern "C" fn polyxml_value_get_float(
+    val: *const PolyXmlValue,
+    out_float: *mut f64,
+) -> PolyXmlErrorCode {
     if val.is_null() || out_float.is_null() {
         return PolyXmlErrorCode::ErrNullPtr;
     }
@@ -222,7 +252,10 @@ pub unsafe extern "C" fn polyxml_value_get_float(val: *const PolyXmlValue, out_f
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn polyxml_value_get_bool(val: *const PolyXmlValue, out_bool: *mut bool) -> PolyXmlErrorCode {
+pub unsafe extern "C" fn polyxml_value_get_bool(
+    val: *const PolyXmlValue,
+    out_bool: *mut bool,
+) -> PolyXmlErrorCode {
     if val.is_null() || out_bool.is_null() {
         return PolyXmlErrorCode::ErrNullPtr;
     }

@@ -36,7 +36,11 @@ impl XmlSerializer {
     ) -> Result<()> {
         let obj = match value {
             PolyValue::Object(o) => o,
-            _ => return Err(PolyXmlError::SerializationError("Expected Object value for model".into())),
+            _ => {
+                return Err(PolyXmlError::SerializationError(
+                    "Expected Object value for model".into(),
+                ))
+            }
         };
 
         let mut elem = BytesStart::new(std::str::from_utf8(tag_name)?);
@@ -124,17 +128,30 @@ impl XmlSerializer {
                                             };
                                             let child_tag = std::str::from_utf8(&field.xml_name)?;
                                             writer
-                                                .write_event(Event::Start(BytesStart::new(child_tag)))
-                                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                                                .write_event(Event::Start(BytesStart::new(
+                                                    child_tag,
+                                                )))
+                                                .map_err(|e| {
+                                                    PolyXmlError::SerializationError(e.to_string())
+                                                })?;
                                             writer
                                                 .write_event(Event::Text(BytesText::new(&text)))
-                                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                                                .map_err(|e| {
+                                                    PolyXmlError::SerializationError(e.to_string())
+                                                })?;
                                             writer
                                                 .write_event(Event::End(BytesEnd::new(child_tag)))
-                                                .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                                                .map_err(|e| {
+                                                    PolyXmlError::SerializationError(e.to_string())
+                                                })?;
                                         }
                                         ValueType::Nested(sub_schema) => {
-                                            Self::write_model(writer, &field.xml_name, item, sub_schema)?;
+                                            Self::write_model(
+                                                writer,
+                                                &field.xml_name,
+                                                item,
+                                                sub_schema,
+                                            )?;
                                         }
                                         _ => {}
                                     }

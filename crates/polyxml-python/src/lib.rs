@@ -7,7 +7,8 @@ use polyxml_core::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, Valu
 use polyxml_core::value::PolyValue;
 
 // Global thread-safe schema cache keyed by Python type pointer
-static SCHEMA_CACHE: RwLock<Option<HashMap<usize, (Arc<ModelSchema>, PyObject)>>> = RwLock::new(None);
+static SCHEMA_CACHE: RwLock<Option<HashMap<usize, (Arc<ModelSchema>, PyObject)>>> =
+    RwLock::new(None);
 
 fn resolve_scalar_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<ScalarType> {
     let type_name: String = type_obj
@@ -64,7 +65,9 @@ fn resolve_value_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<V
                         return Ok(ValueType::List(Box::new(inner)));
                     }
                 }
-                return Ok(ValueType::List(Box::new(ValueType::Scalar(ScalarType::String))));
+                return Ok(ValueType::List(Box::new(ValueType::Scalar(
+                    ScalarType::String,
+                ))));
             }
         }
     }
@@ -114,7 +117,12 @@ fn extract_schema_from_class<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<Mode
 
             let field_type = field_obj.getattr("annotation")?;
             let val_type = resolve_value_type(py, &field_type)?;
-            builder = builder.field(FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type));
+            builder = builder.field(FieldSchema::new(
+                py_name,
+                xml_name.as_bytes(),
+                kind,
+                val_type,
+            ));
         }
     } else if cls.hasattr("__dataclass_fields__")? {
         let fields: Bound<'py, PyDict> = cls.getattr("__dataclass_fields__")?.downcast_into()?;
@@ -141,7 +149,12 @@ fn extract_schema_from_class<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<Mode
 
             let field_type = field_obj.getattr("type")?;
             let val_type = resolve_value_type(py, &field_type)?;
-            builder = builder.field(FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type));
+            builder = builder.field(FieldSchema::new(
+                py_name,
+                xml_name.as_bytes(),
+                kind,
+                val_type,
+            ));
         }
     }
 
@@ -166,7 +179,10 @@ fn get_or_create_schema<'py>(cls: &Bound<'py, PyType>) -> PyResult<(Arc<ModelSch
     {
         let mut cache = SCHEMA_CACHE.write().unwrap_or_else(|p| p.into_inner());
         let map = cache.get_or_insert_with(HashMap::new);
-        map.insert(type_key, (Arc::clone(&schema), py_cls_obj.clone_ref(cls.py())));
+        map.insert(
+            type_key,
+            (Arc::clone(&schema), py_cls_obj.clone_ref(cls.py())),
+        );
     }
 
     Ok((schema, py_cls_obj))
