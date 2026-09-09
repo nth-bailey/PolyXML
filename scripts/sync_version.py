@@ -153,6 +153,18 @@ def set_versions(new_ver: str) -> None:
     CMAKE_PATH.write_text(cmake_text_new, encoding="utf-8")
     print(f"  Updated {CMAKE_PATH.relative_to(REPO_ROOT)}")
 
+    # 6. crates/polyxml-c/Cargo.toml (dependency version requirement)
+    c_cargo_path = REPO_ROOT / "crates" / "polyxml-c" / "Cargo.toml"
+    if c_cargo_path.exists():
+        c_text = c_cargo_path.read_text(encoding="utf-8")
+        c_text_new = re.sub(
+            r'(polyxml\s*=\s*\{[^}]*version\s*=\s*)"[^"]+"',
+            rf'\g<1>"{v}"',
+            c_text,
+        )
+        c_cargo_path.write_text(c_text_new, encoding="utf-8")
+        print(f"  Updated {c_cargo_path.relative_to(REPO_ROOT)}")
+
     print("All manifests successfully synchronized.")
 
 
