@@ -15,6 +15,6 @@ crate-type = ["cdylib"]
 [dependencies]
 polyxml = { path = "../polyxml-core" }
 pyo3 = { version = "0.22", features = ["abi3-py312", "extension-module"] }
-quick-xml = { version = "0.36" }
+quick-xml = { version = "0.42" }
 lexical-core = "1.0"
 smallvec = "1.16"
