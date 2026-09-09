@@ -99,3 +99,64 @@ def test_pydantic_model():
 def test_invalid_xml_raises_value_error():
     with pytest.raises(ValueError):
         polyxml.deserialize(b"<UnclosedTag><name>Test</UnclosedTag", SimpleItem)
+
+
+def test_iterparse_dataclass_bytes():
+    xml = b"""
+    <Catalog>
+        <header><timestamp>12345</timestamp></header>
+        <items>
+            <SimpleItem id="1"><name>Widget A</name><price>10.5</price><active>true</active></SimpleItem>
+            <SimpleItem id="2"><name>Widget B</name><price>20.0</price><active>false</active></SimpleItem>
+            <SimpleItem id="3"><name>Widget C</name><price>30.25</price><active>1</active></SimpleItem>
+        </items>
+    </Catalog>
+    """
+    items = list(polyxml.iterparse(xml, SimpleItem))
+    assert len(items) == 3
+    assert items[0].id == 1 and items[0].name == "Widget A" and items[0].active is True
+    assert items[1].id == 2 and items[1].name == "Widget B" and items[1].active is False
+    assert items[2].id == 3 and items[2].name == "Widget C" and items[2].active is True
+
+
+def test_iterparse_custom_tag_and_str():
+    xml = """
+    <Warehouse>
+        <part id="10"><name>Gear</name><price>5.0</price><active>true</active></part>
+        <part id="20"><name>Bolt</name><price>0.5</price><active>false</active></part>
+    </Warehouse>
+    """
+    items = list(polyxml.iterparse(xml, SimpleItem, tag="part"))
+    assert len(items) == 2
+    assert items[0].id == 10 and items[0].name == "Gear"
+    assert items[1].id == 20 and items[1].name == "Bolt"
+
+
+def test_iterparse_empty_stream():
+    xml = b"<EmptyCatalog></EmptyCatalog>"
+    items = list(polyxml.iterparse(xml, SimpleItem))
+    assert len(items) == 0
+
+
+@dataclass
+class OptionalItem:
+    id: int = field(metadata={"type": "Attribute"})
+    name: str = field(metadata={"type": "Element"})
+    desc: str | None = field(default="default_desc", metadata={"type": "Element"})
+
+
+def test_dataclass_optional_field_fallback():
+    # XML omits <desc>, triggering kwargs fallback and preserving dataclass default value
+    xml = b'<OptionalItem id="99"><name>Sensor X</name></OptionalItem>'
+    res = polyxml.deserialize(xml, OptionalItem)
+    assert res.id == 99
+    assert res.name == "Sensor X"
+    assert res.desc == "default_desc"
+
+
+def test_serialize_pydantic():
+    dev = PydanticDevice(serial="SN-999", model="AeroVibe", power=250.0)
+    xml_bytes = polyxml.serialize(dev)
+    assert b'sn="SN-999"' in xml_bytes
+    assert b"<model>AeroVibe</model>" in xml_bytes
+    assert b"<power>250" in xml_bytes

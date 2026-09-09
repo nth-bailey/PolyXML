@@ -1,43 +1,92 @@
 ---
 title: Performance & Benchmarks
-description: Performance benchmarks comparing PolyXML against legacy single-language parsers.
+description: Reproducible performance benchmarks comparing PolyXML against native and pure-language XML engines.
 ---
 
 # Performance & Benchmarks
 
 PolyXML is engineered to process gigabytes of XML per second by leveraging Rust's zero-cost abstractions, `quick-xml` streaming events, and `lexical-core` numeric conversions.
 
----
-
-## 1. Python Deserialization Throughput
-
-Comparing **PolyXML** (`polyxml.deserialize`) against pure Python XML data-binding solutions (`xsdata`, `xmlschema`, and `pydantic-xml`) on a 10,000-element XML payload:
-
-| Engine | Technology | Throughput | Latency (10k items) | Speedup vs Pure Python |
-| :--- | :--- | :--- | :--- | :---: |
-| **PolyXML** | **Rust + PyO3 (`abi3-py312`)** | **~480 MB/s** | **~21 ms** | **18.5x faster** |
-| `lxml` (DOM) | C (`libxml2`) + Cython | ~220 MB/s | ~45 ms | 8.6x faster |
-| `xsdata` (Standard) | Pure Python (`XmlParser`) | ~26 MB/s | ~390 ms | 1.0x (Baseline) |
-| `xmlschema` | Pure Python | ~18 MB/s | ~550 ms | 0.7x |
-
-> **Key takeaway**: While `lxml` is fast, it only produces untyped DOM nodes. PolyXML instantiates strongly-typed **Python dataclasses and Pydantic v2 models** directly while beating `lxml` by over **2x**.
+The repository includes a fully reusable, automated benchmark suite covering both pure Rust Criterion tests and Python comparative benchmarks.
 
 ---
 
-## 2. Go Deserialization Throughput
+## 1. Python Deserialization & Serialization Throughput
 
-Go’s standard library `encoding/xml` relies heavily on reflection and creates significant GC pressure.
+Benchmarks conducted using Python 3.12 (`abi3-py312`) across 10,000-element streaming payloads (~724 KB XML), micro sensor payloads (~100B), and enterprise orders:
 
-| Engine | Technology | Throughput | Allocation / Op | Speedup |
-| :--- | :--- | :--- | :--- | :---: |
-| **PolyXML (Go)** | **Rust C-ABI via Cgo** | **~620 MB/s** | **Zero heap churn** | **4.2x faster** |
-| `encoding/xml` | Pure Go Reflection | ~145 MB/s | High GC pressure | 1.0x (Baseline) |
+### Batch Catalog Workload (10,000 items, ~724 KB XML)
+
+| Engine | Paradigm / Category | Implementation | Deserialization Latency | Deserialization Throughput | Serialization Latency | Serialization Throughput | Peak RAM |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **PolyXML** | **Typed Dataclass** | **Rust + PyO3** | **13.9 ms** | **51.0 MB/s** | **7.30 ms** | **96.2 MB/s** | **2.0 MB** |
+| `lxml.objectify` | Dynamic C Object | C / Cython (`libxml2`) | 9.9 ms | 71.4 MB/s | 3.9 ms | 178.2 MB/s | 0.2 MB |
+| `lxml.etree` | Untyped DOM | C / Cython (`libxml2`) | 10.0 ms | 70.5 MB/s | — | — | <0.1 MB |
+| `ElementTree` | Untyped DOM | Python Stdlib C/Python | 12.3 ms | 57.5 MB/s | — | — | 7.1 MB |
+| `defusedxml` | Secure DOM | Python Defused | 27.2 ms | 26.0 MB/s | — | — | 7.1 MB |
+| `xmltodict` | Untyped Dict | C (`pyexpat`) | 56.6 ms | 12.5 MB/s | 79.0 ms | 8.9 MB/s | 4.8 MB |
+| `xsdata` | Typed Dataclass | Pure Python | 222.5 ms | 3.2 MB/s | 282.6 ms | 2.5 MB/s | 3.3 MB |
+
+> **Key Takeaway**: 
+> - **Vs Typed Dataclasses (`xsdata`)**: PolyXML is **16.0x faster** at deserialization and **38.7x faster** at serialization, while saving over 1.2 MB of memory.
+> - **Vs Dict Parsers (`xmltodict`)**: PolyXML is **4.1x faster** on deserialization and **10.8x faster** on serialization, while instantiating strongly-typed dataclasses instead of unstructured string dictionaries.
+> - **Vs C Proxies (`lxml.objectify`)**: PolyXML executes within 1.39x of raw C dynamic proxy trees, while returning genuine Python dataclasses with IDE autocomplete and type safety.
 
 ---
 
-## 3. Mission-Critical Schema Workloads (UCI / ISO 20022)
+### Real-Time Micro Telemetry Workload (Sensor ~100B, UCI Telemetry)
 
-On mission-critical aerospace command-and-control payloads (e.g. **Universal Command and Control Interface - UCI**):
+| Engine | Category | Deserialization Latency | Serialization Latency | Speedup vs Pure Python |
+| :--- | :--- | :---: | :---: | :---: |
+| **PolyXML** | **Typed Dataclass** | **2.5 μs** | **1.4 μs** | **17.1x** |
+| **PolyXML (Pydantic)** | **Typed Pydantic v2** | **3.1 μs** | **1.5 μs** | **13.7x** |
+| `lxml.etree` | Untyped DOM | 3.1 μs | — | 13.7x |
+| `lxml.objectify` | C Dynamic Object | 3.3 μs | 1.3 μs | 13.1x |
+| `ElementTree` | Untyped DOM | 4.9 μs | — | 8.7x |
+| `defusedxml` | Secure DOM | 8.6 μs | — | 5.0x |
+| `declxml` | Declarative Dict | 10.2 μs | 23.9 μs | 4.2x |
+| `xmltodict` | Untyped Dict | 10.3 μs | 14.9 μs | 4.2x |
+| `pydantic-xml` | Typed Pydantic v2 | 16.4 μs | 15.6 μs | 2.6x |
+| `untangle` | Dynamic Object | 19.1 μs | — | 2.3x |
+| `xsdata` | Typed Dataclass | 43.0 μs | 45.0 μs | 1.0x (Ref) |
 
-- **Zero Allocation Memory Footprint**: PolyXML streams attributes and elements directly from the socket/file byte buffer without reading the entire document into an in-memory DOM tree.
-- **Microsecond Latencies**: Critical sensor telemetries and financial transactions deserialize in under **50 microseconds**, making PolyXML suitable for real-time applications.
+Critical telemetry commands and sensor packets deserialize in **2.5 microseconds**, beating even C-based DOM parsers (`lxml` at 3.1 μs, `lxml.objectify` at 3.3 μs).
+
+---
+
+## 2. Pure Rust Core Throughput (`crates/polyxml-core`)
+
+Statistical benchmarks measured with Criterion.rs:
+
+| Workload / Target | Operation | Latency | Throughput | Zero Allocations |
+| :--- | :--- | :---: | :---: | :---: |
+| **Sensor Micro (130B)** | Deserialization | **1.19 μs** | **75.1 MiB/s** | Direct scalar parse |
+| **Sensor Micro (130B)** | Serialization | **479 ns** | **187.2 MiB/s** | Zero intermediate DOM |
+| **Catalog (1,000 items, ~70 KB)** | Deserialization | **1.01 ms** | **60.2 MiB/s** | Zero intermediate DOM |
+| **Catalog (1,000 items, ~70 KB)** | Serialization | **358 μs** | **169.1 MiB/s** | Streaming buffer |
+| **Catalog (10,000 items, ~724 KB)** | Deserialization | **10.18 ms** | **62.7 MiB/s** | Streaming buffer |
+| **Catalog (10,000 items, ~724 KB)** | Serialization | **3.61 ms** | **175.2 MiB/s** | Streaming buffer |
+
+---
+
+## 3. How to Reproduce Benchmarks
+
+The benchmark suite is reusable and version-controlled.
+
+### Run All Benchmarks (Rust + Python)
+
+```bash
+./benchmarks/run_all.sh
+```
+
+### Run Pure Rust Criterion Benchmarks
+
+```bash
+cargo bench --bench core_benchmarks
+```
+
+### Run Python Comparative Benchmarks CLI
+
+```bash
+python -m benchmarks --workload all --catalog-sizes 1000 10000 --iterations 25 --output-md benchmarks/results.md --output-json benchmarks/results.json
+```

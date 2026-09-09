@@ -18,4 +18,9 @@ thiserror = "2.0"
 smallvec = "1.16"
 
 [dev-dependencies]
+criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
 pretty_assertions = "1.4"
+
+[[bench]]
+name = "core_benchmarks"
+harness = false

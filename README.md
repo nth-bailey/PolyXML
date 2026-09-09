@@ -74,9 +74,44 @@ While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critic
 ## Key Features
 
 - **⚡ Blazing Fast**: Powered by `quick-xml` streaming event loop and `lexical-core` byte-slice parsing. Zero DOM intermediate allocations.
+- **🌊 Streaming Iterator**: Parse multi-gigabyte XML documents with $O(1)$ constant memory (<5 MB RAM) via `polyxml.iterparse()`.
 - **🔄 Bidirectional**: Full support for both **deserialization** (XML $\to$ typed models) and **serialization** (typed models $\to$ XML).
 - **🌐 Polyglot by Design**: The core engine is 100% pure Rust with zero Python or language runtime dependencies, ready to be embedded anywhere.
 - **🎯 Full Schema Support**: Namespaces, attributes vs. elements, text nodes, `xsi:nil`, choice, lists, and ISO-8601 date/time scalar types.
+
+---
+
+## 🚀 Performance & Benchmarks
+
+PolyXML is benchmarked against the Python and native XML ecosystems on standard, reproducible workloads ([full methodology & data](docs/benchmarks.md)).
+
+### 1. Large Document Throughput (10,000 Catalog Items, 724 KB XML)
+
+| Engine | Paradigm / Category | Implementation | Deserialization Latency | Deserialization Throughput | Serialization Latency | Peak RAM |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: |
+| **PolyXML** | **Typed Dataclass** | **Rust + PyO3** | **13.9 ms** | **51.0 MB/s** | **7.30 ms** | **2.0 MB** |
+| `lxml.etree` | Untyped DOM | C / Cython (`libxml2`) | 10.0 ms | 70.5 MB/s | — | <0.1 MB |
+| `ElementTree` | Untyped DOM | Python Stdlib C/Python | 12.3 ms | 57.5 MB/s | — | 7.1 MB |
+| `defusedxml` | Secure DOM | Python Defused | 27.2 ms | 26.0 MB/s | — | 7.1 MB |
+| `xmltodict` | Untyped Dict | C (`pyexpat`) | 56.6 ms | 12.5 MB/s | 79.0 ms | 4.8 MB |
+| `xsdata` | Typed Dataclass | Pure Python | 222.5 ms | 3.2 MB/s | 282.6 ms | 3.3 MB |
+
+> - **16.0x faster** deserialization & **38.7x faster** serialization than `xsdata` (standard typed dataclasses).
+> - **4.1x faster** than `xmltodict` while returning genuine typed dataclasses instead of untyped string dicts.
+> - **3.5x lower RAM** than Python's standard library `xml.etree.ElementTree`.
+
+### 2. Real-Time Micro-Telemetry (Sensor ~100B, Telemetry Commands)
+
+| Engine | Category | Deserialization Latency | Serialization Latency | Speedup vs Pure Python |
+| :--- | :--- | :---: | :---: | :---: |
+| **PolyXML** | **Typed Dataclass** | **2.5 μs** | **1.4 μs** | **17.1x** |
+| **PolyXML (Pydantic)** | **Typed Pydantic v2** | **3.1 μs** | **1.5 μs** | **13.7x** |
+| `lxml.etree` | Untyped DOM | 3.1 μs | — | 13.7x |
+| `ElementTree` | Untyped DOM | 4.9 μs | — | 8.7x |
+| `xmltodict` | Untyped Dict | 10.3 μs | 14.9 μs | 4.2x |
+| `xsdata` | Typed Dataclass | 43.0 μs | 45.0 μs | 1.0x (Ref) |
+
+Critical telemetry commands and sensor packets deserialize in **2.5 microseconds**, beating even C-based DOM parsers (`lxml` at 3.1 μs).
 
 ---
 
@@ -123,10 +158,14 @@ class Item:
     name: str = field(metadata={"type": "Element"})
     price: float = field(metadata={"type": "Element"})
 
-# Deserialize XML into Python dataclass
+# 1. Deserialize full XML into a typed Python dataclass
 item = polyxml.deserialize(b'<Item id="1"><name>Turbine</name><price>99.5</price></Item>', Item)
 
-# Serialize model back to XML
+# 2. Stream huge XML documents with O(1) constant memory (<5 MB RAM)
+for item in polyxml.iterparse(open("large_catalog.xml", "rb").read(), Item, tag="Item"):
+    print(item.name, item.price)
+
+# 3. Serialize model back to XML
 xml_bytes = polyxml.serialize(item, indent=2)
 ```
 

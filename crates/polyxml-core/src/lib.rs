@@ -6,7 +6,7 @@ pub mod serializer;
 pub mod value;
 
 pub use error::{PolyXmlError, Result};
-pub use parser::XmlDeserializer;
+pub use parser::{XmlDeserializer, XmlItemStream};
 pub use schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
 pub use serializer::XmlSerializer;
 pub use value::PolyValue;
@@ -157,5 +157,59 @@ mod tests {
             Some(&PolyValue::String("Widget B".into()))
         );
         assert_eq!(items[1].get("qty"), Some(&PolyValue::Int(5)));
+    }
+
+    #[test]
+    fn test_streaming_xml_item_stream() {
+        let item_schema = ModelSchema::builder("Item")
+            .field(FieldSchema::new(
+                "title",
+                b"title",
+                FieldKind::Element,
+                ValueType::Scalar(ScalarType::String),
+            ))
+            .field(FieldSchema::new(
+                "qty",
+                b"qty",
+                FieldKind::Attribute,
+                ValueType::Scalar(ScalarType::Int),
+            ))
+            .build();
+
+        let xml = br#"
+        <Inventory>
+            <meta><timestamp>12345</timestamp></meta>
+            <items>
+                <item qty="10"><title>Part A</title></item>
+                <item qty="20"><title>Part B</title></item>
+                <item qty="30"><title>Part C</title></item>
+            </items>
+        </Inventory>
+        "#;
+
+        let mut stream = XmlItemStream::new(&xml[..], Arc::clone(&item_schema), b"item");
+        let item1 = stream.next_item().unwrap().expect("item 1");
+        assert_eq!(
+            item1.get("title"),
+            Some(&PolyValue::String("Part A".into()))
+        );
+        assert_eq!(item1.get("qty"), Some(&PolyValue::Int(10)));
+
+        let item2 = stream.next_item().unwrap().expect("item 2");
+        assert_eq!(
+            item2.get("title"),
+            Some(&PolyValue::String("Part B".into()))
+        );
+        assert_eq!(item2.get("qty"), Some(&PolyValue::Int(20)));
+
+        let item3 = stream.next_item().unwrap().expect("item 3");
+        assert_eq!(
+            item3.get("title"),
+            Some(&PolyValue::String("Part C".into()))
+        );
+        assert_eq!(item3.get("qty"), Some(&PolyValue::Int(30)));
+
+        let item4 = stream.next_item().unwrap();
+        assert!(item4.is_none());
     }
 }
