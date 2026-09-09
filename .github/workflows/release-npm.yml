@@ -1,6 +1,9 @@
 name: Release Node.js Addon (npm)
 
 on:
+  push:
+    tags:
+      - 'v*'
   release:
     types: [published]
   workflow_dispatch:
@@ -28,6 +31,20 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync Tag Version Across Manifests
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_VER="${GITHUB_REF_NAME#v}"
+            echo "Synchronizing version from tag to: $TAG_VER"
+            python scripts/sync_version.py --set "$TAG_VER"
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -61,6 +78,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync Tag Version Across Manifests
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_VER="${GITHUB_REF_NAME#v}"
+            echo "Synchronizing version from tag to: $TAG_VER"
+            python scripts/sync_version.py --set "$TAG_VER"
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

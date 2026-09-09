@@ -29,6 +29,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Verify Multi-Language Version Parity
+        run: python scripts/sync_version.py --check
+
       - name: Check Formatting
         run: cargo fmt --all --check
 

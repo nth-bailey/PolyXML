@@ -145,5 +145,5 @@ pub fn serialize(
 
 #[napi]
 pub fn version() -> &'static str {
-    "0.1.0"
+    env!("CARGO_PKG_VERSION")
 }

@@ -332,6 +332,6 @@ pub unsafe extern "C" fn polyxml_value_free(val: *mut PolyXmlValue) {
 
 #[no_mangle]
 pub extern "C" fn polyxml_version() -> *const c_char {
-    static VERSION: &[u8] = b"0.1.0\0";
+    static VERSION: &[u8] = concat!(env!("CARGO_PKG_VERSION"), "\0").as_bytes();
     VERSION.as_ptr() as *const c_char
 }
