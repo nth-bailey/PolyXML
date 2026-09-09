@@ -10,6 +10,9 @@
   "napi": {
     "name": "polyxml"
   },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.0.0"
+  },
   "keywords": [
     "xml",
     "parser",

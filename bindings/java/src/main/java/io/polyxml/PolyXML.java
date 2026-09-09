@@ -7,7 +7,7 @@ import java.util.Objects;
 
 /**
  * PolyXML: High-performance, polyglot XML data-binding engine for Java.
- * Powered by Java Foreign Function & Memory API (Project Panama).
+ * Powered by Java Foreign Function &amp; Memory API (Project Panama).
  */
 public final class PolyXML {
     private static final Linker LINKER = Linker.nativeLinker();

@@ -21,16 +21,16 @@ jobs:
         settings:
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: cd crates/polyxml-js && npx @napi-rs/cli build --platform --target x86_64-unknown-linux-gnu
+            build: cd crates/polyxml-js && npx -p @napi-rs/cli napi build --platform --target x86_64-unknown-linux-gnu
           - host: macos-latest
             target: x86_64-apple-darwin
-            build: cd crates/polyxml-js && npx @napi-rs/cli build --platform --target x86_64-apple-darwin
+            build: cd crates/polyxml-js && npx -p @napi-rs/cli napi build --platform --target x86_64-apple-darwin
           - host: macos-latest
             target: aarch64-apple-darwin
-            build: cd crates/polyxml-js && npx @napi-rs/cli build --platform --target aarch64-apple-darwin
+            build: cd crates/polyxml-js && npx -p @napi-rs/cli napi build --platform --target aarch64-apple-darwin
           - host: windows-latest
             target: x86_64-pc-windows-msvc
-            build: cd crates/polyxml-js && npx @napi-rs/cli build --platform --target x86_64-pc-windows-msvc
+            build: cd crates/polyxml-js && npx -p @napi-rs/cli napi build --platform --target x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.settings.host }}
 
@@ -54,7 +54,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -102,7 +102,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: 'https://registry.npmjs.org'
 
       - name: Update npm CLI
