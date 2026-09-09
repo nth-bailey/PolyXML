@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 polyxml = { path = "../polyxml-core" }
-napi = { version = "2.16", default-features = false, features = ["napi4"] }
+napi = { version = "3.12", default-features = false, features = ["napi4"] }
 napi-derive = "2.16"
 
 [build-dependencies]
