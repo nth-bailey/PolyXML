@@ -58,6 +58,8 @@ jobs:
       - name: Deploy to Maven Central (Sonatype Central Portal)
         shell: bash
         env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
         run: |
           cd bindings/java
