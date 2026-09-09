@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use polyxml_core::error::PolyXmlError;
-use polyxml_core::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
-use polyxml_core::value::PolyValue;
-use polyxml_core::{deserialize, serialize};
+use polyxml::error::PolyXmlError;
+use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
+use polyxml::value::PolyValue;
+use polyxml::{deserialize, serialize};
 
 #[test]
 fn test_all_scalar_types() {

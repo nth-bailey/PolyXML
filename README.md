@@ -74,8 +74,8 @@ While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critic
 ### Rust
 ```rust
 use std::sync::Arc;
-use polyxml_core::schema::{ModelSchema, FieldSchema, FieldKind, ScalarType, ValueType};
-use polyxml_core::deserialize;
+use polyxml::schema::{ModelSchema, FieldSchema, FieldKind, ScalarType, ValueType};
+use polyxml::deserialize;
 
 let schema = ModelSchema::builder("User")
     .field(FieldSchema::new("id", b"id", FieldKind::Attribute, ValueType::Scalar(ScalarType::Int)))

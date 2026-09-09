@@ -5,23 +5,23 @@ description: Using PolyXML's native Rust engine directly in Rust applications.
 
 # Rust Core Guide
 
-The `polyxml-core` crate is a 100% pure Rust library with zero FFI overhead.
+The `polyxml` crate is a 100% pure Rust library with zero FFI overhead.
 
 ## Cargo Configuration
 
-Add `polyxml-core` to your `Cargo.toml`:
+Add `polyxml` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-polyxml-core = "0.1"
+polyxml = "0.1"
 ```
 
 ## Creating a Schema Programmatically
 
 ```rust
 use std::sync::Arc;
-use polyxml_core::schema::{ModelSchema, FieldSchema, FieldKind, ScalarType, ValueType};
-use polyxml_core::{deserialize, serialize};
+use polyxml::schema::{ModelSchema, FieldSchema, FieldKind, ScalarType, ValueType};
+use polyxml::{deserialize, serialize};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let schema = ModelSchema::builder("Telemetry")

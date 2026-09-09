@@ -3,8 +3,8 @@ use napi::JsUnknown;
 use napi_derive::napi;
 use std::sync::Arc;
 
-use polyxml_core::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
-use polyxml_core::value::PolyValue;
+use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
+use polyxml::value::PolyValue;
 
 #[napi(object)]
 pub struct JsFieldDef {
@@ -85,7 +85,7 @@ pub fn deserialize(
     };
 
     let model_schema = convert_js_schema(&schema);
-    let val = polyxml_core::deserialize(xml_bytes, model_schema)
+    let val = polyxml::deserialize(xml_bytes, model_schema)
         .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))?;
 
     poly_value_to_js(&env, &val)

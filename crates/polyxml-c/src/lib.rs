@@ -4,10 +4,10 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::sync::Arc;
 
-use polyxml_core::schema::{
+use polyxml::schema::{
     FieldKind, FieldSchema, ModelSchema, ModelSchemaBuilder, ScalarType, ValueType,
 };
-use polyxml_core::value::PolyValue;
+use polyxml::value::PolyValue;
 
 // Opaque types
 pub struct PolyXmlSchemaBuilder(ModelSchemaBuilder);
@@ -131,17 +131,13 @@ pub unsafe extern "C" fn polyxml_deserialize(
     let slice = std::slice::from_raw_parts(data, len);
     let s = &(*schema).0;
 
-    match polyxml_core::deserialize(slice, Arc::clone(s)) {
+    match polyxml::deserialize(slice, Arc::clone(s)) {
         Ok(val) => {
             *out_value = Box::into_raw(Box::new(PolyXmlValue(val)));
             PolyXmlErrorCode::Ok
         }
-        Err(polyxml_core::error::PolyXmlError::XmlSyntaxError { .. }) => {
-            PolyXmlErrorCode::ErrSyntax
-        }
-        Err(polyxml_core::error::PolyXmlError::ScalarParseError { .. }) => {
-            PolyXmlErrorCode::ErrScalar
-        }
+        Err(polyxml::error::PolyXmlError::XmlSyntaxError { .. }) => PolyXmlErrorCode::ErrSyntax,
+        Err(polyxml::error::PolyXmlError::ScalarParseError { .. }) => PolyXmlErrorCode::ErrScalar,
         Err(_) => PolyXmlErrorCode::ErrSchema,
     }
 }
@@ -177,7 +173,7 @@ pub unsafe extern "C" fn polyxml_serialize(
     let val = &(*value).0;
     let s = &(*schema).0;
 
-    match polyxml_core::serialize(root_str, val, s, indent_opt) {
+    match polyxml::serialize(root_str, val, s, indent_opt) {
         Ok(mut bytes) => {
             bytes.shrink_to_fit();
             *out_len = bytes.len();

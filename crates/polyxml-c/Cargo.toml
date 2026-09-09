@@ -12,4 +12,4 @@ name = "polyxml"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-polyxml-core = { path = "../polyxml-core" }
+polyxml = { path = "../polyxml-core" }

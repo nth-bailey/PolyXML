@@ -7,8 +7,8 @@ use pyo3::types::{PyBytes, PyDict, PyList, PyString, PyType};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use polyxml_core::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
-use polyxml_core::value::PolyValue;
+use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
+use polyxml::value::PolyValue;
 
 // Global thread-safe schema cache keyed by Python type pointer
 static SCHEMA_CACHE: RwLock<Option<HashMap<usize, (Arc<ModelSchema>, PyObject)>>> =
@@ -349,7 +349,7 @@ fn deserialize<'py>(
     target_type: Bound<'py, PyType>,
 ) -> PyResult<PyObject> {
     let (schema, py_cls) = get_or_create_schema(&target_type)?;
-    let poly_val = polyxml_core::deserialize(source, Arc::clone(&schema))
+    let poly_val = polyxml::deserialize(source, Arc::clone(&schema))
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
     let bound_cls = py_cls.bind(py);
@@ -369,7 +369,7 @@ fn serialize<'py>(
     let poly_val = py_to_poly_value(py, &obj, &schema)?;
     let root_name = schema.name.as_str();
 
-    let bytes = polyxml_core::serialize(root_name, &poly_val, &schema, indent)
+    let bytes = polyxml::serialize(root_name, &poly_val, &schema, indent)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
     Ok(PyBytes::new_bound(py, &bytes))

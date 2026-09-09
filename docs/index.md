@@ -22,7 +22,7 @@ While web ecosystems shifted toward JSON and Protocol Buffers, mission-critical 
 ## Supported Ecosystems
 
 === "Rust"
-    Native zero-copy core engine via `polyxml-core` on [crates.io](https://crates.io/crates/polyxml-core). Monomorphized, fast streaming parser.
+    Native zero-copy core engine via `polyxml` on [crates.io](https://crates.io/crates/polyxml). Monomorphized, fast streaming parser.
 
 === "Python"
     Accelerates Python `dataclasses` and **Pydantic v2** models via PyO3 (`abi3-py312`). 10x–30x faster than pure Python XML parsers.

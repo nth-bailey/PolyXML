@@ -11,7 +11,7 @@ description = "Node.js and TypeScript native addon bindings for PolyXML"
 crate-type = ["cdylib"]
 
 [dependencies]
-polyxml-core = { path = "../polyxml-core" }
+polyxml = { path = "../polyxml-core" }
 napi = { version = "2.16", default-features = false, features = ["napi4"] }
 napi-derive = "2.16"
 

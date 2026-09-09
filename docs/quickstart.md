@@ -48,14 +48,14 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     ### Cargo Dependency
     ```toml
     [dependencies]
-    polyxml-core = "0.1"
+    polyxml = "0.1"
     ```
 
     ### Example
     ```rust
     use std::sync::Arc;
-    use polyxml_core::schema::{ModelSchema, FieldSchema, FieldKind, ScalarType, ValueType};
-    use polyxml_core::{deserialize, serialize};
+    use polyxml::schema::{ModelSchema, FieldSchema, FieldKind, ScalarType, ValueType};
+    use polyxml::{deserialize, serialize};
 
     fn main() -> Result<(), Box<dyn std::error::Error>> {
         let schema = ModelSchema::builder("Sensor")
@@ -170,6 +170,15 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     ```
 
 === "Java (Panama FFI)"
+
+    ### Maven Dependency
+    ```xml
+    <dependency>
+        <groupId>io.github.nth-bailey</groupId>
+        <artifactId>polyxml</artifactId>
+        <version>0.1.0</version>
+    </dependency>
+    ```
 
     ### Example
     ```java
