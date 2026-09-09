@@ -18,6 +18,15 @@ pub fn deserialize(xml_bytes: &[u8], schema: Arc<ModelSchema>) -> Result<PolyVal
     XmlDeserializer::deserialize(xml_bytes, schema)
 }
 
+/// High-level function to deserialize XML bytes with a custom maximum recursion depth limit.
+pub fn deserialize_with_limit(
+    xml_bytes: &[u8],
+    schema: Arc<ModelSchema>,
+    max_depth: usize,
+) -> Result<PolyValue> {
+    XmlDeserializer::deserialize_with_limit(xml_bytes, schema, max_depth)
+}
+
 /// High-level function to serialize a PolyValue into XML bytes using a ModelSchema.
 pub fn serialize(
     root_name: &str,

@@ -27,6 +27,12 @@ pub enum PolyXmlError {
 
     #[error("Serialization error: {0}")]
     SerializationError(String),
+
+    #[error("Maximum XML recursion depth exceeded: current {current} >= limit {max_depth}")]
+    MaxDepthExceeded { max_depth: usize, current: usize },
+
+    #[error("XML parsing or unescape error: {0}")]
+    XmlError(#[from] quick_xml::Error),
 }
 
 pub type Result<T> = std::result::Result<T, PolyXmlError>;

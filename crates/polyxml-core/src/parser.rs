@@ -70,8 +70,18 @@ fn is_nil_element(e: &BytesStart) -> bool {
     false
 }
 
+pub const DEFAULT_MAX_DEPTH: usize = 256;
+
 impl XmlDeserializer {
     pub fn deserialize(xml_bytes: &[u8], root_schema: Arc<ModelSchema>) -> Result<PolyValue> {
+        Self::deserialize_with_limit(xml_bytes, root_schema, DEFAULT_MAX_DEPTH)
+    }
+
+    pub fn deserialize_with_limit(
+        xml_bytes: &[u8],
+        root_schema: Arc<ModelSchema>,
+        max_depth: usize,
+    ) -> Result<PolyValue> {
         let mut reader = Reader::from_reader(xml_bytes);
         reader.config_mut().trim_text(true);
 
@@ -83,6 +93,12 @@ impl XmlDeserializer {
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
+                    if stack.len() >= max_depth {
+                        return Err(PolyXmlError::MaxDepthExceeded {
+                            max_depth,
+                            current: stack.len() + 1,
+                        });
+                    }
                     let local_name = e.local_name().as_ref().to_vec();
                     let is_nil = is_nil_element(e);
 
@@ -212,11 +228,12 @@ impl XmlDeserializer {
                     }
                 }
                 Ok(Event::Text(ref e)) => {
+                    let unescaped = e.unescape().map_err(PolyXmlError::XmlError)?;
                     if active_scalar_field.is_some() {
-                        text_buf.extend_from_slice(e.as_ref());
+                        text_buf.extend_from_slice(unescaped.as_bytes());
                     } else if let Some(frame) = stack.last_mut() {
                         if frame.schema.text_field.is_some() {
-                            frame.frame_text_buf.extend_from_slice(e.as_ref());
+                            frame.frame_text_buf.extend_from_slice(unescaped.as_bytes());
                         }
                     }
                 }
@@ -291,7 +308,8 @@ impl XmlDeserializer {
             if let Some(&field_idx) = frame.schema.attribute_map.get(key.as_ref()) {
                 let field = &frame.schema.fields[field_idx];
                 if let ValueType::Scalar(ref st) = field.val_type {
-                    let val = ValueConverter::parse_scalar(st, &attr.value, &field.name)?;
+                    let unescaped = attr.unescape_value().map_err(PolyXmlError::XmlError)?;
+                    let val = ValueConverter::parse_scalar(st, unescaped.as_bytes(), &field.name)?;
                     frame.scalar_values.insert(field_idx, val);
                 }
             }

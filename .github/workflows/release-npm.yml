@@ -1,0 +1,86 @@
+name: Release Node.js Addon (npm)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: npx @napi-rs/cli build --platform --target x86_64-unknown-linux-gnu --manifest-path crates/polyxml-js/Cargo.toml
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            build: npx @napi-rs/cli build --platform --target x86_64-apple-darwin --manifest-path crates/polyxml-js/Cargo.toml
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            build: npx @napi-rs/cli build --platform --target aarch64-apple-darwin --manifest-path crates/polyxml-js/Cargo.toml
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            build: npx @napi-rs/cli build --platform --target x86_64-pc-windows-msvc --manifest-path crates/polyxml-js/Cargo.toml
+
+    runs-on: ${{ matrix.settings.host }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Dependencies
+        run: npm install -g @napi-rs/cli
+
+      - name: Build Native Module
+        run: ${{ matrix.settings.build }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: crates/polyxml-js/*.node
+          if-no-files-found: ignore
+
+  publish:
+    name: Publish to npm
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: crates/polyxml-js
+          pattern: bindings-*
+          merge-multiple: true
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NODE_AUTH_TOKEN" ]; then
+            cd crates/polyxml-js && npm publish --access public --dry-run
+          else
+            echo "NPM_TOKEN not configured; skipping npm publish"
+          fi
