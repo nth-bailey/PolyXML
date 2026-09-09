@@ -146,6 +146,7 @@ let schema = ModelSchema::builder("User")
 let xml = br#"<User id="42"><name>Alice</name></User>"#;
 let value = deserialize(xml, Arc::clone(&schema))?;
 ```
+👉 **[Read the Full Rust Guide & Advanced Examples →](docs/guides/rust.md)**
 
 ### Python
 ```python
@@ -168,6 +169,7 @@ for item in polyxml.iterparse(open("large_catalog.xml", "rb").read(), Item, tag=
 # 3. Serialize model back to XML
 xml_bytes = polyxml.serialize(item, indent=2)
 ```
+👉 **[Read the Full Python (Dataclasses & Pydantic) Guide →](docs/guides/python.md)**
 
 ### Modern C++20
 ```cpp
@@ -181,6 +183,7 @@ auto schema = polyxml::SchemaBuilder("Sensor")
 auto val = polyxml::deserialize(R"(<Sensor id="101"><name>Gyro</name></Sensor>)", schema);
 std::string name = val.get("name")->as_string().value();
 ```
+👉 **[Read the Full Modern C++20 Guide & Examples →](docs/guides/cpp.md)**
 
 ### Go
 ```go
@@ -194,6 +197,7 @@ schema, _ := builder.Build()
 val, err := polyxml.Deserialize(xmlBytes, schema)
 name, _ := val.GetField("name").GetString()
 ```
+👉 **[Read the Full Go Guide & Struct Adapters →](docs/guides/go.md)**
 
 ### TypeScript / Node.js
 ```typescript
@@ -209,6 +213,7 @@ const schema = {
 
 const obj = deserialize('<Item id="7"><name>Motor</name></Item>', schema);
 ```
+👉 **[Read the Full TypeScript & Node.js Guide →](docs/guides/node.md)**
 
 ### Java 22+ (Project Panama FFI)
 ```java
@@ -222,6 +227,7 @@ try (var schema = new PolyXML.SchemaBuilder("Sensor")
     System.out.println("PolyXML Native Version: " + PolyXML.version());
 }
 ```
+👉 **[Read the Full Java 22 Panama Guide →](docs/guides/java.md)**
 
 ---
 
