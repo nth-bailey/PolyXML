@@ -13,6 +13,18 @@ use polyxml_core::value::PolyValue;
 // Global thread-safe schema cache keyed by Python type pointer
 static SCHEMA_CACHE: RwLock<Option<HashMap<usize, (Arc<ModelSchema>, PyObject)>>> =
     RwLock::new(None);
+// Cache keyed by schema name to resolve nested Python types during deserialization
+static CLASS_BY_SCHEMA: RwLock<Option<HashMap<String, PyObject>>> = RwLock::new(None);
+
+fn lookup_py_class<'py>(py: Python<'py>, schema_name: &str) -> Option<Bound<'py, PyAny>> {
+    let class_map = CLASS_BY_SCHEMA.read().unwrap_or_else(|p| p.into_inner());
+    if let Some(ref map) = *class_map {
+        if let Some(cls_obj) = map.get(schema_name) {
+            return Some(cls_obj.bind(py).clone());
+        }
+    }
+    None
+}
 
 fn resolve_scalar_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<ScalarType> {
     let type_name: String = type_obj
@@ -193,6 +205,12 @@ fn get_or_create_schema<'py>(cls: &Bound<'py, PyType>) -> PyResult<(Arc<ModelSch
         );
     }
 
+    {
+        let mut class_map = CLASS_BY_SCHEMA.write().unwrap_or_else(|p| p.into_inner());
+        let map = class_map.get_or_insert_with(HashMap::new);
+        map.insert(schema.name.clone(), py_cls_obj.clone_ref(cls.py()));
+    }
+
     Ok((schema, py_cls_obj))
 }
 
@@ -211,20 +229,46 @@ fn poly_value_to_py<'py>(
         PolyValue::List(items) => {
             let py_list = PyList::empty_bound(py);
             if let ValueType::List(inner_type) = val_type {
+                let inner_cls = if let ValueType::Nested(ref s) = inner_type.as_ref() {
+                    lookup_py_class(py, &s.name)
+                } else {
+                    None
+                };
                 for item in items {
-                    let py_item = poly_value_to_py(py, item, inner_type, None)?;
+                    let py_item = poly_value_to_py(py, item, inner_type, inner_cls.as_ref())?;
                     py_list.append(py_item)?;
                 }
             }
             Ok(py_list.into_any().unbind())
         }
         PolyValue::Object(map) => {
-            if let Some(target_cls) = cls {
+            let effective_cls = match cls {
+                Some(c) => Some(c.clone()),
+                None => {
+                    if let ValueType::Nested(ref s) = val_type {
+                        lookup_py_class(py, &s.name)
+                    } else {
+                        None
+                    }
+                }
+            };
+
+            if let Some(ref target_cls) = effective_cls {
                 let kwargs = PyDict::new_bound(py);
                 if let ValueType::Nested(ref schema) = val_type {
                     for field in &schema.fields {
                         if let Some(field_val) = map.get(&field.name) {
-                            let py_val = poly_value_to_py(py, field_val, &field.val_type, None)?;
+                            let field_cls = if let ValueType::Nested(ref s) = field.val_type {
+                                lookup_py_class(py, &s.name)
+                            } else {
+                                None
+                            };
+                            let py_val = poly_value_to_py(
+                                py,
+                                field_val,
+                                &field.val_type,
+                                field_cls.as_ref(),
+                            )?;
                             kwargs.set_item(&field.name, py_val)?;
                         }
                     }
