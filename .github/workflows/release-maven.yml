@@ -1,0 +1,63 @@
+name: Release Java Package (Maven Central)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish to Maven Central
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync Tag Version Across Manifests
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_VER="${GITHUB_REF_NAME#v}"
+            echo "Synchronizing version from tag to: $TAG_VER"
+            python scripts/sync_version.py --set "$TAG_VER"
+          fi
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Native polyxml-c Library
+        run: cargo build --release -p polyxml-c
+
+      - name: Setup Java 22 & GPG Key
+        uses: actions/setup-java@v4
+        with:
+          java-version: '22'
+          distribution: 'temurin'
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+
+      - name: Deploy to Maven Central (Sonatype Central Portal)
+        shell: bash
+        run: |
+          cd bindings/java
+          if [ -n "${{ secrets.MAVEN_CENTRAL_USERNAME }}" ] && [ -n "${{ secrets.MAVEN_GPG_PRIVATE_KEY }}" ]; then
+            echo "Deploying release to Maven Central..."
+            mvn --batch-mode deploy -P release -DskipTests
+          else
+            echo "Maven Central credentials or GPG key not configured; running verify dry-run..."
+            mvn --batch-mode package -DskipTests
+          fi
