@@ -72,7 +72,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v5
 
       - name: Build and Install PolyXML Python Extension
         working-directory: crates/polyxml-python
@@ -201,4 +201,6 @@ jobs:
 
       - name: Run Maven Tests
         working-directory: bindings/java
-        run: mvn test -Djava.library.path=${{ github.workspace }}/target/release
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/target/release
+        run: mvn test -DargLine="--enable-native-access=ALL-UNNAMED -Djava.library.path=${{ github.workspace }}/target/release"

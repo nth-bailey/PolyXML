@@ -44,7 +44,6 @@ Issues = "https://github.com/nth-bailey/PolyXML/issues"
 features = ["pyo3/extension-module"]
 python-source = "python"
 module-name = "polyxml._polyxml"
-compatibility = "abi3-py312"
 strip = true
 
 [tool.pytest.ini_options]
