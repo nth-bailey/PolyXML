@@ -121,9 +121,12 @@ jobs:
         run: |
           cd crates/polyxml-js
           if [ -n "$NODE_AUTH_TOKEN" ]; then
-            echo "Publishing to npm using NPM_TOKEN with provenance..."
-            npm publish --access public --provenance
+            echo "Attempting publish with NPM_TOKEN..."
+            NODE_AUTH_TOKEN="$NODE_AUTH_TOKEN" npm publish --access public --provenance || {
+              echo "Token publish failed; attempting tokenless npm Trusted Publishing (OIDC)..."
+              NODE_AUTH_TOKEN="" npm publish --access public --provenance
+            }
           else
-            echo "Attempting tokenless publish via npm Trusted Publishing (OIDC)..."
+            echo "Publishing via tokenless npm Trusted Publishing (OIDC)..."
             npm publish --access public --provenance
           fi
