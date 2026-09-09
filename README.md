@@ -87,7 +87,7 @@ While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critic
 | **TypeScript / Node** | [![npm](https://img.shields.io/npm/v/polyxml.svg?logo=npm&color=CB3837&label=npm)](https://www.npmjs.com/package/polyxml) | `npm install polyxml` | `napi-rs` Native Addon | 🟢 Stable |
 | **Java** | [![Maven Central](https://img.shields.io/maven-central/v/io.github.nth-bailey/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven)](https://central.sonatype.com/artifact/io.github.nth-bailey/polyxml) | `<artifactId>polyxml</artifactId>` | Java 22+ Panama FFI | 🟢 Stable |
 | **Go** | [![Go Reference](https://pkg.go.dev/badge/github.com/nth-bailey/PolyXML/bindings/go.svg)](https://pkg.go.dev/github.com/nth-bailey/PolyXML/bindings/go) | `go get github.com/nth-bailey/PolyXML/bindings/go` | Cgo (`polyxml.h`) | 🟢 Stable |
-| **Modern C++20** | `bindings/cpp` (`polyxml_cpp`) | CMake `target_link_libraries` | Header-Only C++20 | 🟢 Stable |
+| **Modern C++20 / C** | `bindings/cpp` / [Conan](conan/) (`polyxml`) | `conan install --requires="polyxml/0.1.0"` | Header-Only C++20 & Native Lib | 🟢 Stable |
 
 ---
 
