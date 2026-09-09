@@ -23,6 +23,17 @@ All contributors and participants agree to abide by our [Code of Conduct](CODE_O
 
 ## 3. Workflow & Verification
 
+### Git Hooks (Recommended)
+
+To run automated formatting, linting, and version parity checks locally before committing:
+```bash
+# Enable repository git hooks (zero external dependencies):
+git config core.hooksPath .githooks
+
+# Or, if using the Python pre-commit framework:
+pre-commit install
+```
+
 Before submitting any Pull Request, ensure the respective checks pass:
 
 ### Rust Core & C-ABI

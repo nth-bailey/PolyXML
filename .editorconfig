@@ -1,0 +1,66 @@
+﻿# EditorConfig is awesome: https://EditorConfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Rust
+[*.rs]
+indent_style = space
+indent_size = 4
+max_line_length = 100
+
+# Python
+[*.py]
+indent_style = space
+indent_size = 4
+max_line_length = 100
+
+# JavaScript & TypeScript
+[*.{js,ts,jsx,tsx,json}]
+indent_style = space
+indent_size = 2
+
+# Java
+[*.java]
+indent_style = space
+indent_size = 4
+
+# C & C++
+[*.{c,h,cpp,hpp,cc,hh}]
+indent_style = space
+indent_size = 4
+
+# Go
+[*.go]
+indent_style = tab
+indent_size = 4
+
+# XML / HTML / SVG
+[*.{xml,html,svg}]
+indent_style = space
+indent_size = 2
+
+# YAML / TOML
+[*.{yml,yaml,toml}]
+indent_style = space
+indent_size = 2
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+
+# Makefiles & CMake
+[Makefile]
+indent_style = tab
+
+[CMakeLists.txt]
+indent_style = space
+indent_size = 4

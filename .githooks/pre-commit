@@ -1,0 +1,71 @@
+#!/bin/sh
+set -e
+
+# Export standard toolchain paths if not in PATH (Windows & Unix support)
+if [ -n "$USERPROFILE" ]; then
+    export PATH="$USERPROFILE/.rustup/toolchains/stable-x86_64-pc-windows-msvc/bin:$USERPROFILE/.cargo/bin:$PATH"
+fi
+if [ -n "$HOME" ]; then
+    export PATH="$HOME/.cargo/bin:$PATH"
+fi
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo -e "${BLUE}[git-hook: pre-commit]${NC} Running pre-commit validation checks..."
+
+# 1. Multi-Language Version Parity Check
+echo -e "${BLUE}[1/3] Checking multi-language version parity across manifests...${NC}"
+if command -v uv >/dev/null 2>&1; then
+    uv run python scripts/sync_version.py --check || {
+        echo -e "${RED}[FAIL] Version parity check failed! Run 'python scripts/sync_version.py --set <version>' to fix.${NC}"
+        exit 1
+    }
+    echo -e "${GREEN}[OK] Version parity confirmed.${NC}"
+elif command -v python3 >/dev/null 2>&1; then
+    python3 scripts/sync_version.py --check || exit 1
+    echo -e "${GREEN}[OK] Version parity confirmed.${NC}"
+elif command -v python >/dev/null 2>&1; then
+    python scripts/sync_version.py --check || exit 1
+    echo -e "${GREEN}[OK] Version parity confirmed.${NC}"
+else
+    echo -e "${YELLOW}[SKIP] Python/uv not found; skipping version check.${NC}"
+fi
+
+# 2. Rust Code Formatting Check
+echo -e "${BLUE}[2/3] Checking Rust code formatting (cargo fmt)...${NC}"
+if command -v cargo >/dev/null 2>&1; then
+    cargo fmt --all -- --check || {
+        echo -e "${RED}[FAIL] Rust code formatting check failed! Run 'cargo fmt --all' to fix.${NC}"
+        exit 1
+    }
+    echo -e "${GREEN}[OK] Rust formatting clean.${NC}"
+else
+    echo -e "${YELLOW}[SKIP] Cargo not found in PATH; skipping cargo fmt.${NC}"
+fi
+
+# 3. Python Linting & Formatting (Ruff)
+echo -e "${BLUE}[3/3] Checking Python code quality (ruff)...${NC}"
+if command -v uvx >/dev/null 2>&1; then
+    uvx ruff check crates/polyxml-python/python crates/polyxml-python/tests || {
+        echo -e "${RED}[FAIL] Ruff lint failed! Run 'uvx ruff check --fix' to auto-fix.${NC}"
+        exit 1
+    }
+    uvx ruff format --check crates/polyxml-python/python crates/polyxml-python/tests || {
+        echo -e "${RED}[FAIL] Ruff format failed! Run 'uvx ruff format' to auto-format.${NC}"
+        exit 1
+    }
+    echo -e "${GREEN}[OK] Python linting and formatting clean.${NC}"
+elif command -v ruff >/dev/null 2>&1; then
+    ruff check crates/polyxml-python/python crates/polyxml-python/tests || exit 1
+    ruff format --check crates/polyxml-python/python crates/polyxml-python/tests || exit 1
+    echo -e "${GREEN}[OK] Python linting and formatting clean.${NC}"
+else
+    echo -e "${YELLOW}[SKIP] Ruff / uvx not found; skipping Python lint.${NC}"
+fi
+
+echo -e "${GREEN}[SUCCESS] All pre-commit checks passed cleanly!${NC}"
+exit 0

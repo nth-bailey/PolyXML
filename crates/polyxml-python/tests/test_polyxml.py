@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
 
-import polyxml
 import pytest
 from pydantic import BaseModel, Field
+
+import polyxml
 
 
 def test_version():
@@ -86,7 +87,9 @@ class PydanticDevice(BaseModel):
 
 
 def test_pydantic_model():
-    xml = '<PydanticDevice sn="SN-88231"><model>AeroCore</model><power>120.5</power></PydanticDevice>'
+    xml = (
+        '<PydanticDevice sn="SN-88231"><model>AeroCore</model><power>120.5</power></PydanticDevice>'
+    )
     res = polyxml.deserialize(xml, PydanticDevice)
     assert res.serial == "SN-88231"
     assert res.model == "AeroCore"

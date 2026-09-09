@@ -1,0 +1,41 @@
+﻿# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.node$'
+      - id: end-of-file-fixer
+        exclude: '\.node$'
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^crates/polyxml-python/
+      - id: ruff-format
+        files: ^crates/polyxml-python/
+
+  - repo: local
+    hooks:
+      - id: version-parity
+        name: Multi-language version parity check
+        entry: python scripts/sync_version.py --check
+        language: system
+        pass_filenames: false
+        files: ^(Cargo\.toml|crates/polyxml-python/pyproject\.toml|crates/polyxml-js/package\.json|bindings/java/pom\.xml|bindings/cpp/CMakeLists\.txt)$
+
+      - id: cargo-fmt
+        name: Rust format check (cargo fmt)
+        entry: cargo fmt --all -- --check
+        language: system
+        pass_filenames: false
+        files: \.rs$
