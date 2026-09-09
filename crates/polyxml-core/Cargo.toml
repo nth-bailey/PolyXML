@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+readme = "README.md"
 description = "Pure Rust high-performance streaming XML data-binding core engine"
 keywords = ["xml", "deserializer", "serializer", "data-binding", "quick-xml"]
 categories = ["parsing", "encoding"]
