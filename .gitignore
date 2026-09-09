@@ -30,3 +30,15 @@ htmlcov/
 *.swo
 .DS_Store
 Thumbs.db
+# Documentation
+site/
+
+# Node / napi-rs
+node_modules/
+*.node
+
+# CMake / C++
+bindings/cpp/build/
+
+# Java / Maven
+bindings/java/target/

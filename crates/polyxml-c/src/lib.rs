@@ -1,4 +1,4 @@
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::sync::Arc;
 
@@ -283,6 +283,38 @@ pub unsafe extern "C" fn polyxml_value_get_string(
     } else {
         PolyXmlErrorCode::ErrScalar
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn polyxml_value_get_list_len(
+    val: *const PolyXmlValue,
+    out_len: *mut usize,
+) -> PolyXmlErrorCode {
+    if val.is_null() || out_len.is_null() {
+        return PolyXmlErrorCode::ErrNullPtr;
+    }
+    if let Some(l) = (*val).0.as_list() {
+        *out_len = l.len();
+        PolyXmlErrorCode::Ok
+    } else {
+        PolyXmlErrorCode::ErrScalar
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn polyxml_value_get_list_item(
+    val: *const PolyXmlValue,
+    idx: usize,
+) -> *const PolyXmlValue {
+    if val.is_null() {
+        return std::ptr::null();
+    }
+    if let Some(l) = (*val).0.as_list() {
+        if let Some(item) = l.get(idx) {
+            return item as *const PolyValue as *const PolyXmlValue;
+        }
+    }
+    std::ptr::null()
 }
 
 #[no_mangle]

@@ -1,0 +1,49 @@
+name: Bug Report
+description: Report an issue, parse error, or regression in PolyXML
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill out the sections below.
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language Ecosystem
+      description: In which language binding did the issue occur?
+      options:
+        - Rust (polyxml-core)
+        - Python (polyxml)
+        - C++ (polyxml.hpp)
+        - Go (polyxml)
+        - TypeScript / Node.js
+        - Java (Project Panama)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem Description
+      description: What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal Reproducible Example
+      description: Provide the XML document and code snippet that reproduces the issue.
+      render: xml
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS version, compiler/runtime versions (e.g. Rust 1.80, Python 3.12, Go 1.22).
+    validations:
+      required: true

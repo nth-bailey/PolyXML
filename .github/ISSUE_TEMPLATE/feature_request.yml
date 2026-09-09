@@ -1,0 +1,31 @@
+name: Feature Request
+description: Propose a new feature, optimization, or language binding for PolyXML
+title: "[FEAT]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an enhancement to PolyXML!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Use Case
+      description: What problem would this feature solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should this feature work? Include any proposed API signatures.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you've evaluated.

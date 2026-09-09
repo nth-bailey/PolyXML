@@ -1,5 +1,4 @@
 use std::io::Cursor;
-use std::sync::Arc;
 
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::Writer;

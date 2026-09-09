@@ -1,0 +1,88 @@
+[project]
+site_url = "https://nth-bailey.github.io/PolyXML/"
+site_name = "PolyXML"
+site_description = "The High-Performance, Polyglot XML Data-Binding Engine in Rust."
+repo_url = "https://github.com/nth-bailey/PolyXML"
+repo_name = "nth-bailey/PolyXML"
+edit_uri = "edit/main/docs/"
+
+nav = [
+  { "Get Started" = [
+      { "Introduction" = "index.md" },
+      { "Multi-Language Quickstart" = "quickstart.md" },
+      { "Architecture & Design" = "architecture.md" },
+      { "Performance & Benchmarks" = "benchmarks.md" },
+  ]},
+  { "Language Guides" = [
+      { "Rust (Native Core)" = "guides/rust.md" },
+      { "Python (Dataclasses & Pydantic)" = "guides/python.md" },
+      { "Modern C++20" = "guides/cpp.md" },
+      { "Go (Cgo)" = "guides/go.md" },
+      { "TypeScript & Node.js" = "guides/node.md" },
+      { "Java 22 (Panama FFI)" = "guides/java.md" },
+  ]},
+]
+
+[project.theme]
+language = "en"
+features = [
+  "announce.dismiss",
+  "content.action.edit",
+  "content.action.view",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.code.select",
+  "content.footnote.tooltips",
+  "content.tabs.link",
+  "content.tooltips",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.instant.prefetch",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+[project.markdown.extensions]
+toc = { permalink = "#" }
+admonition = {}
+codehilite = {}
+footnotes = {}
+attr_list = {}
+md_in_html = {}
+def_list = {}
+
+[project.markdown.extensions.pymdownx.superfences]
+custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" }
+]
+
+[project.markdown.extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+
+[project.markdown.extensions.pymdownx.tabbed]
+alternate_style = true
+combine_header_slug = true
+slugify = "pymdownx.slugs:slugify"

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/nth-bailey/PolyXML/discussions
+    about: Ask general questions, request advice, or discuss architecture.
+  - name: Security Vulnerabilities
+    url: https://github.com/nth-bailey/PolyXML/security/advisories
+    about: Report security issues privately.

@@ -6,7 +6,7 @@ use quick_xml::Reader;
 
 use crate::converters::ValueConverter;
 use crate::error::{PolyXmlError, Result};
-use crate::schema::{FieldKind, ModelSchema, ScalarType, ValueType};
+use crate::schema::{ModelSchema, ScalarType, ValueType};
 use crate::value::PolyValue;
 
 struct StackFrame {
