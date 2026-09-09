@@ -8,8 +8,13 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build:
+
     strategy:
       fail-fast: false
       matrix:
@@ -99,6 +104,9 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Update npm CLI
+        run: npm install -g npm@latest
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -110,8 +118,11 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          cd crates/polyxml-js
           if [ -n "$NODE_AUTH_TOKEN" ]; then
-            cd crates/polyxml-js && npm publish --access public
+            echo "Publishing to npm using NPM_TOKEN with provenance..."
+            npm publish --access public --provenance
           else
-            echo "NPM_TOKEN not configured; skipping npm publish"
+            echo "Attempting tokenless publish via npm Trusted Publishing (OIDC)..."
+            npm publish --access public --provenance
           fi
