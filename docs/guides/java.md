@@ -11,8 +11,8 @@ PolyXML uses Java 22+ **Project Panama (Foreign Function & Memory API)** for zer
 
 ```xml
 <dependency>
-    <groupId>io.polyxml</groupId>
-    <artifactId>polyxml-java</artifactId>
+    <groupId>io.github.nth-bailey</groupId>
+    <artifactId>polyxml</artifactId>
     <version>0.1.0</version>
 </dependency>
 ```

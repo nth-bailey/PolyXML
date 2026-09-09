@@ -30,4 +30,13 @@ test('PolyXML JavaScript bindings', (t) => {
   assert.strictEqual(val.name, 'Barometric Altimeter');
   assert.strictEqual(val.reading, 1013.25);
   assert.strictEqual(val.calibrated, true);
+
+  // Test serialization
+  const outBytes = polyxml.serialize('Sensor', val, schema, 2);
+  assert.ok(outBytes instanceof Uint8Array || Buffer.isBuffer(outBytes));
+  const outXml = Buffer.from(outBytes).toString('utf-8');
+  assert.ok(outXml.includes('id="101"'));
+  assert.ok(outXml.includes('<name>Barometric Altimeter</name>'));
+  assert.ok(outXml.includes('<reading>1013.25</reading>'));
+  assert.ok(outXml.includes('<calibrated>true</calibrated>'));
 });

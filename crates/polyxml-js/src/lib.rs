@@ -91,6 +91,58 @@ pub fn deserialize(
     poly_value_to_js(&env, &val)
 }
 
+fn js_to_poly_value(_env: &Env, val: JsUnknown, scalar_type: &str) -> Result<PolyValue> {
+    let val_type = val.get_type()?;
+    if val_type == napi::ValueType::Null || val_type == napi::ValueType::Undefined {
+        return Ok(PolyValue::Null);
+    }
+    match scalar_type {
+        "int" => {
+            let num = val.coerce_to_number()?;
+            Ok(PolyValue::Int(num.get_int64()?))
+        }
+        "float" => {
+            let num = val.coerce_to_number()?;
+            Ok(PolyValue::Float(num.get_double()?))
+        }
+        "bool" => {
+            let b = val.coerce_to_bool()?;
+            Ok(PolyValue::Bool(b.get_value()?))
+        }
+        _ => {
+            let s = val.coerce_to_string()?;
+            let utf8 = s.into_utf8()?;
+            Ok(PolyValue::String(utf8.as_str()?.to_string()))
+        }
+    }
+}
+
+#[napi]
+pub fn serialize(
+    env: Env,
+    root_name: String,
+    value: napi::JsObject,
+    schema: JsModelSchema,
+    indent: Option<u32>,
+) -> Result<Buffer> {
+    use std::collections::HashMap;
+
+    let mut map = HashMap::new();
+    for f in &schema.fields {
+        if value.has_named_property(&f.name)? {
+            let prop: JsUnknown = value.get_named_property(&f.name)?;
+            let pv = js_to_poly_value(&env, prop, &f.scalar_type)?;
+            map.insert(f.name.clone(), pv);
+        }
+    }
+    let poly_val = PolyValue::Object(map);
+    let model_schema = convert_js_schema(&schema);
+    let indent_opt = indent.map(|i| i as usize);
+    let bytes = polyxml::serialize(&root_name, &poly_val, &model_schema, indent_opt)
+        .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))?;
+    Ok(bytes.into())
+}
+
 #[napi]
 pub fn version() -> &'static str {
     "0.1.0"

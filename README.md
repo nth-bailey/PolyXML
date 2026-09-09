@@ -56,16 +56,17 @@ While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critic
 
 ---
 
-## Language Ecosystem Status
+## Language Ecosystem & Packages
 
-| Language | Module / Package | Interop Tech | Status |
-| :--- | :--- | :--- | :---: |
-| **Rust** | `crates/polyxml-core` | Native | 🟢 Core |
-| **Python** | `crates/polyxml-python` | PyO3 (`abi3-py312`) | 🟢 Native |
-| **C / C++** | `crates/polyxml-c` & `bindings/cpp` | Standard C-ABI / C++20 | 🟢 Native |
-| **Go** | `bindings/go` | Cgo (`#include "polyxml.h"`) | 🟢 Native |
-| **Java** | `bindings/java` | Java 22+ Project Panama FFI | 🟢 Native |
-| **TypeScript / Node** | `crates/polyxml-js` | `napi-rs` Native Addon | 🟢 Native |
+| Ecosystem / Language | Package / Registry | Installation | Interop Tech | Status |
+| :--- | :--- | :--- | :--- | :---: |
+| **Rust (Core)** | `polyxml` (crates.io) | `cargo add polyxml` | Native Zero-Copy | 🟢 Stable |
+| **Rust (C-ABI)** | `polyxml-c` (crates.io) | `cargo add polyxml-c` | C-ABI Shared Lib | 🟢 Stable |
+| **Python** | `polyxml` (PyPI) | `pip install polyxml` | PyO3 (`abi3-py312`) | 🟢 Stable |
+| **TypeScript / Node** | `polyxml` (npm) | `npm install polyxml` | `napi-rs` Native Addon | 🟢 Stable |
+| **Java** | `io.github.nth-bailey:polyxml` (Maven) | `<artifactId>polyxml</artifactId>` | Java 22+ Panama FFI | 🟢 Stable |
+| **Go** | `github.com/nth-bailey/PolyXML/bindings/go` | `go get github.com/nth-bailey/PolyXML/bindings/go` | Cgo (`polyxml.h`) | 🟢 Stable |
+| **Modern C++20** | `bindings/cpp` (`polyxml_cpp`) | CMake `target_link_libraries` | Header-Only C++20 | 🟢 Stable |
 
 ---
 

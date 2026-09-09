@@ -31,7 +31,7 @@ While web ecosystems shifted toward JSON and Protocol Buffers, mission-critical 
     Zero-overhead modern C++20 header-only wrapper (`polyxml.hpp`) with RAII memory management, designed for avionics, robotics, and defense.
 
 === "Go"
-    High-throughput Cgo wrapper providing `polyxml.Unmarshal` and `polyxml.Marshal`, replacing Go's slow reflection-based `encoding/xml`.
+    High-throughput Cgo wrapper providing `polyxml.Deserialize` and `polyxml.Serialize`, replacing Go's slow reflection-based `encoding/xml`.
 
 === "TypeScript & Node"
     Native Node.js addon compiled via `napi-rs` with full TypeScript definitions (`index.d.ts`), ideal for high-throughput microservices.
