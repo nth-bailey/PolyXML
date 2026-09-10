@@ -6,7 +6,66 @@ from enum import Enum
 
 import pytest
 from pydantic import BaseModel, Field
-from pyxsdata.models.datatype import XmlDate, XmlDateTime, XmlDuration, XmlTime
+
+try:
+    from pyxsdata.models.datatype import XmlDate, XmlDateTime, XmlDuration, XmlTime
+except ImportError:
+
+    class XmlDate:
+
+        def __init__(self, val: str):
+            self.val = val
+
+        @classmethod
+        def from_string(cls, val: str):
+            return cls(val)
+
+        def __eq__(self, other):
+            return isinstance(other, XmlDate) and self.val == other.val
+
+        def __str__(self):
+            return self.val
+
+    class XmlDateTime:
+
+        def __init__(self, val: str):
+            self.val = val
+
+        @classmethod
+        def from_string(cls, val: str):
+            return cls(val)
+
+        def __eq__(self, other):
+            return isinstance(other, XmlDateTime) and self.val == other.val
+
+        def __str__(self):
+            return self.val
+
+    class XmlTime:
+
+        def __init__(self, val: str):
+            self.val = val
+
+        @classmethod
+        def from_string(cls, val: str):
+            return cls(val)
+
+        def __eq__(self, other):
+            return isinstance(other, XmlTime) and self.val == other.val
+
+        def __str__(self):
+            return self.val
+
+    class XmlDuration:
+
+        def __init__(self, val: str):
+            self.val = val
+
+        def __eq__(self, other):
+            return isinstance(other, XmlDuration) and self.val == other.val
+
+        def __str__(self):
+            return self.val
 
 import polyxml
 

@@ -372,48 +372,28 @@ fn convert_scalar_to_py<'py>(
                         let dec = decimal_cls.call1((s.as_str(),))?;
                         return Ok(dec.unbind());
                     }
-                    "XmlDate" => {
+                    "XmlDate" | "XmlDateTime" | "XmlTime" => {
+                        if let Ok(val) = target_type.call_method1("from_string", (s.as_str(),)) {
+                            return Ok(val.unbind());
+                        }
                         if let Ok(datatype_mod) = py.import_bound("pyxsdata.models.datatype") {
-                            if let Ok(cls) = datatype_mod.getattr("XmlDate") {
+                            if let Ok(cls) = datatype_mod.getattr(type_name.as_str()) {
                                 if let Ok(val) = cls.call_method1("from_string", (s.as_str(),)) {
                                     return Ok(val.unbind());
                                 }
                             }
                         }
+                        if let Ok(val) = target_type.call1((s.as_str(),)) {
+                            return Ok(val.unbind());
+                        }
+                        let mod_name = match type_name.as_str() {
+                            "XmlDate" => "date",
+                            "XmlDateTime" => "datetime",
+                            "XmlTime" => "time",
+                            _ => "",
+                        };
                         if let Ok(datetime_mod) = py.import_bound("datetime") {
-                            if let Ok(cls) = datetime_mod.getattr("date") {
-                                if let Ok(val) = cls.call_method1("fromisoformat", (s.as_str(),)) {
-                                    return Ok(val.unbind());
-                                }
-                            }
-                        }
-                    }
-                    "XmlDateTime" => {
-                        if let Ok(datatype_mod) = py.import_bound("pyxsdata.models.datatype") {
-                            if let Ok(cls) = datatype_mod.getattr("XmlDateTime") {
-                                if let Ok(val) = cls.call_method1("from_string", (s.as_str(),)) {
-                                    return Ok(val.unbind());
-                                }
-                            }
-                        }
-                        if let Ok(datetime_mod) = py.import_bound("datetime") {
-                            if let Ok(cls) = datetime_mod.getattr("datetime") {
-                                if let Ok(val) = cls.call_method1("fromisoformat", (s.as_str(),)) {
-                                    return Ok(val.unbind());
-                                }
-                            }
-                        }
-                    }
-                    "XmlTime" => {
-                        if let Ok(datatype_mod) = py.import_bound("pyxsdata.models.datatype") {
-                            if let Ok(cls) = datatype_mod.getattr("XmlTime") {
-                                if let Ok(val) = cls.call_method1("from_string", (s.as_str(),)) {
-                                    return Ok(val.unbind());
-                                }
-                            }
-                        }
-                        if let Ok(datetime_mod) = py.import_bound("datetime") {
-                            if let Ok(cls) = datetime_mod.getattr("time") {
+                            if let Ok(cls) = datetime_mod.getattr(mod_name) {
                                 if let Ok(val) = cls.call_method1("fromisoformat", (s.as_str(),)) {
                                     return Ok(val.unbind());
                                 }
@@ -421,6 +401,9 @@ fn convert_scalar_to_py<'py>(
                         }
                     }
                     "XmlDuration" => {
+                        if let Ok(val) = target_type.call1((s.as_str(),)) {
+                            return Ok(val.unbind());
+                        }
                         if let Ok(datatype_mod) = py.import_bound("pyxsdata.models.datatype") {
                             if let Ok(cls) = datatype_mod.getattr("XmlDuration") {
                                 if let Ok(val) = cls.call1((s.as_str(),)) {

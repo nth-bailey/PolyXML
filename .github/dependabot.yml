@@ -19,6 +19,17 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      - dependency-name: "quick-xml"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "pyo3"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "napi"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "napi-derive"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "criterion"
+        update-types: ["version-update:semver-major"]
     groups:
       cargo:
         patterns:
