@@ -1,4 +1,4 @@
-﻿version: 2
+version: 2
 updates:
   # GitHub Actions workflows
   - package-ecosystem: "github-actions"
@@ -7,6 +7,10 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   # Rust Cargo dependencies
   - package-ecosystem: "cargo"
@@ -15,6 +19,10 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      cargo:
+        patterns:
+          - "*"
 
   # Python dependencies (polyxml-python)
   - package-ecosystem: "pip"
@@ -23,6 +31,10 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore(deps-python)"
+    groups:
+      python:
+        patterns:
+          - "*"
 
   # Node.js dependencies (polyxml-js)
   - package-ecosystem: "npm"
@@ -31,6 +43,10 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore(deps-js)"
+    groups:
+      npm:
+        patterns:
+          - "*"
 
   # Java dependencies (bindings/java)
   - package-ecosystem: "maven"
@@ -39,3 +55,8 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore(deps-java)"
+    groups:
+      maven:
+        patterns:
+          - "*"
+
