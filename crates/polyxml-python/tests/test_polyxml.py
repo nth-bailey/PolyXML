@@ -1,7 +1,12 @@
+import io
+import pathlib
 from dataclasses import dataclass, field
+from decimal import Decimal
+from enum import Enum
 
 import pytest
 from pydantic import BaseModel, Field
+from pyxsdata.models.datatype import XmlDate, XmlDateTime, XmlDuration, XmlTime
 
 import polyxml
 
@@ -160,3 +165,108 @@ def test_serialize_pydantic():
     assert b'sn="SN-999"' in xml_bytes
     assert b"<model>AeroVibe</model>" in xml_bytes
     assert b"<power>250" in xml_bytes
+
+
+class Status(Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+class StatusCode(Enum):
+    OK = 200
+    NOT_FOUND = 404
+
+
+class NamedStatus(Enum):
+    FIRST = 1
+    SECOND = 2
+
+
+@dataclass
+class RichTypesItem:
+    rate: Decimal = field(metadata={"type": "Element"})
+    status: Status = field(metadata={"type": "Element"})
+    code: StatusCode = field(metadata={"type": "Element"})
+    named: NamedStatus = field(metadata={"type": "Element"})
+    date: XmlDate = field(metadata={"type": "Element"})
+    datetime: XmlDateTime = field(metadata={"type": "Element"})
+    time: XmlTime = field(metadata={"type": "Element"})
+    duration: XmlDuration = field(metadata={"type": "Element"})
+    tag: str = field(init=False, metadata={"type": "Element"})
+
+
+def test_rich_types_deserialization_and_serialization():
+    xml = (
+        b"<RichTypesItem>"
+        b"<rate>123.456789</rate>"
+        b"<status>active</status>"
+        b"<code>200</code>"
+        b"<named>FIRST</named>"
+        b"<date>2026-09-10</date>"
+        b"<datetime>2026-09-10T14:30:00Z</datetime>"
+        b"<time>14:30:00</time>"
+        b"<duration>P1DT2H</duration>"
+        b"<tag>calculated_val</tag>"
+        b"</RichTypesItem>"
+    )
+    res = polyxml.deserialize(xml, RichTypesItem)
+    assert res.rate == Decimal("123.456789")
+    assert res.status == Status.ACTIVE
+    assert res.code == StatusCode.OK
+    assert res.named == NamedStatus.FIRST
+    assert res.date == XmlDate.from_string("2026-09-10")
+    assert res.datetime == XmlDateTime.from_string("2026-09-10T14:30:00Z")
+    assert res.time == XmlTime.from_string("14:30:00")
+    assert res.duration == XmlDuration("P1DT2H")
+    assert res.tag == "calculated_val"
+
+    # Serialize back
+    serialized = polyxml.serialize(res)
+    assert b"<rate>123.456789</rate>" in serialized
+    assert b"<status>active</status>" in serialized
+    assert b"<code>200</code>" in serialized
+    assert b"<date>2026-09-10</date>" in serialized
+    assert b"<tag>calculated_val</tag>" in serialized
+
+
+def test_to_bytes_pathlib_and_file_str(tmp_path: pathlib.Path):
+    xml_file = tmp_path / "item.xml"
+    xml_file.write_bytes(
+        b'<SimpleItem id="1"><name>A</name><price>1.0</price><active>1</active></SimpleItem>'
+    )
+
+    # pathlib.Path
+    res1 = polyxml.deserialize(xml_file, SimpleItem)
+    assert res1.id == 1
+
+    # str file path
+    res2 = polyxml.deserialize(str(xml_file), SimpleItem)
+    assert res2.id == 1
+
+    # str raw xml without '<' as first char (e.g. whitespace before, or plain xml)
+    raw_str_not_file = (
+        "   <SimpleItem id='2'><name>B</name><price>2.0</price><active>0</active></SimpleItem>"
+    )
+    res3 = polyxml.deserialize(raw_str_not_file, SimpleItem)
+    assert res3.id == 2
+
+    # str raw xml that doesn't start with '<' and is not a file
+    # (e.g. invalid string) - should fail during parsing or return encoded
+    with pytest.raises(ValueError):
+        polyxml.deserialize("non_existent_file.xml", SimpleItem)
+
+
+def test_to_bytes_streams():
+    xml = b'<SimpleItem id="10"><name>StreamItem</name><price>3.5</price><active>true</active></SimpleItem>'
+    # BytesIO
+    res_bytes = polyxml.deserialize(io.BytesIO(xml), SimpleItem)
+    assert res_bytes.id == 10
+
+    # StringIO
+    res_str = polyxml.deserialize(io.StringIO(xml.decode("utf-8")), SimpleItem)
+    assert res_str.id == 10
+
+
+def test_to_bytes_invalid_type():
+    with pytest.raises(TypeError, match="Unsupported XML source type"):
+        polyxml.deserialize(12345, SimpleItem)  # type: ignore[arg-type]

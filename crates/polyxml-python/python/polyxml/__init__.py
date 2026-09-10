@@ -1,10 +1,12 @@
 """PolyXML: High-performance, polyglot XML data-binding engine."""
 
+import pathlib
 from collections.abc import Iterator
+from typing import IO
 
-from polyxml._polyxml import (
+from polyxml._polyxml import (  # type: ignore[import-not-found]
     deserialize as _deserialize,
-)  # type: ignore[import-not-found]
+)
 from polyxml._polyxml import (
     iterparse as _iterparse,
 )
@@ -18,39 +20,55 @@ from polyxml._polyxml import (
 __version__: str = _version()
 
 
-def deserialize[T](source: bytes | str, target_type: type[T]) -> T:
-    """Deserialize XML bytes or string into a Python dataclass or model instance.
+def _to_bytes(source: bytes | str | pathlib.Path | IO[bytes] | IO[str]) -> bytes:
+    if isinstance(source, bytes):
+        return source
+    if isinstance(source, str):
+        if source.lstrip().startswith("<"):
+            return source.encode("utf-8")
+        path = pathlib.Path(source)
+        if path.is_file():
+            return path.read_bytes()
+        return source.encode("utf-8")
+    if isinstance(source, pathlib.Path):
+        return source.read_bytes()
+    if hasattr(source, "read"):
+        data = source.read()
+        return data.encode("utf-8") if isinstance(data, str) else data
+    raise TypeError(f"Unsupported XML source type: {type(source)}")
+
+
+def deserialize[T](
+    source: bytes | str | pathlib.Path | IO[bytes] | IO[str], target_type: type[T]
+) -> T:
+    """Deserialize XML bytes, string, file path, or stream into a typed model.
 
     Args:
-        source: XML content as raw bytes or a string.
+        source: XML content as raw bytes, string, Path, or file stream.
         target_type: The target dataclass or model class.
 
     Returns:
         The deserialized model instance.
     """
-    if isinstance(source, str):
-        source = source.encode("utf-8")
-    return _deserialize(source, target_type)
+    return _deserialize(_to_bytes(source), target_type)
 
 
 def iterparse[T](
-    source: bytes | str,
+    source: bytes | str | pathlib.Path | IO[bytes] | IO[str],
     target_type: type[T],
     tag: str | None = None,
 ) -> Iterator[T]:
     """Stream and deserialize XML elements one-by-one with O(1) constant memory.
 
     Args:
-        source: XML content as raw bytes or a string.
+        source: XML content as raw bytes, string, Path, or file stream.
         target_type: The target dataclass or model class for each element.
         tag: Optional XML element tag name to match. Defaults to the model schema name.
 
     Yields:
         Deserialized model instances as they are streamed.
     """
-    if isinstance(source, str):
-        source = source.encode("utf-8")
-    return _iterparse(source, target_type, tag)
+    return _iterparse(_to_bytes(source), target_type, tag)
 
 
 def serialize(obj: object, *, indent: int | None = None) -> bytes:
