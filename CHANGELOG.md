@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/nth-bailey/PolyXML/compare/v0.3.0...v0.4.0) (2026-09-10)
+
+
+### Features
+
+* upgrade quick-xml to 0.42, criterion to 0.8, and pyo3 to 0.29 ([440bb14](https://github.com/nth-bailey/PolyXML/commit/440bb1489286a0ddd97f04ca8dce3067bac271d8))
+
 # [0.3.0](https://github.com/nth-bailey/PolyXML/compare/v0.2.1...v0.3.0) (2026-09-10)
 
 
