@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/nth-bailey/PolyXML/compare/v0.2.1...v0.3.0) (2026-09-10)
+
+
+### Features
+
+* upgrade quick-xml to 0.37, pyo3 to 0.23, criterion to 0.7 and update dependabot rules ([5e25ff5](https://github.com/nth-bailey/PolyXML/commit/5e25ff522542fb258445a03080b9882f3866bfc5))
+
 ## [0.2.1](https://github.com/nth-bailey/PolyXML/compare/v0.2.0...v0.2.1) (2026-09-10)
 
 
