@@ -329,3 +329,20 @@ def test_to_bytes_streams():
 def test_to_bytes_invalid_type():
     with pytest.raises(TypeError, match="Unsupported XML source type"):
         polyxml.deserialize(12345, SimpleItem)  # type: ignore[arg-type]
+
+
+@dataclass
+class UnionWrapper:
+    child: None | ChildNode = field(
+        default=None, metadata={"type": "Element", "name": "child"}
+    )
+    count: int | None = field(default=None, metadata={"type": "Element"})
+
+
+def test_pep604_union_nested_dataclass():
+    xml = "<UnionWrapper><child><tag>Payload</tag></child><count>42</count></UnionWrapper>"
+    res = polyxml.deserialize(xml, UnionWrapper)
+    assert res.child is not None
+    assert res.child.tag == "Payload"
+    assert res.count == 42
+

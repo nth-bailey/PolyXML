@@ -31,8 +31,11 @@ pub enum PolyXmlError {
     #[error("Maximum XML recursion depth exceeded: current {current} >= limit {max_depth}")]
     MaxDepthExceeded { max_depth: usize, current: usize },
 
-    #[error("XML parsing or unescape error: {0}")]
+    #[error("XML parsing error: {0}")]
     XmlError(#[from] quick_xml::Error),
+
+    #[error("XML unescape error: {0}")]
+    EscapeError(#[from] quick_xml::escape::EscapeError),
 }
 
 pub type Result<T> = std::result::Result<T, PolyXmlError>;

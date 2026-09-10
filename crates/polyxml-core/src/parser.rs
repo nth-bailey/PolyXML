@@ -86,13 +86,40 @@ pub struct XmlDeserializer;
 fn is_nil_element(e: &BytesStart) -> bool {
     for attr in e.attributes().flatten() {
         let key = attr.key.local_name();
-        if (key.as_ref() == b"nil" || key.as_ref() == b"xsi:nil")
-            && (attr.value.as_ref() == b"true" || attr.value.as_ref() == b"1")
+        if (key.as_ref() == "nil" || key.as_ref() == "xsi:nil")
+            && (attr.value.as_ref() == "true" || attr.value.as_ref() == "1")
         {
             return true;
         }
     }
     false
+}
+
+fn append_general_ref(
+    e: &quick_xml::events::BytesRef,
+    active_scalar: bool,
+    text_buf: &mut Vec<u8>,
+    frame_text_buf: Option<&mut Vec<u8>>,
+) -> Result<()> {
+    let mut char_buf = [0u8; 4];
+    let resolved_bytes: &[u8] = if e.is_char_ref() {
+        if let Some(ch) = e.resolve_char_ref().map_err(PolyXmlError::XmlError)? {
+            ch.encode_utf8(&mut char_buf).as_bytes()
+        } else {
+            b""
+        }
+    } else if let Some(s) = quick_xml::escape::resolve_xml_entity(e.as_ref()) {
+        s.as_bytes()
+    } else {
+        e.as_ref().as_bytes()
+    };
+
+    if active_scalar {
+        text_buf.extend_from_slice(resolved_bytes);
+    } else if let Some(tb) = frame_text_buf {
+        tb.extend_from_slice(resolved_bytes);
+    }
+    Ok(())
 }
 
 pub const DEFAULT_MAX_DEPTH: usize = 256;
@@ -108,7 +135,6 @@ impl XmlDeserializer {
         max_depth: usize,
     ) -> Result<PolyValue> {
         let mut reader = Reader::from_reader(xml_bytes);
-        reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
 
         loop {
@@ -166,7 +192,10 @@ impl XmlDeserializer {
                     let is_nil = is_nil_element(e);
 
                     let current_schema = Arc::clone(&stack.last().unwrap().schema);
-                    if let Some(&field_idx) = current_schema.element_map.get(local_name.as_ref()) {
+                    if let Some(&field_idx) = current_schema
+                        .element_map
+                        .get(local_name.as_ref().as_bytes())
+                    {
                         let field = &current_schema.fields[field_idx];
                         match &field.val_type {
                             ValueType::Scalar(st) => {
@@ -210,7 +239,10 @@ impl XmlDeserializer {
                     let is_nil = is_nil_element(e);
 
                     let current_schema = Arc::clone(&stack.last().unwrap().schema);
-                    if let Some(&field_idx) = current_schema.element_map.get(local_name.as_ref()) {
+                    if let Some(&field_idx) = current_schema
+                        .element_map
+                        .get(local_name.as_ref().as_bytes())
+                    {
                         let field = &current_schema.fields[field_idx];
                         match &field.val_type {
                             ValueType::Scalar(_) => {
@@ -251,7 +283,7 @@ impl XmlDeserializer {
                     }
                 }
                 Ok(Event::Text(ref e)) => {
-                    let unescaped = e.unescape().map_err(PolyXmlError::XmlError)?;
+                    let unescaped = quick_xml::escape::unescape(e.as_ref())?;
                     if active_scalar_field.is_some() {
                         text_buf.extend_from_slice(unescaped.as_bytes());
                     } else if let Some(frame) = stack.last_mut() {
@@ -262,12 +294,16 @@ impl XmlDeserializer {
                 }
                 Ok(Event::CData(ref e)) => {
                     if active_scalar_field.is_some() {
-                        text_buf.extend_from_slice(e.as_ref());
+                        text_buf.extend_from_slice(e.as_ref().as_bytes());
                     } else if let Some(frame) = stack.last_mut() {
                         if let Some(ref mut tb) = frame.frame_text_buf {
-                            tb.extend_from_slice(e.as_ref());
+                            tb.extend_from_slice(e.as_ref().as_bytes());
                         }
                     }
+                }
+                Ok(Event::GeneralRef(ref e)) => {
+                    let frame_tb = stack.last_mut().and_then(|f| f.frame_text_buf.as_mut());
+                    append_general_ref(e, active_scalar_field.is_some(), &mut text_buf, frame_tb)?;
                 }
                 Ok(Event::End(ref e)) => {
                     if let Some((field_idx, ref scalar_type, is_list)) = active_scalar_field.take()
@@ -287,7 +323,10 @@ impl XmlDeserializer {
                         let instance = finished_frame.finish()?;
                         let parent = stack.last_mut().unwrap();
 
-                        if let Some(&field_idx) = parent.schema.element_map.get(local_name.as_ref())
+                        if let Some(&field_idx) = parent
+                            .schema
+                            .element_map
+                            .get(local_name.as_ref().as_bytes())
                         {
                             let field = &parent.schema.fields[field_idx];
                             if matches!(field.val_type, ValueType::List(_)) {
@@ -321,11 +360,15 @@ impl XmlDeserializer {
     pub(crate) fn parse_attributes(e: &BytesStart, frame: &mut StackFrame) -> Result<()> {
         for attr in e.attributes().flatten() {
             let key = attr.key.local_name();
-            if let Some(&field_idx) = frame.schema.attribute_map.get(key.as_ref()) {
+            if let Some(&field_idx) = frame.schema.attribute_map.get(key.as_ref().as_bytes()) {
                 let field = &frame.schema.fields[field_idx];
                 if let ValueType::Scalar(ref st) = field.val_type {
-                    let unescaped = attr.unescape_value().map_err(PolyXmlError::XmlError)?;
-                    let val = ValueConverter::parse_scalar(st, unescaped.as_bytes(), &field.name)?;
+                    let unescaped = quick_xml::escape::unescape(attr.value.as_ref())?;
+                    let val = ValueConverter::parse_scalar(
+                        st,
+                        unescaped.as_ref().as_bytes(),
+                        &field.name,
+                    )?;
                     frame.values[field_idx] = Some(val);
                 }
             }
@@ -344,8 +387,7 @@ pub struct XmlItemStream<R: std::io::BufRead> {
 
 impl<R: std::io::BufRead> XmlItemStream<R> {
     pub fn new(reader: R, schema: Arc<ModelSchema>, target_tag: &[u8]) -> Self {
-        let mut xml_reader = Reader::from_reader(reader);
-        xml_reader.config_mut().trim_text(true);
+        let xml_reader = Reader::from_reader(reader);
         Self {
             reader: xml_reader,
             schema,
@@ -361,7 +403,7 @@ impl<R: std::io::BufRead> XmlItemStream<R> {
             match self.reader.read_event_into(&mut self.buf) {
                 Ok(Event::Start(ref e)) => {
                     let local = e.local_name();
-                    if local.as_ref() == self.target_tag.as_slice() {
+                    if local.as_ref().as_bytes() == self.target_tag.as_slice() {
                         let item = XmlDeserializer::parse_sub_tree(
                             &mut self.reader,
                             Arc::clone(&self.schema),
@@ -373,7 +415,7 @@ impl<R: std::io::BufRead> XmlItemStream<R> {
                 }
                 Ok(Event::Empty(ref e)) => {
                     let local = e.local_name();
-                    if local.as_ref() == self.target_tag.as_slice() {
+                    if local.as_ref().as_bytes() == self.target_tag.as_slice() {
                         let mut frame = StackFrame::new(Arc::clone(&self.schema));
                         XmlDeserializer::parse_attributes(e, &mut frame)?;
                         return Ok(Some(frame.finish()?));

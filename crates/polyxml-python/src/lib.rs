@@ -11,6 +11,8 @@ use std::sync::{Arc, RwLock};
 use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
 use polyxml::value::PolyValue;
 
+type PyObject = Py<PyAny>;
+
 struct CachedFieldMeta {
     py_string: Py<PyString>,
     is_init: bool,
@@ -45,21 +47,31 @@ fn lookup_py_class<'py>(py: Python<'py>, schema_name: &str) -> Option<Bound<'py,
 }
 
 fn unwrap_optional_type<'py>(type_obj: &Bound<'py, PyAny>) -> Bound<'py, PyAny> {
-    if let Ok(origin) = type_obj.getattr("__origin__") {
+    let is_union = if let Ok(origin) = type_obj.getattr("__origin__") {
         if let Ok(origin_name) = origin.getattr("__name__") {
             let origin_str: String = origin_name.extract().unwrap_or_default();
-            if origin_str == "Union" || origin_str == "UnionType" {
-                if let Ok(args) = type_obj.getattr("__args__") {
-                    if let Ok(tuple) = args.downcast::<PyTuple>() {
-                        for arg in tuple.iter() {
-                            let arg_name: String = arg
-                                .getattr("__name__")
-                                .and_then(|n| n.extract())
-                                .unwrap_or_default();
-                            if arg_name != "NoneType" {
-                                return unwrap_optional_type(&arg);
-                            }
-                        }
+            origin_str == "Union" || origin_str == "UnionType"
+        } else {
+            false
+        }
+    } else {
+        type_obj
+            .get_type()
+            .name()
+            .map(|n| n == "UnionType")
+            .unwrap_or(false)
+    };
+
+    if is_union {
+        if let Ok(args) = type_obj.getattr("__args__") {
+            if let Ok(tuple) = args.cast::<PyTuple>() {
+                for arg in tuple.iter() {
+                    let arg_name: String = arg
+                        .getattr("__name__")
+                        .and_then(|n| n.extract())
+                        .unwrap_or_default();
+                    if arg_name != "NoneType" {
+                        return unwrap_optional_type(&arg);
                     }
                 }
             }
@@ -69,10 +81,10 @@ fn unwrap_optional_type<'py>(type_obj: &Bound<'py, PyAny>) -> Bound<'py, PyAny> 
 }
 
 fn is_enum_class<'py>(py: Python<'py>, cls: &Bound<'py, PyAny>) -> bool {
-    if let Ok(py_type) = cls.downcast::<PyType>() {
+    if let Ok(py_type) = cls.cast::<PyType>() {
         if let Ok(enum_module) = py.import("enum") {
             if let Ok(enum_cls) = enum_module.getattr("Enum") {
-                if let Ok(py_enum) = enum_cls.downcast::<PyType>() {
+                if let Ok(py_enum) = enum_cls.cast::<PyType>() {
                     return py_type.is_subclass(py_enum).unwrap_or(false);
                 }
             }
@@ -108,26 +120,44 @@ fn resolve_scalar_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<
 }
 
 fn resolve_value_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<ValueType> {
-    // Handle typing.Optional / Union
+    // Handle typing.Optional / Union and PEP 604 UnionType
+    let is_union = if let Ok(origin) = type_obj.getattr("__origin__") {
+        if let Ok(origin_name) = origin.getattr("__name__") {
+            let origin_str: String = origin_name.extract().unwrap_or_default();
+            origin_str == "Union" || origin_str == "UnionType"
+        } else {
+            false
+        }
+    } else {
+        type_obj
+            .get_type()
+            .name()
+            .map(|n| n == "UnionType")
+            .unwrap_or(false)
+    };
+
+    if is_union {
+        if let Ok(args) = type_obj.getattr("__args__") {
+            if let Ok(tuple) = args.cast_into::<PyTuple>() {
+                for arg in tuple.iter() {
+                    let arg_name: String = arg
+                        .getattr("__name__")
+                        .and_then(|n| n.extract())
+                        .unwrap_or_default();
+                    if arg_name != "NoneType" {
+                        return resolve_value_type(py, &arg);
+                    }
+                }
+            }
+        }
+    }
+
     if let Ok(origin) = type_obj.getattr("__origin__") {
         if let Ok(origin_name) = origin.getattr("__name__") {
             let origin_str: String = origin_name.extract().unwrap_or_default();
-            if origin_str == "Union" || origin_str == "UnionType" {
+            if origin_str == "list" || origin_str == "List" {
                 if let Ok(args) = type_obj.getattr("__args__") {
-                    let tuple: Bound<'_, pyo3::types::PyTuple> = args.downcast_into()?;
-                    for arg in tuple.iter() {
-                        let arg_name: String = arg
-                            .getattr("__name__")
-                            .and_then(|n| n.extract())
-                            .unwrap_or_default();
-                        if arg_name != "NoneType" {
-                            return resolve_value_type(py, &arg);
-                        }
-                    }
-                }
-            } else if origin_str == "list" || origin_str == "List" {
-                if let Ok(args) = type_obj.getattr("__args__") {
-                    let tuple: Bound<'_, pyo3::types::PyTuple> = args.downcast_into()?;
+                    let tuple: Bound<'_, pyo3::types::PyTuple> = args.cast_into()?;
                     if let Some(first) = tuple.iter().next() {
                         let inner = resolve_value_type(py, &first)?;
                         return Ok(ValueType::List(Box::new(inner)));
@@ -142,7 +172,7 @@ fn resolve_value_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<V
 
     // Check if target is a nested dataclass or Pydantic model
     if type_obj.hasattr("__dataclass_fields__")? || type_obj.hasattr("model_fields")? {
-        if let Ok(py_type) = type_obj.downcast::<PyType>() {
+        if let Ok(py_type) = type_obj.cast::<PyType>() {
             let (nested_schema, _) = get_or_create_schema(py_type)?;
             return Ok(ValueType::Nested(nested_schema));
         }
@@ -165,10 +195,10 @@ fn extract_schema_from_class<'py>(
         .ok()
         .and_then(|m| m.getattr("get_type_hints").ok())
         .and_then(|f| f.call1((cls,)).ok())
-        .and_then(|h| h.downcast_into::<PyDict>().ok());
+        .and_then(|h| h.cast_into::<PyDict>().ok());
 
     if cls.hasattr("model_fields")? {
-        let model_fields: Bound<'py, PyDict> = cls.getattr("model_fields")?.downcast_into()?;
+        let model_fields: Bound<'py, PyDict> = cls.getattr("model_fields")?.cast_into()?;
         for (name_obj, field_obj) in model_fields.iter() {
             let py_name: String = name_obj.extract()?;
             let py_string = PyString::new(py, &py_name).unbind();
@@ -221,7 +251,7 @@ fn extract_schema_from_class<'py>(
             ));
         }
     } else if cls.hasattr("__dataclass_fields__")? {
-        let fields: Bound<'py, PyDict> = cls.getattr("__dataclass_fields__")?.downcast_into()?;
+        let fields: Bound<'py, PyDict> = cls.getattr("__dataclass_fields__")?.cast_into()?;
         for (name_obj, field_obj) in fields.iter() {
             let py_name: String = name_obj.extract()?;
             let py_string = PyString::new(py, &py_name).unbind();
@@ -631,7 +661,7 @@ fn py_to_poly_value<'py>(
                     }
                 },
                 ValueType::List(inner) => {
-                    if let Ok(list) = val.downcast::<PyList>() {
+                    if let Ok(list) = val.cast::<PyList>() {
                         let mut poly_items = Vec::with_capacity(list.len());
                         let child_meta = if let ValueType::Nested(sub_schema) = inner.as_ref() {
                             lookup_cached_meta(&sub_schema.name)
