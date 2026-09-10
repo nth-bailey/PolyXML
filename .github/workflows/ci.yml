@@ -45,7 +45,7 @@ jobs:
         run: cargo build --release -p polyxml-c
 
       - name: Upload Native Lib
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: polyxml-native-linux
           path: target/release/libpolyxml.so
@@ -162,7 +162,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -191,7 +191,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Java 22
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "22"
