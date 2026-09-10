@@ -396,7 +396,7 @@ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
 name = "polyxml"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "criterion",
  "lexical-core",
@@ -409,14 +409,14 @@ dependencies = [
 
 [[package]]
 name = "polyxml-c"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "polyxml",
 ]
 
 [[package]]
 name = "polyxml-js"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "napi",
  "napi-build",
@@ -426,7 +426,7 @@ dependencies = [
 
 [[package]]
 name = "polyxml-python"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "lexical-core",
  "polyxml",

@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/nth-bailey/PolyXML/compare/v0.2.0...v0.2.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* **python:** make date/time resolution standalone and ignore breaking cargo major updates in dependabot ([6d04cc8](https://github.com/nth-bailey/PolyXML/commit/6d04cc8d302f2e876152611ffd48014d9ff089d5))
+
 # [0.2.0](https://github.com/nth-bailey/PolyXML/compare/v0.1.0...v0.2.0) (2026-09-10)
 
 
