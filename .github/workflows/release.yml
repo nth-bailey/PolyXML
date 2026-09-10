@@ -1,5 +1,9 @@
 name: Release & Version Roll
 
+concurrency:
+  group: release-polyxml
+  cancel-in-progress: false
+
 on:
   workflow_run:
     workflows: ["CI"]
