@@ -4,6 +4,7 @@
 
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyString, PyTuple, PyType};
+use pyo3::IntoPyObjectExt;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -69,7 +70,7 @@ fn unwrap_optional_type<'py>(type_obj: &Bound<'py, PyAny>) -> Bound<'py, PyAny> 
 
 fn is_enum_class<'py>(py: Python<'py>, cls: &Bound<'py, PyAny>) -> bool {
     if let Ok(py_type) = cls.downcast::<PyType>() {
-        if let Ok(enum_module) = py.import_bound("enum") {
+        if let Ok(enum_module) = py.import("enum") {
             if let Ok(enum_cls) = enum_module.getattr("Enum") {
                 if let Ok(py_enum) = enum_cls.downcast::<PyType>() {
                     return py_type.is_subclass(py_enum).unwrap_or(false);
@@ -160,7 +161,7 @@ fn extract_schema_from_class<'py>(
     let mut cached_fields = Vec::new();
 
     let type_hints: Option<Bound<'py, PyDict>> = py
-        .import_bound("typing")
+        .import("typing")
         .ok()
         .and_then(|m| m.getattr("get_type_hints").ok())
         .and_then(|f| f.call1((cls,)).ok())
@@ -170,7 +171,7 @@ fn extract_schema_from_class<'py>(
         let model_fields: Bound<'py, PyDict> = cls.getattr("model_fields")?.downcast_into()?;
         for (name_obj, field_obj) in model_fields.iter() {
             let py_name: String = name_obj.extract()?;
-            let py_string = PyString::new_bound(py, &py_name).unbind();
+            let py_string = PyString::new(py, &py_name).unbind();
             let mut xml_name = py_name.clone();
             let mut kind = FieldKind::Element;
 
@@ -223,7 +224,7 @@ fn extract_schema_from_class<'py>(
         let fields: Bound<'py, PyDict> = cls.getattr("__dataclass_fields__")?.downcast_into()?;
         for (name_obj, field_obj) in fields.iter() {
             let py_name: String = name_obj.extract()?;
-            let py_string = PyString::new_bound(py, &py_name).unbind();
+            let py_string = PyString::new(py, &py_name).unbind();
             let mut xml_name = py_name.clone();
             let mut kind = FieldKind::Element;
 
@@ -333,7 +334,7 @@ fn convert_scalar_to_py<'py>(
 ) -> PyResult<PyObject> {
     match val {
         PolyValue::Null => Ok(py.None()),
-        PolyValue::Bool(b) => Ok(b.to_object(py)),
+        PolyValue::Bool(b) => b.into_py_any(py),
         PolyValue::Int(i) => {
             if let Some(target_type) = py_type_opt {
                 if is_enum_class(py, target_type) {
@@ -342,9 +343,9 @@ fn convert_scalar_to_py<'py>(
                     }
                 }
             }
-            Ok(i.to_object(py))
+            i.into_py_any(py)
         }
-        PolyValue::Float(f) => Ok(f.to_object(py)),
+        PolyValue::Float(f) => f.into_py_any(py),
         PolyValue::String(s) => {
             if let Some(target_type) = py_type_opt {
                 if is_enum_class(py, target_type) {
@@ -368,7 +369,7 @@ fn convert_scalar_to_py<'py>(
 
                 match type_name.as_str() {
                     "Decimal" => {
-                        let decimal_cls = py.import_bound("decimal")?.getattr("Decimal")?;
+                        let decimal_cls = py.import("decimal")?.getattr("Decimal")?;
                         let dec = decimal_cls.call1((s.as_str(),))?;
                         return Ok(dec.unbind());
                     }
@@ -376,7 +377,7 @@ fn convert_scalar_to_py<'py>(
                         if let Ok(val) = target_type.call_method1("from_string", (s.as_str(),)) {
                             return Ok(val.unbind());
                         }
-                        if let Ok(datatype_mod) = py.import_bound("pyxsdata.models.datatype") {
+                        if let Ok(datatype_mod) = py.import("pyxsdata.models.datatype") {
                             if let Ok(cls) = datatype_mod.getattr(type_name.as_str()) {
                                 if let Ok(val) = cls.call_method1("from_string", (s.as_str(),)) {
                                     return Ok(val.unbind());
@@ -392,7 +393,7 @@ fn convert_scalar_to_py<'py>(
                             "XmlTime" => "time",
                             _ => "",
                         };
-                        if let Ok(datetime_mod) = py.import_bound("datetime") {
+                        if let Ok(datetime_mod) = py.import("datetime") {
                             if let Ok(cls) = datetime_mod.getattr(mod_name) {
                                 if let Ok(val) = cls.call_method1("fromisoformat", (s.as_str(),)) {
                                     return Ok(val.unbind());
@@ -404,7 +405,7 @@ fn convert_scalar_to_py<'py>(
                         if let Ok(val) = target_type.call1((s.as_str(),)) {
                             return Ok(val.unbind());
                         }
-                        if let Ok(datatype_mod) = py.import_bound("pyxsdata.models.datatype") {
+                        if let Ok(datatype_mod) = py.import("pyxsdata.models.datatype") {
                             if let Ok(cls) = datatype_mod.getattr("XmlDuration") {
                                 if let Ok(val) = cls.call1((s.as_str(),)) {
                                     return Ok(val.unbind());
@@ -415,7 +416,7 @@ fn convert_scalar_to_py<'py>(
                     _ => {}
                 }
             }
-            Ok(PyString::new_bound(py, s).into_any().unbind())
+            Ok(PyString::new(py, s).into_any().unbind())
         }
         _ => Ok(py.None()),
     }
@@ -430,7 +431,7 @@ fn poly_value_to_py<'py>(
 ) -> PyResult<PyObject> {
     match val {
         PolyValue::Null => Ok(py.None()),
-        PolyValue::Bool(b) => Ok(b.to_object(py)),
+        PolyValue::Bool(b) => b.into_py_any(py),
         PolyValue::Int(_) | PolyValue::Float(_) | PolyValue::String(_) => {
             let st = match val_type {
                 ValueType::Scalar(ref s) => s,
@@ -456,10 +457,10 @@ fn poly_value_to_py<'py>(
                         poly_value_to_py(py, item, inner_type, inner_cls.as_ref(), field_meta)?;
                     py_items.push(py_item);
                 }
-                let py_list = PyList::new_bound(py, &py_items);
+                let py_list = PyList::new(py, &py_items)?;
                 Ok(py_list.into_any().unbind())
             } else {
-                let py_list = PyList::empty_bound(py);
+                let py_list = PyList::empty(py);
                 Ok(py_list.into_any().unbind())
             }
         }
@@ -508,7 +509,7 @@ fn poly_value_to_py<'py>(
                                 }
                             }
                             if all_found {
-                                let tuple = pyo3::types::PyTuple::new_bound(py, &args_vec);
+                                let tuple = pyo3::types::PyTuple::new(py, &args_vec)?;
                                 if let Ok(instance) = target_cls.call1(tuple) {
                                     return Ok(instance.unbind());
                                 }
@@ -517,7 +518,7 @@ fn poly_value_to_py<'py>(
                     }
 
                     // Method 2: Keyword arguments with init=False post-init support
-                    let kwargs = PyDict::new_bound(py);
+                    let kwargs = PyDict::new(py);
                     let mut post_init_fields: Vec<(Py<PyString>, PyObject)> = Vec::new();
 
                     for (i, field) in schema.fields.iter().enumerate() {
@@ -546,7 +547,7 @@ fn poly_value_to_py<'py>(
                                 kwargs.set_item(&field.name, py_val)?;
                             } else {
                                 post_init_fields
-                                    .push((PyString::new_bound(py, &field.name).unbind(), py_val));
+                                    .push((PyString::new(py, &field.name).unbind(), py_val));
                             }
                         }
                     }
@@ -556,7 +557,7 @@ fn poly_value_to_py<'py>(
                     }
                     return Ok(instance.unbind());
                 }
-                let dict = PyDict::new_bound(py);
+                let dict = PyDict::new(py);
                 for (k, v) in map {
                     let py_v =
                         poly_value_to_py(py, v, &ValueType::Scalar(ScalarType::Any), None, None)?;
@@ -565,7 +566,7 @@ fn poly_value_to_py<'py>(
                 let instance = target_cls.call((), Some(&dict))?;
                 Ok(instance.unbind())
             } else {
-                let dict = PyDict::new_bound(py);
+                let dict = PyDict::new(py);
                 for (k, v) in map {
                     let py_v =
                         poly_value_to_py(py, v, &ValueType::Scalar(ScalarType::Any), None, None)?;
@@ -763,7 +764,7 @@ fn serialize<'py>(
     let bytes = polyxml::serialize(root_name, &poly_val, &meta.schema, indent)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
-    Ok(PyBytes::new_bound(py, &bytes))
+    Ok(PyBytes::new(py, &bytes))
 }
 
 #[pyfunction]

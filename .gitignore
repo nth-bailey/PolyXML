@@ -42,3 +42,7 @@ bindings/cpp/build/
 
 # Java / Maven
 bindings/java/target/
+
+# Large test data & uv lock
+/NeTEx_ARR_NL_*.xml
+uv.lock
