@@ -62,7 +62,7 @@ jobs:
         run: |
           NEW_TAG="v${{ steps.semantic.outputs.new_release_version }}"
           echo "Dispatched releases for $NEW_TAG"
-          for wf in release-crates.yml release-pypi.yml release-npm.yml release-maven.yml; do
+          for wf in release-crates.yml release-pypi.yml release-npm.yml release-maven.yml release-homebrew.yml; do
             echo "Dispatching $wf..."
             gh workflow run "$wf" --ref "$NEW_TAG" || echo "Note: $wf dispatch skipped or handled by release event"
           done

@@ -1,0 +1,29 @@
+name: Release Homebrew (homebrew-polyxml)
+
+concurrency:
+  group: release-homebrew
+  cancel-in-progress: false
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  homebrew:
+    name: Bump Homebrew Formula
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Homebrew formula
+        uses: mislav/bump-homebrew-formula-action@v3
+        with:
+          formula-name: polyxml
+          homebrew-tap: nth-bailey/homebrew-polyxml
+          base-branch: main
+          download-url: https://github.com/nth-bailey/PolyXML/archive/refs/tags/${{ github.ref_name }}.tar.gz
+          commit-message: "chore(formula): bump polyxml to ${{ github.ref_name }}"
+        env:
+          COMMITTER_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
