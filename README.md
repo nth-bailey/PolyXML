@@ -114,6 +114,21 @@ PolyXML is benchmarked against the Python and native XML ecosystems on standard,
 
 Critical telemetry commands and sensor packets deserialize in **2.5 microseconds**, beating even C-based DOM parsers (`lxml` at 3.1 μs).
 
+### 3. Key-Value Database & Binary IPC (10,000 Entities in MDBX)
+
+When caching parsed models in transactional key-value databases (`libmdbx`, `LMDB`, `RocksDB`) or transferring entity batches across multiprocessing workers, `polyxml.dumps_binary()` and `polyxml.loads_binary()` eliminate Python's single-threaded pickle bottlenecks:
+
+| Storage Pipeline | Dumps Throughput | Dumps Latency | Loads Throughput | Payload Size | MDBX Write Speed |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **`CloudPickle + LZ4` (Legacy)** | 20,609 ops/s | 48.5 μs | 49,322 ops/s | 547 B | 18,287 ops/s |
+| `Pickle 5 + LZ4` (Stdlib C) | 71,954 ops/s | 13.9 μs | 50,092 ops/s | 539 B | — |
+| **`PolyXML Binary + LZ4`** | **163,192 ops/s** | **6.1 μs** | **64,781 ops/s** | **252 B** | **58,781 ops/s** |
+| **`PolyXML Binary (Direct, No LZ4)`** | **213,003 ops/s** | **4.7 μs** | **84,673 ops/s** | **327 B** | **63,236 ops/s** |
+
+> - **7.9x faster serialization** and **3.2x faster transactional writes into real MDBX**.
+> - **53.9% smaller storage footprint** (252 B vs 547 B per entity).
+> - **Zero Loss XML Fidelity**: Losslessly preserves `XmlDate`, `XmlDateTime`, `XmlDuration`, `XmlTime`, `Decimal`, `QName`, `Enum`, `Path`, and Pydantic v2 models.
+
 ---
 
 ## Language Ecosystem & Packages

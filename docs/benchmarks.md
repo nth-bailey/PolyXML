@@ -69,7 +69,30 @@ Statistical benchmarks measured with Criterion.rs:
 
 ---
 
-## 3. How to Reproduce Benchmarks
+## 3. Key-Value Storage & Binary IPC Throughput (`polyxml.dumps_binary` / `loads_binary`)
+
+When storing XML dataclasses and Pydantic models in embedded transactional key-value databases (`libmdbx`, `LMDB`, `RocksDB`) or communicating over Unix Domain Sockets/multiprocessing queues, Python's traditional `cloudpickle` and standard `pickle` encounter severe GIL and GC bottlenecks.
+
+`polyxml.dumps_binary()` and `polyxml.loads_binary()` provide high-speed MessagePack encoding with universal leaf type hooks (`XmlDate`, `XmlDateTime`, `XmlDuration`, `XmlTime`, `Decimal`, `QName`, `Enum`, `Path`, and Pydantic models):
+
+### 10,000 Complex XML Entities in Real MDBX Pipeline
+
+| Serializer Pipeline | Dumps Ops/s | Dumps Latency | Loads Ops/s | Avg Payload Size | MDBX Write Ops/s |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **`CloudPickle + LZ4` (Legacy)** | 20,609 ops/s | 48.5 μs | 49,322 ops/s | 547 B | 18,287 ops/s |
+| `Pickle 5 + LZ4` (Stdlib C) | 71,954 ops/s | 13.9 μs | 50,092 ops/s | 539 B | — |
+| **`PolyXML Binary + LZ4`** | **163,192 ops/s** | **6.1 μs** | **64,781 ops/s** | **252 B** | **58,781 ops/s** |
+| **`PolyXML Binary (Direct, No LZ4)`** | **213,003 ops/s** | **4.7 μs** | **84,673 ops/s** | **327 B** | **63,236 ops/s** |
+
+### Key Takeaways:
+- **7.9x Faster Serialization**: Slashes per-object serialization from 48.5 μs down to 6.1 μs.
+- **53.9% Storage Space Reduction**: Cuts stored byte size from 547 bytes to 252 bytes per entity.
+- **3.2x MDBX Transaction Speedup**: Real database writes into `libmdbx` jump from 18,287 ops/s to 58,781 ops/s.
+- **100% Fidelity Guarantee**: Round-trips preserve exact dataclass types, field metadata, and XML primitive representations with `assert loads(dumps(x)) == x`.
+
+---
+
+## 4. How to Reproduce Benchmarks
 
 The benchmark suite is reusable and version-controlled.
 

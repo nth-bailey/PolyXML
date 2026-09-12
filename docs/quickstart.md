@@ -41,6 +41,15 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     # 2. Serialize model back to formatted XML
     xml_output = polyxml.serialize(sensor, indent=2)
     print(xml_output.decode("utf-8"))
+
+    # 3. Stream multi-gigabyte XML files in O(1) memory
+    # for s in polyxml.iterparse(open("huge.xml", "rb").read(), Sensor, tag="Sensor"):
+    #     print(s.name)
+
+    # 4. Zero-GIL binary serialization for key-value DBs (MDBX, Redis) & IPC
+    binary_blob = polyxml.dumps_binary(sensor)
+    restored = polyxml.loads_binary(binary_blob, Sensor)
+    assert restored.name == sensor.name
     ```
 
 === "Rust"

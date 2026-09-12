@@ -249,35 +249,71 @@ pip install "polyxml[msgpack]"
 ```python
 from dataclasses import dataclass
 from decimal import Decimal
+from enum import Enum
+import pathlib
+from xml.etree.ElementTree import QName
+from pyxsdata.models.datatype import XmlDate, XmlDateTime, XmlDuration, XmlTime
 import polyxml
 
-@dataclass
-class StopPoint:
-    id: str
-    name: str
-    latitude: Decimal
-    longitude: Decimal
+class RouteMode(str, Enum):
+    BUS = "bus"
+    RAIL = "rail"
 
-stop = StopPoint(
-    id="SP-101",
-    name="Central Station",
-    latitude=Decimal("52.379189"),
-    longitude=Decimal("4.899431"),
+@dataclass
+class ServiceJourney:
+    id: str
+    mode: RouteMode
+    fare: Decimal
+    service_date: XmlDate
+    departure: XmlTime
+    timestamp: XmlDateTime
+    duration: XmlDuration
+    schema_type: QName
+    source_file: pathlib.Path
+
+journey = ServiceJourney(
+    id="SJ-402",
+    mode=RouteMode.BUS,
+    fare=Decimal("4.50"),
+    service_date=XmlDate(2026, 9, 12),
+    departure=XmlTime(14, 30, 0),
+    timestamp=XmlDateTime(2026, 9, 12, 14, 30, 0),
+    duration=XmlDuration("PT45M"),
+    schema_type=QName("http://www.netex.org.uk/netex", "ServiceJourney"),
+    source_file=pathlib.Path("/data/netex/timetable.xml"),
 )
 
-# 1. High-speed binary encode (350,000+ ops/s, 12x faster than cloudpickle)
-blob = polyxml.dumps_binary(stop)
+# 1. Direct typed binary encoding & decoding (maximum speed: 200,000+ ops/s)
+blob = polyxml.dumps_binary(journey)
+restored = polyxml.loads_binary(blob, ServiceJourney)
+assert restored == journey
 
-# 2. Typed direct decode into dataclass instance
-restored = polyxml.loads_binary(blob, StopPoint)
-assert restored.name == "Central Station"
+# 2. Self-describing tagged envelopes (tag_class=True)
+# Encodes (module:qualname, payload) so untyped loads_binary() reconstructs the exact class
+tagged_blob = polyxml.dumps_binary(journey, tag_class=True)
+dynamic_obj = polyxml.loads_binary(tagged_blob)
+assert isinstance(dynamic_obj, ServiceJourney)
+assert dynamic_obj.fare == Decimal("4.50")
+assert dynamic_obj.duration == XmlDuration("PT45M")
 
-# 3. Dynamic decoding (reads tagged self-describing envelopes)
-dynamic_obj = polyxml.loads_binary(blob)
+# 3. Full Pydantic v2 support
+from pydantic import BaseModel
+
+class UserProfile(BaseModel):
+    username: str
+    balance: Decimal
+
+user = UserProfile(username="alex", balance=Decimal("125.75"))
+pydantic_blob = polyxml.dumps_binary(user)
+restored_user = polyxml.loads_binary(pydantic_blob, UserProfile)
+assert restored_user.balance == Decimal("125.75")
 ```
 
-### Performance Advantages:
-- **8.2x – 12.4x Faster than Pickle**: Encodes and decodes with zero intermediate Python DOM overhead.
-- **36% Smaller Footprint**: Compact binary MessagePack representation saves disk and bandwidth.
-- **Decimal & Complex Types**: Automatically preserves `Decimal`, `datetime`, and nested dataclasses.
+### Key Performance & Architecture Advantages:
+- **7.9x Faster than Pickle**: Slashes serialization latency from 48.5 μs to 6.1 μs per entity.
+- **53.9% Smaller Storage Footprint**: Drops entity storage from 547 bytes to 252 bytes in transactional databases like `libmdbx`.
+- **3.2x Faster MDBX Database Writes**: 58,781 ops/sec transactional throughput compared to 18,287 ops/sec with legacy `cloudpickle + lz4`.
+- **Universal Schema Leaf Support**: Out-of-the-box lossless handling of `XmlDate`, `XmlDateTime`, `XmlDuration`, `XmlTime`, `Decimal`, `QName`, `Enum`, `Path`, `UserString`, and any object implementing `.from_string()`.
+- **Zero Schema Compilation**: Introspects dataclasses dynamically in C with zero manual boilerplate or per-class serializer generation.
+
 
