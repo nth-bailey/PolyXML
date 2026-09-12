@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/nth-bailey/PolyXML/compare/v0.6.0...v0.7.0) (2026-09-12)
+
+
+### Features
+
+* **core:** support mixed-content wildcard fields in deserializer and serializer ([529457f](https://github.com/nth-bailey/PolyXML/commit/529457f2793269d51cd7acd68620b296fb039f5e))
+
 # [0.6.0](https://github.com/nth-bailey/PolyXML/compare/v0.5.1...v0.6.0) (2026-09-12)
 
 
