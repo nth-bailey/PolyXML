@@ -5,25 +5,35 @@ concurrency:
   cancel-in-progress: false
 
 on:
-  push:
-    tags:
-      - 'v*'
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to bump to (e.g. v0.5.0)"
+        required: true
 
 jobs:
   homebrew:
     name: Bump Homebrew Formula
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "name=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Update Homebrew formula
         uses: mislav/bump-homebrew-formula-action@v3
         with:
           formula-name: polyxml
           homebrew-tap: nth-bailey/homebrew-polyxml
           base-branch: main
-          download-url: https://github.com/nth-bailey/PolyXML/archive/refs/tags/${{ github.ref_name }}.tar.gz
-          commit-message: "chore(formula): bump polyxml to ${{ github.ref_name }}"
+          tag-name: ${{ steps.tag.outputs.name }}
+          commit-message: "chore(formula): bump polyxml to ${{ steps.tag.outputs.name }}"
         env:
           COMMITTER_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
