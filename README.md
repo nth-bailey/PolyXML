@@ -76,6 +76,7 @@ While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critic
 - **⚡ Blazing Fast**: Powered by `quick-xml` streaming event loop and `lexical-core` byte-slice parsing. Zero DOM intermediate allocations.
 - **🌊 Streaming Iterator**: Parse multi-gigabyte XML documents with $O(1)$ constant memory (<5 MB RAM) via `polyxml.iterparse()`.
 - **🔄 Bidirectional**: Full support for both **deserialization** (XML $\to$ typed models) and **serialization** (typed models $\to$ XML).
+- **📦 Native Binary Serialization**: Ultra-fast MessagePack binary encoding/decoding via `polyxml.dumps_binary()` and `polyxml.loads_binary()` for key-value stores (MDBX, LMDB, Redis) and IPC (up to 350,000+ objs/s).
 - **🌐 Polyglot by Design**: The core engine is 100% pure Rust with zero Python or language runtime dependencies, ready to be embedded anywhere.
 - **🎯 Full Schema Support**: Namespaces, attributes vs. elements, text nodes, `xsi:nil`, choice, lists, and ISO-8601 date/time scalar types.
 
@@ -168,6 +169,10 @@ for item in polyxml.iterparse(open("large_catalog.xml", "rb").read(), Item, tag=
 
 # 3. Serialize model back to XML
 xml_bytes = polyxml.serialize(item, indent=2)
+
+# 4. Zero-GIL binary serialization for key-value databases & IPC
+bin_bytes = polyxml.dumps_binary(item)
+restored = polyxml.loads_binary(bin_bytes, Item)
 ```
 👉 **[Read the Full Python (Dataclasses & Pydantic) Guide →](docs/guides/python.md)**
 
