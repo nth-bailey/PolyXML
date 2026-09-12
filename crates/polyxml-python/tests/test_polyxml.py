@@ -1,9 +1,12 @@
 import io
 import pathlib
+from collections import UserString
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
+from xml.etree.ElementTree import QName
 
+import msgspec
 import pytest
 from pydantic import BaseModel, Field
 
@@ -402,3 +405,140 @@ def test_binary_deserialization_unsupported_type():
     payload = polyxml.dumps_binary({"a": 1})
     with pytest.raises(NotImplementedError, match="PolyXML binary deserializer cannot deserialize"):
         polyxml.loads_binary(payload, UnhandledClass)
+
+
+class StatusEnum(Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+class CustomDuration(UserString):
+    pass
+
+
+class FromStringHolder:
+    def __init__(self, val: str):
+        self.val = val
+
+    @classmethod
+    def from_string(cls, val: str):
+        return cls(val)
+
+    def __str__(self):
+        return self.val
+
+    def __eq__(self, other):
+        return isinstance(other, FromStringHolder) and self.val == other.val
+
+
+@dataclass
+class RichXmlItem:
+    status: StatusEnum
+    qname: QName
+    duration: CustomDuration
+    holder: FromStringHolder
+
+
+def test_binary_serialization_xml_types():
+    orig = RichXmlItem(
+        status=StatusEnum.ACTIVE,
+        qname=QName("http://example.com", "elem"),
+        duration=CustomDuration("P1Y2M3D"),
+        holder=FromStringHolder("parsed_value"),
+    )
+    payload = polyxml.dumps_binary(orig)
+    decoded = polyxml.loads_binary(payload, RichXmlItem)
+    assert decoded.status == StatusEnum.ACTIVE
+    assert decoded.qname == QName("http://example.com", "elem")
+    assert decoded.duration == CustomDuration("P1Y2M3D")
+    assert decoded.holder == FromStringHolder("parsed_value")
+
+
+def test_binary_serialization_tag_class_dataclass():
+    item = SimpleItem(id=99, name="TaggedItem", price=49.99, active=True)
+    payload = polyxml.dumps_binary(item, tag_class=True)
+
+    # Loads without passing target_type
+    decoded_auto = polyxml.loads_binary(payload)
+    assert isinstance(decoded_auto, SimpleItem)
+    assert decoded_auto.id == 99
+    assert decoded_auto.name == "TaggedItem"
+
+    # Loads with explicit target_type on tagged payload
+    decoded_explicit = polyxml.loads_binary(payload, SimpleItem)
+    assert isinstance(decoded_explicit, SimpleItem)
+    assert decoded_explicit.id == 99
+
+
+def test_binary_serialization_tag_class_pydantic():
+    device = PydanticDevice(serial="SN-9999", model="AeroEdge", power=250.0)
+    payload = polyxml.dumps_binary(device, tag_class=True)
+    decoded = polyxml.loads_binary(payload)
+    assert isinstance(decoded, PydanticDevice)
+    assert decoded.serial == "SN-9999"
+    assert decoded.model == "AeroEdge"
+    assert decoded.power == 250.0
+
+
+def test_binary_serialization_tag_class_primitive():
+    payload = polyxml.dumps_binary("plain_string", tag_class=True)
+    decoded = polyxml.loads_binary(payload)
+    assert decoded == "plain_string"
+
+
+def test_binary_serialization_hooks_direct():
+    from polyxml import _dec_hook, _enc_hook
+
+    assert _enc_hook(StatusEnum.ACTIVE) == "active"
+    assert _dec_hook(Decimal, "19.99") == Decimal("19.99")
+    assert _dec_hook(StatusEnum, "active") == StatusEnum.ACTIVE
+
+
+def test_binary_serialization_resolve_class():
+    from polyxml import _resolve_class
+
+    assert _resolve_class("") is None
+    assert _resolve_class("NoColonHere") is None
+    assert _resolve_class("nonexistent.module:FakeClass") is None
+    assert _resolve_class("polyxml:dumps_binary") is polyxml.dumps_binary
+    # Hits the _CLASS_CACHE branch
+    assert _resolve_class("polyxml:dumps_binary") is polyxml.dumps_binary
+
+
+def test_binary_serialization_tagged_unresolvable_class():
+    # Tagged payload with a class that cannot be resolved
+    raw_inner = msgspec.msgpack.encode({"key": "value"})
+    tagged_data = msgspec.msgpack.encode(("nonexistent.module:FakeClass", raw_inner))
+
+    decoded = polyxml.loads_binary(tagged_data)
+    assert decoded == {"key": "value"}
+
+
+def test_binary_serialization_tagged_payload_decode_error():
+    # Explicit target_type on tagged payload where inner payload fails to decode
+    raw_inner = msgspec.msgpack.encode({"unexpected": "structure"})
+    tagged_data = msgspec.msgpack.encode(("nonexistent:Fake", raw_inner))
+
+    with pytest.raises(msgspec.ValidationError):
+        polyxml.loads_binary(tagged_data, SimpleItem)
+
+
+def test_binary_serialization_target_type_non_tagged_decode_errors():
+    # Target type passed with invalid msgpack bytes
+    with pytest.raises(msgspec.DecodeError):
+        polyxml.loads_binary(b"\xc1", SimpleItem)
+
+    # Target type passed with valid non-tagged msgpack that fails validation
+    with pytest.raises(msgspec.ValidationError):
+        polyxml.loads_binary(msgspec.msgpack.encode(123), SimpleItem)
+
+
+def test_binary_serialization_loads_corrupted_or_non_tagged():
+    # Plain non-tagged list of two items where second is not bytes
+    data = msgspec.msgpack.encode(["not_a_class_tag", 12345])
+    decoded = polyxml.loads_binary(data)
+    assert decoded == ["not_a_class_tag", 12345]
+
+    # Non-decodable data to custom type
+    with pytest.raises(msgspec.DecodeError):
+        polyxml.loads_binary(b"\xc1")
