@@ -1,6 +1,6 @@
 {
   "name": "polyxml",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "High-performance, polyglot XML data-binding engine built in Rust",
   "main": "index.js",
   "types": "index.d.ts",

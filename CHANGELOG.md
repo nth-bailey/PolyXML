@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/nth-bailey/PolyXML/compare/v0.5.1...v0.6.0) (2026-09-12)
+
+
+### Features
+
+* **python:** universal XML datatype support and class-tagging for binary MessagePack serialization ([b50e62d](https://github.com/nth-bailey/PolyXML/commit/b50e62d0fabe13bb6761c2666d220251c030eec5))
+
 ## [0.5.1](https://github.com/nth-bailey/PolyXML/compare/v0.5.0...v0.5.1) (2026-09-12)
 
 
