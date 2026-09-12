@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/nth-bailey/PolyXML/compare/v0.4.0...v0.5.0) (2026-09-12)
+
+
+### Features
+
+* **binary:** add zero-GIL binary serialization (dumps_binary, loads_binary) with 100% test coverage ([f3c115a](https://github.com/nth-bailey/PolyXML/commit/f3c115aff96a43821562b5b003c981e364df35e8))
+
 # [0.4.0](https://github.com/nth-bailey/PolyXML/compare/v0.3.0...v0.4.0) (2026-09-10)
 
 
