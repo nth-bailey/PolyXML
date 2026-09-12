@@ -1,3 +1,11 @@
+## [0.5.1](https://github.com/nth-bailey/PolyXML/compare/v0.5.0...v0.5.1) (2026-09-12)
+
+
+### Bug Fixes
+
+* **ci:** fix Homebrew release workflow tag resolution ([9e35fb9](https://github.com/nth-bailey/PolyXML/commit/9e35fb9ed5ea72e613bc6349a30a0fbd6d09388c))
+* **ci:** upgrade bump-homebrew-formula-action v3 → v4 ([7f863c4](https://github.com/nth-bailey/PolyXML/commit/7f863c45273fa45e99bd53f34ac5e49a7f4c9d83))
+
 # [0.5.0](https://github.com/nth-bailey/PolyXML/compare/v0.4.0...v0.5.0) (2026-09-12)
 
 
