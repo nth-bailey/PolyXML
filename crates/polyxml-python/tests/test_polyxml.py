@@ -12,7 +12,6 @@ try:
 except ImportError:
 
     class XmlDate:
-
         def __init__(self, val: str):
             self.val = val
 
@@ -27,7 +26,6 @@ except ImportError:
             return self.val
 
     class XmlDateTime:
-
         def __init__(self, val: str):
             self.val = val
 
@@ -42,7 +40,6 @@ except ImportError:
             return self.val
 
     class XmlTime:
-
         def __init__(self, val: str):
             self.val = val
 
@@ -57,7 +54,6 @@ except ImportError:
             return self.val
 
     class XmlDuration:
-
         def __init__(self, val: str):
             self.val = val
 
@@ -66,6 +62,7 @@ except ImportError:
 
         def __str__(self):
             return self.val
+
 
 import polyxml
 
@@ -333,9 +330,7 @@ def test_to_bytes_invalid_type():
 
 @dataclass
 class UnionWrapper:
-    child: None | ChildNode = field(
-        default=None, metadata={"type": "Element", "name": "child"}
-    )
+    child: None | ChildNode = field(default=None, metadata={"type": "Element", "name": "child"})
     count: int | None = field(default=None, metadata={"type": "Element"})
 
 
@@ -346,3 +341,64 @@ def test_pep604_union_nested_dataclass():
     assert res.child.tag == "Payload"
     assert res.count == 42
 
+
+def test_binary_serialization_dataclass():
+    item = SimpleItem(id=42, name="TestItem", price=19.99, active=True)
+    payload = polyxml.dumps_binary(item)
+    assert isinstance(payload, bytes)
+    assert len(payload) > 0
+
+    decoded = polyxml.loads_binary(payload, SimpleItem)
+    assert isinstance(decoded, SimpleItem)
+    assert decoded.id == 42
+    assert decoded.name == "TestItem"
+    assert decoded.price == 19.99
+    assert decoded.active is True
+
+
+def test_binary_serialization_decimal():
+    @dataclass
+    class DecimalItem:
+        val: Decimal
+
+    item = DecimalItem(val=Decimal("19.99"))
+    payload = polyxml.dumps_binary(item)
+    decoded = polyxml.loads_binary(payload, DecimalItem)
+    assert decoded.val == Decimal("19.99")
+
+
+def test_binary_serialization_untyped():
+    data = {"name": "Alice", "score": 100}
+    payload = polyxml.dumps_binary(data)
+    decoded = polyxml.loads_binary(payload)
+    assert decoded == data
+
+
+def test_binary_serialization_xmldate_and_path():
+    @dataclass
+    class ExtraItem:
+        date: XmlDate
+        path: pathlib.Path
+
+    orig = ExtraItem(date=XmlDate("2026-09-12"), path=pathlib.Path("/tmp/test.xml"))
+    payload = polyxml.dumps_binary(orig)
+    decoded = polyxml.loads_binary(payload, ExtraItem)
+    assert decoded.date == XmlDate("2026-09-12")
+    assert decoded.path == pathlib.Path("/tmp/test.xml")
+
+
+def test_binary_serialization_unsupported_type():
+    class CustomObject:
+        pass
+
+    with pytest.raises(NotImplementedError, match="PolyXML binary serializer cannot serialize"):
+        polyxml.dumps_binary(CustomObject())
+
+
+def test_binary_deserialization_unsupported_type():
+    class UnhandledClass:
+        pass
+
+    payload = polyxml.dumps_binary({"a": 1})
+    with pytest.raises(NotImplementedError, match="PolyXML binary deserializer cannot deserialize"):
+        polyxml.loads_binary(payload, UnhandledClass)

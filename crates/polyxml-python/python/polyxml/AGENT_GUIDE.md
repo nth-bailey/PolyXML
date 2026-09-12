@@ -27,9 +27,7 @@ class Item:
 
 
 # 1. From raw XML string:
-item = polyxml.deserialize(
-    '<Item id="1"><name>Bolt</name><price>0.99</price></Item>', Item
-)
+item = polyxml.deserialize('<Item id="1"><name>Bolt</name><price>0.99</price></Item>', Item)
 
 # 2. From raw bytes:
 item = polyxml.deserialize(b"<Item ...>...</Item>", Item)
@@ -46,9 +44,7 @@ import polyxml
 from my_models import VehicleJourney
 
 # Streams elements one-by-one with zero intermediate DOM allocations
-for journey in polyxml.iterparse(
-    "large_transit_dump.xml", VehicleJourney, tag="VehicleJourney"
-):
+for journey in polyxml.iterparse("large_transit_dump.xml", VehicleJourney, tag="VehicleJourney"):
     process_journey(journey)
 ```
 

@@ -26,6 +26,7 @@ See `AGENT_GUIDE.md` or https://nth-bailey.github.io/PolyXML/ for complete docum
 
 import pathlib
 from collections.abc import Iterator
+from decimal import Decimal
 from typing import IO
 
 from polyxml._polyxml import (  # type: ignore[import-not-found]
@@ -111,4 +112,83 @@ def serialize(obj: object, *, indent: int | None = None) -> bytes:
     return _serialize(obj, indent=indent)
 
 
-__all__ = ["__version__", "deserialize", "iterparse", "serialize"]
+try:
+    import msgspec
+
+    _HAS_MSGSPEC = True
+except ImportError:  # pragma: no cover
+    msgspec = None  # type: ignore[assignment]
+    _HAS_MSGSPEC = False
+
+
+def _enc_hook(obj: object) -> str:
+    if isinstance(obj, pathlib.Path | Decimal):
+        return str(obj)
+    if hasattr(obj, "from_string") and hasattr(obj, "val"):
+        return str(obj)
+    raise NotImplementedError(
+        f"PolyXML binary serializer cannot serialize object of type {type(obj).__name__}"
+    )
+
+
+def _dec_hook(target_type: type[object], obj: object) -> object:
+    if target_type is pathlib.Path:
+        return pathlib.Path(str(obj))
+    if hasattr(target_type, "from_string"):
+        return target_type.from_string(str(obj))
+    raise NotImplementedError(
+        f"PolyXML binary deserializer cannot deserialize object into type {target_type.__name__}"
+    )
+
+
+def dumps_binary(obj: object) -> bytes:
+    """Serialize a model or dataclass into a high-throughput binary MessagePack buffer.
+
+    Args:
+        obj: Python dataclass, Pydantic model, or object.
+
+    Returns:
+        Compact binary MessagePack bytes.
+
+    Raises:
+        RuntimeError: If msgspec is not installed.
+    """
+    if not _HAS_MSGSPEC:  # pragma: no cover
+        raise RuntimeError(
+            "PolyXML binary serialization requires 'msgspec'. "
+            "Install it via: pip install 'polyxml[msgpack]' or pip install msgspec"
+        )
+    return msgspec.msgpack.encode(obj, enc_hook=_enc_hook)
+
+
+def loads_binary[T](data: bytes, target_type: type[T] | None = None) -> T | object:
+    """Deserialize binary MessagePack bytes into a strongly-typed model or object.
+
+    Args:
+        data: Binary MessagePack bytes to decode.
+        target_type: Optional target dataclass or model class. If omitted, returns dynamic structure.
+
+    Returns:
+        The deserialized model instance or object.
+
+    Raises:
+        RuntimeError: If msgspec is not installed.
+    """
+    if not _HAS_MSGSPEC:  # pragma: no cover
+        raise RuntimeError(
+            "PolyXML binary deserialization requires 'msgspec'. "
+            "Install it via: pip install 'polyxml[msgpack]' or pip install msgspec"
+        )
+    if target_type is not None:
+        return msgspec.msgpack.decode(data, type=target_type, dec_hook=_dec_hook)
+    return msgspec.msgpack.decode(data, dec_hook=_dec_hook)
+
+
+__all__ = [
+    "__version__",
+    "deserialize",
+    "dumps_binary",
+    "iterparse",
+    "loads_binary",
+    "serialize",
+]
