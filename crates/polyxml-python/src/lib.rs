@@ -216,6 +216,13 @@ fn extract_schema_from_class<'py>(
                     match t_str.as_str() {
                         "Attribute" => kind = FieldKind::Attribute,
                         "Text" => kind = FieldKind::Text,
+                        "Wildcard" => {
+                            if let Ok(m_mixed) = m.get_item("mixed") {
+                                if m_mixed.extract::<bool>().unwrap_or(false) {
+                                    kind = FieldKind::Text;
+                                }
+                            }
+                        }
                         _ => kind = FieldKind::Element,
                     }
                 }
@@ -264,6 +271,13 @@ fn extract_schema_from_class<'py>(
                     match t_str.as_str() {
                         "Attribute" => kind = FieldKind::Attribute,
                         "Text" => kind = FieldKind::Text,
+                        "Wildcard" => {
+                            if let Ok(m_mixed) = meta.get_item("mixed") {
+                                if m_mixed.extract::<bool>().unwrap_or(false) {
+                                    kind = FieldKind::Text;
+                                }
+                            }
+                        }
                         _ => kind = FieldKind::Element,
                     }
                 }

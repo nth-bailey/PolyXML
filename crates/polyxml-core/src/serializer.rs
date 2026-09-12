@@ -93,6 +93,17 @@ impl XmlSerializer {
                             .write_event(Event::Text(BytesText::new(text_content)))
                             .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                     }
+                } else if let PolyValue::List(items) = val {
+                    for item in items {
+                        let mut item_buf = [0u8; lexical_core::BUFFER_SIZE];
+                        if let Some(text_content) = Self::format_scalar_to(item, &mut item_buf) {
+                            if !text_content.is_empty() {
+                                writer
+                                    .write_event(Event::Text(BytesText::new(text_content)))
+                                    .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
+                            }
+                        }
+                    }
                 }
             }
         }

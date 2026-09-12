@@ -542,3 +542,23 @@ def test_binary_serialization_loads_corrupted_or_non_tagged():
     # Non-decodable data to custom type
     with pytest.raises(msgspec.DecodeError):
         polyxml.loads_binary(b"\xc1")
+
+
+def test_mixed_content_wildcard_dataclass():
+    @dataclass
+    class MixedNode:
+        lang: str | None = field(default=None, metadata={"type": "Attribute"})
+        content: list[object] = field(
+            default_factory=list,
+            metadata={"type": "Wildcard", "mixed": True},
+        )
+
+    xml = '<MixedNode lang="en">Sample Text Content</MixedNode>'
+    decoded = polyxml.deserialize(xml.encode("utf-8"), MixedNode)
+    assert decoded.lang == "en"
+    assert decoded.content == ["Sample Text Content"]
+
+    serialized = polyxml.serialize(decoded)
+    assert b"Sample Text Content" in serialized
+    assert b'lang="en"' in serialized
+

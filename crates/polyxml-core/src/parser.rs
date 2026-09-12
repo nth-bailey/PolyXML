@@ -69,9 +69,18 @@ impl StackFrame {
             if let Some(ref text_buf) = self.frame_text_buf {
                 if !text_buf.is_empty() {
                     let field = &self.schema.fields[text_idx];
-                    if let ValueType::Scalar(ref st) = field.val_type {
-                        let val = ValueConverter::parse_scalar(st, text_buf, &field.name)?;
-                        obj.insert(field.name.clone(), val);
+                    match &field.val_type {
+                        ValueType::Scalar(st) => {
+                            let val = ValueConverter::parse_scalar(st, text_buf, &field.name)?;
+                            obj.insert(field.name.clone(), val);
+                        }
+                        ValueType::List(inner) => {
+                            if let ValueType::Scalar(st) = &**inner {
+                                let val = ValueConverter::parse_scalar(st, text_buf, &field.name)?;
+                                obj.insert(field.name.clone(), PolyValue::List(vec![val]));
+                            }
+                        }
+                        _ => {}
                     }
                 }
             }
