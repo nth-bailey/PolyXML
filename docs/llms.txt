@@ -1,0 +1,58 @@
+# PolyXML
+
+> The High-Performance, Polyglot Native XML Data-Binding Engine in Rust.
+
+PolyXML is a high-throughput, memory-efficient native XML data-binding engine designed for zero-unnecessary-allocation deserialization and serialization across programming languages (Rust, Python 3.12+ Dataclasses & Pydantic v2, C++20, Go, Java 22, Node.js).
+
+## Key Rules for AI Coding Assistants
+- **Pure Rust Core Engine**: The core parsing engine (`crates/polyxml-core`) uses `quick-xml` reader events and `lexical-core` for zero DOM allocation parsing.
+- **Python Integration**: Functions via `polyxml.deserialize`, `polyxml.iterparse`, and `polyxml.serialize`. Do NOT try to instantiate an `XmlParser` class.
+- **Model Support**: Natively binds to Python 3.12+ standard `dataclasses` (with metadata `{"type": "Element" | "Attribute"}`) and Pydantic v2 `BaseModel`.
+- **High-Volume Datasets**: Use `polyxml.iterparse(source, TargetModel, tag="TagName")` for O(1) constant-memory streaming of large XML documents.
+
+## Python Quickstart Recipes
+
+### 1. Deserialization
+```python
+from dataclasses import dataclass, field
+import polyxml
+
+
+@dataclass
+class Item:
+    id: int = field(metadata={"type": "Attribute"})
+    name: str = field(metadata={"type": "Element"})
+
+
+# Accepts str, bytes, pathlib.Path, or IO stream
+item = polyxml.deserialize('<Item id="42"><name>Widget</name></Item>', Item)
+```
+
+### 2. O(1) Constant-Memory Streaming
+```python
+import polyxml
+
+for item in polyxml.iterparse("large_dataset.xml", Item, tag="Item"):
+    process(item)
+```
+
+### 3. Serialization
+```python
+import polyxml
+
+xml_bytes = polyxml.serialize(item, indent=2)
+```
+
+## Rust Quickstart Recipes
+
+```rust
+use polyxml::{deserialize, serialize};
+// Use derive macros or native schema representations
+```
+
+## Documentation Links
+- [Multi-Language Quickstart](quickstart.md): Getting started across Rust, Python, and FFI targets.
+- [Architecture & Design](architecture.md): Zero-allocation streaming pipeline and Schema IR.
+- [Python Guide](guides/python.md): Dataclasses and Pydantic v2 bindings.
+- [Rust Guide](guides/rust.md): Using the native core engine.
+- [Benchmarks](benchmarks.md): 300MB+ NeTEx transit benchmark comparing against pure-Python parsers.

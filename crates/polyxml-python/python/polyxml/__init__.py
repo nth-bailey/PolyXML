@@ -1,4 +1,28 @@
-"""PolyXML: High-performance, polyglot XML data-binding engine."""
+"""PolyXML: High-performance, polyglot native XML data-binding engine.
+
+QUICKSTART FOR AI AGENTS & DEVELOPERS:
+
+1. Deserialize XML (string, bytes, or file Path) into a typed Dataclass or Pydantic model:
+    >>> import polyxml
+    >>> from dataclasses import dataclass, field
+    >>>
+    >>> @dataclass
+    >>> class User:
+    ...     name: str = field(metadata={"type": "Element"})
+    >>>
+    >>> user = polyxml.deserialize("<User><name>Alice</name></User>", User)
+    >>> user.name
+    'Alice'
+
+2. Stream large XML files with O(1) constant memory (Streaming / Facet Extraction):
+    >>> for user in polyxml.iterparse("massive_users.xml", User, tag="User"):
+    ...     process(user)
+
+3. Serialize a model instance back into XML bytes:
+    >>> xml_bytes = polyxml.serialize(user, indent=2)
+
+See `AGENT_GUIDE.md` or https://nth-bailey.github.io/PolyXML/ for complete documentation.
+"""
 
 import pathlib
 from collections.abc import Iterator
@@ -35,7 +59,10 @@ def _to_bytes(source: bytes | str | pathlib.Path | IO[bytes] | IO[str]) -> bytes
     if hasattr(source, "read"):
         data = source.read()
         return data.encode("utf-8") if isinstance(data, str) else data
-    raise TypeError(f"Unsupported XML source type: {type(source)}")
+    raise TypeError(
+        f"Unsupported XML source type: {type(source).__name__}. "
+        "Expected bytes, str (XML string or file path), pathlib.Path, or a binary/text IO stream."
+    )
 
 
 def deserialize[T](
