@@ -561,4 +561,3 @@ def test_mixed_content_wildcard_dataclass():
     serialized = polyxml.serialize(decoded)
     assert b"Sample Text Content" in serialized
     assert b'lang="en"' in serialized
-

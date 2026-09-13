@@ -43,9 +43,13 @@ uv run abi3audit $(find ../../target/ -name "polyxml*.so" | head -n 1)
 
 ## 4. Full Quality & Verification Checklist
 
-Before committing any Python or PyO3 changes:
+Before committing any Python or PyO3 changes, run the one-shot gate script or execute each step:
 
 ```bash
+# Automated one-shot dual-language quality gate:
+./scripts/gate.sh
+
+# Or step-by-step:
 # 1. Rust checks across all crates
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
