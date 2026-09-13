@@ -1,3 +1,10 @@
+# [0.8.0](https://github.com/nth-bailey/PolyXML/compare/v0.7.0...v0.8.0) (2026-09-13)
+
+
+### Features
+
+* **scripts:** add dual-language quality gate script ([07e6085](https://github.com/nth-bailey/PolyXML/commit/07e6085b8e1fc9591005fbb832cf189c71d45af3))
+
 # [0.7.0](https://github.com/nth-bailey/PolyXML/compare/v0.6.0...v0.7.0) (2026-09-12)
 
 
