@@ -1,5 +1,9 @@
 name: Release Crates (crates.io)
 
+concurrency:
+  group: release-crates-${{ github.ref_name || github.ref }}
+  cancel-in-progress: false
+
 on:
   push:
     tags:

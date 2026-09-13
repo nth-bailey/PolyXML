@@ -59,9 +59,14 @@ jobs:
         if: steps.semantic.outputs.new_release_published == 'true'
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          HAS_PAT: ${{ secrets.PAT_TOKEN != '' }}
         run: |
+          if [ "$HAS_PAT" = "true" ]; then
+            echo "Release was published with PAT_TOKEN; downstream 'on: release' workflows are automatically triggered by GitHub. Skipping manual dispatch to prevent duplicate builds."
+            exit 0
+          fi
           NEW_TAG="v${{ steps.semantic.outputs.new_release_version }}"
-          echo "Dispatched releases for $NEW_TAG"
+          echo "Dispatched releases for $NEW_TAG (fallback when running without PAT)"
           for wf in release-crates.yml release-pypi.yml release-npm.yml release-maven.yml; do
             echo "Dispatching $wf..."
             gh workflow run "$wf" --ref "$NEW_TAG" || echo "Note: $wf dispatch skipped or handled by release event"

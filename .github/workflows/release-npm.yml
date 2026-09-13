@@ -1,5 +1,9 @@
 name: Release Node.js Addon (npm)
 
+concurrency:
+  group: release-npm-${{ github.ref_name || github.ref }}
+  cancel-in-progress: false
+
 on:
   push:
     tags:

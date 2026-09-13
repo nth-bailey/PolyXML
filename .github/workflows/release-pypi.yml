@@ -1,5 +1,9 @@
 name: Release Python Wheels (PyPI)
 
+concurrency:
+  group: release-pypi-${{ github.ref_name || github.ref }}
+  cancel-in-progress: false
+
 on:
   push:
     tags:

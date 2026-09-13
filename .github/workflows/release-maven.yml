@@ -1,5 +1,9 @@
 name: Release Java Package (Maven Central)
 
+concurrency:
+  group: release-maven-${{ github.ref_name || github.ref }}
+  cancel-in-progress: false
+
 on:
   push:
     tags:
@@ -70,10 +74,10 @@ jobs:
               GPG_ARGS="-Dgpg.passphrase=$MAVEN_GPG_PASSPHRASE"
             fi
             output=$(mvn --batch-mode deploy -P release -DskipTests $GPG_ARGS 2>&1) && { echo "$output"; exit 0; }
-            if echo "$output" | grep -q "already exists"; then
+            if echo "$output" | grep -qiE "(already exists|already been published|is currently being published)"; then
               echo "$output"
               echo ""
-              echo "Version already published on Maven Central — skipping."
+              echo "Version already published or currently being published on Maven Central — skipping."
               exit 0
             fi
             echo "$output" >&2
