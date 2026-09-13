@@ -96,3 +96,15 @@ Before completing any task:
 3. **Rust Tests**: Ensure `cargo test --workspace` passes cleanly.
 4. **Python Tests & Coverage**: Ensure `pytest --cov=polyxml --cov-branch --cov-fail-under=100` passes with **100% coverage**.
 5. **Python Lint**: Ensure `ruff check python/ tests/` passes with 0 errors.
+
+---
+
+## 5. Workspace Skills Maintenance
+
+Custom agent runbooks and procedures are stored as skills in `.agents/skills/<skill_name>/SKILL.md`.
+
+When working in this repository:
+1. **Consult & Use Skills**: When working on PyO3 ABI3 builds, memory profiling, or the pure Rust core engine, refer to the corresponding skill in `.agents/skills/`.
+2. **Keep Skills Up to Date**: If you discover a bug, an undocumented toolchain requirement, or an improved workflow while working on a task, **you MUST update the relevant `SKILL.md`** so subsequent agents benefit from the fix.
+3. **Capture New Workflows**: When introducing a new complex, multi-step, or repeatable workflow, create a new skill directory in `.agents/skills/<skill_name>/SKILL.md` following standard frontmatter conventions.
+
