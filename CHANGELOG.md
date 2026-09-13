@@ -1,3 +1,10 @@
+## [0.8.1](https://github.com/nth-bailey/PolyXML/compare/v0.8.0...v0.8.1) (2026-09-13)
+
+
+### Bug Fixes
+
+* **ci:** deduplicate release dispatch and handle concurrent maven central deployments ([7f92648](https://github.com/nth-bailey/PolyXML/commit/7f9264899e2800aa5f5b85904b892fa6c9192b8b))
+
 # [0.8.0](https://github.com/nth-bailey/PolyXML/compare/v0.7.0...v0.8.0) (2026-09-13)
 
 
