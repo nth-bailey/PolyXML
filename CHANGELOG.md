@@ -1,3 +1,10 @@
+# [0.10.0](https://github.com/nth-bailey/PolyXML/compare/v0.9.0...v0.10.0) (2026-09-17)
+
+
+### Features
+
+* **core,python:** implement toggleable W3C XML namespace support and prefix mapping ([fba695e](https://github.com/nth-bailey/PolyXML/commit/fba695e0a3697d6978c4b52738158ebff453407e))
+
 # [0.9.0](https://github.com/nth-bailey/PolyXML/compare/v0.8.1...v0.9.0) (2026-09-13)
 
 
