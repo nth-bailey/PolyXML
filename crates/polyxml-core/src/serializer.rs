@@ -116,6 +116,7 @@ impl NamespaceContext {
                 if !prefix.is_empty() {
                     return Cow::Owned(format!("{}:{}", prefix, clean_name));
                 }
+                return Cow::Borrowed(clean_name);
             }
         }
         Cow::Borrowed(local_name)
@@ -132,6 +133,7 @@ impl NamespaceContext {
                 if !prefix.is_empty() {
                     return Cow::Owned(format!("{}:{}", prefix, clean_name));
                 }
+                return Cow::Borrowed(clean_name);
             }
         }
         Cow::Borrowed(local_name)
