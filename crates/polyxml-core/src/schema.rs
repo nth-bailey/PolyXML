@@ -33,6 +33,7 @@ pub enum ValueType {
 pub struct FieldSchema {
     pub name: String,
     pub xml_name: Vec<u8>,
+    pub namespace: Option<String>,
     pub kind: FieldKind,
     pub val_type: ValueType,
     pub required: bool,
@@ -48,10 +49,16 @@ impl FieldSchema {
         Self {
             name: name.into(),
             xml_name: xml_name.to_vec(),
+            namespace: None,
             kind,
             val_type,
             required: false,
         }
+    }
+
+    pub fn namespace(mut self, ns: impl Into<String>) -> Self {
+        self.namespace = Some(ns.into());
+        self
     }
 
     pub fn required(mut self) -> Self {
@@ -63,6 +70,8 @@ impl FieldSchema {
 #[derive(Debug, Clone)]
 pub struct ModelSchema {
     pub name: String,
+    pub xml_name: Vec<u8>,
+    pub namespace: Option<String>,
     pub fields: Vec<FieldSchema>,
     pub element_map: HashMap<Vec<u8>, usize>,
     pub attribute_map: HashMap<Vec<u8>, usize>,
@@ -77,6 +86,8 @@ impl ModelSchema {
 
 pub struct ModelSchemaBuilder {
     name: String,
+    xml_name: Option<Vec<u8>>,
+    namespace: Option<String>,
     fields: Vec<FieldSchema>,
 }
 
@@ -84,8 +95,20 @@ impl ModelSchemaBuilder {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
+            xml_name: None,
+            namespace: None,
             fields: Vec::new(),
         }
+    }
+
+    pub fn xml_name(mut self, xml_name: &[u8]) -> Self {
+        self.xml_name = Some(xml_name.to_vec());
+        self
+    }
+
+    pub fn namespace(mut self, ns: impl Into<String>) -> Self {
+        self.namespace = Some(ns.into());
+        self
     }
 
     pub fn field(mut self, field: FieldSchema) -> Self {
@@ -119,8 +142,14 @@ impl ModelSchemaBuilder {
             }
         }
 
+        let xml_name = self
+            .xml_name
+            .unwrap_or_else(|| self.name.as_bytes().to_vec());
+
         Arc::new(ModelSchema {
             name: self.name,
+            xml_name,
+            namespace: self.namespace,
             fields: self.fields,
             element_map,
             attribute_map,

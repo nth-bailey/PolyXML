@@ -231,7 +231,71 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ---
 
-## 6. High-Throughput Production Best Practices
+## 6. XML Namespaces & Prefix Mapping
+
+`polyxml-core` natively supports W3C XML namespaces for both serialization and deserialization with zero allocation overhead when disabled.
+
+### Schema Definition with Namespaces
+
+Declare namespaces on models or specific fields using `.with_namespace()`:
+
+```rust
+use std::collections::HashMap;
+use std::sync::Arc;
+use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
+use polyxml::{deserialize, serialize_with_options, PolyValue};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Define a schema with model-level and field-level namespaces
+    let schema = ModelSchema::builder("Order")
+        .with_namespace("https://example.com/orders")
+        .field(
+            FieldSchema::new("id", b"id", FieldKind::Attribute, ValueType::Scalar(ScalarType::Int))
+                .required(),
+        )
+        .field(
+            FieldSchema::new("item", b"item", FieldKind::Element, ValueType::Scalar(ScalarType::String))
+                .with_namespace("https://example.com/items"),
+        )
+        .build();
+
+    let mut record = HashMap::new();
+    record.insert("id".to_string(), PolyValue::Int(1001));
+    record.insert("item".to_string(), PolyValue::String("Widget Pro".to_string()));
+    let val = PolyValue::Object(record);
+
+    // 1. Serialization with automatic namespace prefix generation (ns0, ns1, ...)
+    let bytes = serialize_with_options("Order", &val, &schema, Some(2), true, None)?;
+    println!("{}", std::str::from_utf8(&bytes)?);
+    // Output:
+    // <ns0:Order xmlns:ns0="https://example.com/orders" xmlns:ns1="https://example.com/items" id="1001">
+    //   <ns1:item>Widget Pro</ns1:item>
+    // </ns0:Order>
+
+    // 2. Serialization with custom prefix mapping
+    let mut ns_map = HashMap::new();
+    ns_map.insert(Some("ord".to_string()), "https://example.com/orders".to_string());
+    ns_map.insert(Some("itm".to_string()), "https://example.com/items".to_string());
+
+    let bytes = serialize_with_options("Order", &val, &schema, Some(2), true, Some(&ns_map))?;
+    println!("{}", std::str::from_utf8(&bytes)?);
+    // Output:
+    // <ord:Order xmlns:ord="https://example.com/orders" xmlns:itm="https://example.com/items" id="1001">
+    //   <itm:item>Widget Pro</itm:item>
+    // </ord:Order>
+
+    // 3. Deserializing namespaced documents (automatically matches local names and prefixes)
+    let parsed = deserialize(&bytes, Arc::clone(&schema))?;
+    assert_eq!(parsed.get("id").and_then(|v| v.as_i64()), Some(1001));
+    assert_eq!(parsed.get("item").and_then(|v| v.as_str()), Some("Widget Pro"));
+
+    Ok(())
+}
+```
+
+---
+
+## 7. High-Throughput Production Best Practices
 
 To achieve the maximum throughput from `polyxml-core`:
 
@@ -239,3 +303,4 @@ To achieve the maximum throughput from `polyxml-core`:
 2. **Pre-allocate Buffers**: For serialization loops, pass an existing `Vec<u8>` or reuse serialization buffers across requests to avoid heap allocations.
 3. **Use `XmlItemStream` for Files > 5 MB**: For large XML feeds, streaming ensures your process memory remains constant regardless of file size.
 4. **Thread Safety**: Both `ModelSchema` and `PolyValue` are fully `Send + Sync`, making them ideal for parallel processing with `rayon` or multi-threaded Tokio runtimes.
+

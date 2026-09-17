@@ -104,17 +104,28 @@ def iterparse[T](
     return _iterparse(_to_bytes(source), target_type, tag)
 
 
-def serialize(obj: object, *, indent: int | None = None) -> bytes:
+def serialize(
+    obj: object,
+    *,
+    indent: int | None = None,
+    namespaces: bool | None = None,
+    ns_map: dict[str, str] | None = None,
+) -> bytes:
     """Serialize a strongly-typed model instance back into XML bytes.
 
     Args:
         obj: Python dataclass or Pydantic model instance.
         indent: Optional indentation size in spaces for pretty-printing.
+        namespaces: Optional boolean toggle to enable or disable XML namespace prefix
+            resolution and root xmlns attribute generation. When None (default),
+            namespaces are automatically enabled if the model or fields define
+            namespaces or if ns_map is provided.
+        ns_map: Optional prefix-to-URI or URI-to-prefix mapping dictionary for XML namespaces.
 
     Returns:
         UTF-8 encoded XML bytes representing the model instance.
     """
-    return _serialize(obj, indent=indent)
+    return _serialize(obj, indent=indent, namespaces=namespaces, ns_map=ns_map)
 
 
 try:

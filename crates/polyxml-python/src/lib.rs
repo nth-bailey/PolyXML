@@ -188,6 +188,24 @@ fn extract_schema_from_class<'py>(
     let py = cls.py();
     let class_name: String = cls.getattr("__name__")?.extract()?;
     let mut builder = ModelSchema::builder(class_name);
+
+    if let Ok(meta_cls) = cls.getattr("Meta") {
+        if let Ok(name_val) = meta_cls.getattr("name") {
+            if let Ok(name_str) = name_val.extract::<String>() {
+                if !name_str.is_empty() {
+                    builder = builder.xml_name(name_str.as_bytes());
+                }
+            }
+        }
+        if let Ok(ns_val) = meta_cls.getattr("namespace") {
+            if let Ok(ns_str) = ns_val.extract::<String>() {
+                if !ns_str.is_empty() {
+                    builder = builder.namespace(ns_str);
+                }
+            }
+        }
+    }
+
     let mut cached_fields = Vec::new();
 
     let type_hints: Option<Bound<'py, PyDict>> = py
@@ -204,6 +222,7 @@ fn extract_schema_from_class<'py>(
             let py_string = PyString::new(py, &py_name).unbind();
             let mut xml_name = py_name.clone();
             let mut kind = FieldKind::Element;
+            let mut field_ns: Option<String> = None;
 
             let meta = field_obj
                 .getattr("xsdata_metadata")
@@ -229,6 +248,13 @@ fn extract_schema_from_class<'py>(
                 if let Ok(n) = m.get_item("name") {
                     xml_name = n.extract().unwrap_or(py_name.clone());
                 }
+                if let Ok(ns) = m.get_item("namespace") {
+                    if let Ok(ns_str) = ns.extract::<String>() {
+                        if !ns_str.is_empty() {
+                            field_ns = Some(ns_str);
+                        }
+                    }
+                }
             }
 
             let field_type = if let Some(ref hints) = type_hints {
@@ -250,12 +276,11 @@ fn extract_schema_from_class<'py>(
                 py_type: Some(unwrapped_type.into_any().unbind()),
             });
 
-            builder = builder.field(FieldSchema::new(
-                py_name,
-                xml_name.as_bytes(),
-                kind,
-                val_type,
-            ));
+            let mut field_schema = FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type);
+            if let Some(ns) = field_ns {
+                field_schema = field_schema.namespace(ns);
+            }
+            builder = builder.field(field_schema);
         }
     } else if cls.hasattr("__dataclass_fields__")? {
         let fields: Bound<'py, PyDict> = cls.getattr("__dataclass_fields__")?.cast_into()?;
@@ -264,6 +289,7 @@ fn extract_schema_from_class<'py>(
             let py_string = PyString::new(py, &py_name).unbind();
             let mut xml_name = py_name.clone();
             let mut kind = FieldKind::Element;
+            let mut field_ns: Option<String> = None;
 
             if let Ok(meta) = field_obj.getattr("metadata") {
                 if let Ok(t) = meta.get_item("type") {
@@ -283,6 +309,13 @@ fn extract_schema_from_class<'py>(
                 }
                 if let Ok(n) = meta.get_item("name") {
                     xml_name = n.extract().unwrap_or(py_name.clone());
+                }
+                if let Ok(ns) = meta.get_item("namespace") {
+                    if let Ok(ns_str) = ns.extract::<String>() {
+                        if !ns_str.is_empty() {
+                            field_ns = Some(ns_str);
+                        }
+                    }
                 }
             }
 
@@ -315,12 +348,11 @@ fn extract_schema_from_class<'py>(
                 py_type: Some(unwrapped_type.into_any().unbind()),
             });
 
-            builder = builder.field(FieldSchema::new(
-                py_name,
-                xml_name.as_bytes(),
-                kind,
-                val_type,
-            ));
+            let mut field_schema = FieldSchema::new(py_name, xml_name.as_bytes(), kind, val_type);
+            if let Some(ns) = field_ns {
+                field_schema = field_schema.namespace(ns);
+            }
+            builder = builder.field(field_schema);
         }
     }
 
@@ -793,20 +825,49 @@ impl XmlIterator {
 }
 
 #[pyfunction]
-#[pyo3(signature = (obj, indent=None))]
+#[pyo3(signature = (obj, indent=None, namespaces=None, ns_map=None))]
 fn serialize<'py>(
     py: Python<'py>,
     obj: Bound<'py, PyAny>,
     indent: Option<usize>,
+    namespaces: Option<bool>,
+    ns_map: Option<Bound<'py, PyDict>>,
 ) -> PyResult<Bound<'py, PyBytes>> {
     let cls = obj.get_type();
     let meta = get_or_create_schema_meta(&cls)?;
 
     let poly_val = py_to_poly_value(py, &obj, &meta.schema, Some(&meta))?;
-    let root_name = meta.schema.name.as_str();
+    let root_name = std::str::from_utf8(&meta.schema.xml_name).unwrap_or(meta.schema.name.as_str());
 
-    let bytes = polyxml::serialize(root_name, &poly_val, &meta.schema, indent)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+    let rust_ns_map = if let Some(dict) = ns_map {
+        let mut map = std::collections::HashMap::new();
+        for (k, v) in dict.iter() {
+            let k_str = if k.is_none() {
+                String::new()
+            } else {
+                k.extract::<String>().unwrap_or_default()
+            };
+            let v_str = if v.is_none() {
+                String::new()
+            } else {
+                v.extract::<String>().unwrap_or_default()
+            };
+            map.insert(k_str, v_str);
+        }
+        Some(map)
+    } else {
+        None
+    };
+
+    let bytes = polyxml::serialize_with_options(
+        root_name,
+        &poly_val,
+        &meta.schema,
+        indent,
+        namespaces,
+        rust_ns_map.as_ref(),
+    )
+    .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
     Ok(PyBytes::new(py, &bytes))
 }

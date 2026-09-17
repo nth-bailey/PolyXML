@@ -182,7 +182,7 @@ item = polyxml.deserialize(b'<Item id="1"><name>Turbine</name><price>99.5</price
 for item in polyxml.iterparse(open("large_catalog.xml", "rb").read(), Item, tag="Item"):
     print(item.name, item.price)
 
-# 3. Serialize model back to XML
+# 3. Serialize model back to XML (with full W3C namespace & ns_map support)
 xml_bytes = polyxml.serialize(item, indent=2)
 
 # 4. Zero-GIL binary serialization for key-value databases & IPC

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::io::Cursor;
 
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
@@ -6,6 +8,125 @@ use quick_xml::Writer;
 use crate::error::{PolyXmlError, Result};
 use crate::schema::{FieldKind, ModelSchema, ValueType};
 use crate::value::PolyValue;
+
+#[derive(Debug, Clone)]
+pub struct NamespaceContext {
+    pub uri_to_prefix: HashMap<String, String>,
+    pub prefix_to_uri: Vec<(String, String)>,
+}
+
+impl NamespaceContext {
+    pub fn build(
+        root_schema: &ModelSchema,
+        user_ns_map: Option<&HashMap<String, String>>,
+    ) -> Option<Self> {
+        let mut uris = Vec::new();
+        Self::collect_namespaces(root_schema, &mut uris);
+
+        if uris.is_empty() && user_ns_map.is_none_or(|m| m.is_empty()) {
+            return None;
+        }
+
+        let mut uri_to_prefix = HashMap::new();
+        let mut prefix_to_uri = Vec::new();
+
+        // 1. Process user ns_map
+        if let Some(map) = user_ns_map {
+            for (k, v) in map {
+                let (prefix, uri) = if v.contains("://") || v.starts_with("urn:") {
+                    (k.clone(), v.clone())
+                } else if k.contains("://") || k.starts_with("urn:") {
+                    (v.clone(), k.clone())
+                } else {
+                    (k.clone(), v.clone())
+                };
+
+                let clean_prefix = if prefix == "None" {
+                    String::new()
+                } else {
+                    prefix
+                };
+                if !uri.is_empty() && !uri_to_prefix.contains_key(&uri) {
+                    uri_to_prefix.insert(uri.clone(), clean_prefix.clone());
+                    prefix_to_uri.push((clean_prefix, uri));
+                }
+            }
+        }
+
+        // 2. Assign prefixes for remaining schema URIs
+        let mut ns_counter = 0;
+        for uri in uris {
+            if !uri_to_prefix.contains_key(&uri) {
+                let prefix = match uri.as_str() {
+                    "http://www.w3.org/2001/XMLSchema-instance" => "xsi".to_string(),
+                    "http://www.w3.org/2001/XMLSchema" => "xs".to_string(),
+                    "http://www.w3.org/XML/1998/namespace" => "xml".to_string(),
+                    _ => loop {
+                        let candidate = format!("ns{}", ns_counter);
+                        ns_counter += 1;
+                        if !prefix_to_uri.iter().any(|(p, _)| p == &candidate) {
+                            break candidate;
+                        }
+                    },
+                };
+
+                uri_to_prefix.insert(uri.clone(), prefix.clone());
+                prefix_to_uri.push((prefix, uri));
+            }
+        }
+
+        Some(Self {
+            uri_to_prefix,
+            prefix_to_uri,
+        })
+    }
+
+    fn collect_namespaces(schema: &ModelSchema, uris: &mut Vec<String>) {
+        if let Some(ref ns) = schema.namespace {
+            if !ns.is_empty() && !uris.contains(ns) {
+                uris.push(ns.clone());
+            }
+        }
+        for field in &schema.fields {
+            if let Some(ref ns) = field.namespace {
+                if !ns.is_empty() && !uris.contains(ns) {
+                    uris.push(ns.clone());
+                }
+            }
+            match &field.val_type {
+                ValueType::Nested(nested) => Self::collect_namespaces(nested, uris),
+                ValueType::List(inner) => {
+                    if let ValueType::Nested(nested) = inner.as_ref() {
+                        Self::collect_namespaces(nested, uris);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    pub fn qualify_element<'a>(&'a self, local_name: &'a str, ns: Option<&str>) -> Cow<'a, str> {
+        if let Some(ns_uri) = ns {
+            if let Some(prefix) = self.uri_to_prefix.get(ns_uri) {
+                if !prefix.is_empty() {
+                    return Cow::Owned(format!("{}:{}", prefix, local_name));
+                }
+            }
+        }
+        Cow::Borrowed(local_name)
+    }
+
+    pub fn qualify_attribute<'a>(&'a self, local_name: &'a str, ns: Option<&str>) -> Cow<'a, str> {
+        if let Some(ns_uri) = ns {
+            if let Some(prefix) = self.uri_to_prefix.get(ns_uri) {
+                if !prefix.is_empty() {
+                    return Cow::Owned(format!("{}:{}", prefix, local_name));
+                }
+            }
+        }
+        Cow::Borrowed(local_name)
+    }
+}
 
 pub struct XmlSerializer;
 
@@ -16,13 +137,37 @@ impl XmlSerializer {
         schema: &ModelSchema,
         indent: Option<usize>,
     ) -> Result<Vec<u8>> {
+        Self::serialize_with_options(root_name, value, schema, indent, None, None)
+    }
+
+    pub fn serialize_with_options(
+        root_name: &str,
+        value: &PolyValue,
+        schema: &ModelSchema,
+        indent: Option<usize>,
+        enable_namespaces: Option<bool>,
+        ns_map: Option<&HashMap<String, String>>,
+    ) -> Result<Vec<u8>> {
         let mut buffer = Cursor::new(Vec::with_capacity(512));
         let mut writer = match indent {
             Some(spaces) => Writer::new_with_indent(&mut buffer, b' ', spaces),
             None => Writer::new(&mut buffer),
         };
 
-        Self::write_model(&mut writer, root_name.as_bytes(), value, schema)?;
+        let ns_ctx = match enable_namespaces {
+            Some(false) => None,
+            _ => NamespaceContext::build(schema, ns_map),
+        };
+
+        Self::write_model(
+            &mut writer,
+            root_name.as_bytes(),
+            value,
+            schema,
+            ns_ctx.as_ref(),
+            true,
+            schema.namespace.as_deref(),
+        )?;
 
         Ok(buffer.into_inner())
     }
@@ -51,6 +196,9 @@ impl XmlSerializer {
         tag_name: &[u8],
         value: &PolyValue,
         schema: &ModelSchema,
+        ns_ctx: Option<&NamespaceContext>,
+        is_root: bool,
+        element_ns: Option<&str>,
     ) -> Result<()> {
         let obj = match value {
             PolyValue::Object(o) => o,
@@ -61,17 +209,43 @@ impl XmlSerializer {
             }
         };
 
-        let mut elem = BytesStart::new(std::str::from_utf8(tag_name)?);
+        let local_tag = std::str::from_utf8(tag_name)?;
+        let qualified_tag = if let Some(ctx) = ns_ctx {
+            ctx.qualify_element(local_tag, element_ns)
+        } else {
+            Cow::Borrowed(local_tag)
+        };
+
+        let mut elem = BytesStart::new(qualified_tag.as_ref());
+
+        // Emit xmlns declarations on root element
+        if is_root {
+            if let Some(ctx) = ns_ctx {
+                for (prefix, uri) in &ctx.prefix_to_uri {
+                    if prefix.is_empty() {
+                        elem.push_attribute(("xmlns", uri.as_str()));
+                    } else {
+                        let attr_name = format!("xmlns:{}", prefix);
+                        elem.push_attribute((attr_name.as_str(), uri.as_str()));
+                    }
+                }
+            }
+        }
 
         // 1. Collect and write attributes
         for field in &schema.fields {
             if field.kind == FieldKind::Attribute {
                 if let Some(val) = obj.get(&field.name) {
                     if !val.is_null() {
-                        let attr_name = std::str::from_utf8(&field.xml_name)?;
+                        let local_attr = std::str::from_utf8(&field.xml_name)?;
+                        let attr_name = if let Some(ctx) = ns_ctx {
+                            ctx.qualify_attribute(local_attr, field.namespace.as_deref())
+                        } else {
+                            Cow::Borrowed(local_attr)
+                        };
                         let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                         if let Some(attr_str) = Self::format_scalar_to(val, &mut buf) {
-                            elem.push_attribute((attr_name, attr_str));
+                            elem.push_attribute((attr_name.as_ref(), attr_str));
                         }
                     }
                 }
@@ -115,19 +289,28 @@ impl XmlSerializer {
                     if val.is_null() {
                         continue;
                     }
+                    let child_element_ns =
+                        field.namespace.as_deref().or(schema.namespace.as_deref());
+
                     match &field.val_type {
                         ValueType::Scalar(_) => {
                             let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                             if let Some(text) = Self::format_scalar_to(val, &mut buf) {
-                                let child_tag = std::str::from_utf8(&field.xml_name)?;
+                                let local_child = std::str::from_utf8(&field.xml_name)?;
+                                let child_tag = if let Some(ctx) = ns_ctx {
+                                    ctx.qualify_element(local_child, child_element_ns)
+                                } else {
+                                    Cow::Borrowed(local_child)
+                                };
+
                                 writer
-                                    .write_event(Event::Start(BytesStart::new(child_tag)))
+                                    .write_event(Event::Start(BytesStart::new(child_tag.as_ref())))
                                     .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                                 writer
                                     .write_event(Event::Text(BytesText::new(text)))
                                     .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                                 writer
-                                    .write_event(Event::End(BytesEnd::new(child_tag)))
+                                    .write_event(Event::End(BytesEnd::new(child_tag.as_ref())))
                                     .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
                             }
                         }
@@ -140,11 +323,20 @@ impl XmlSerializer {
                                             if let Some(text) =
                                                 Self::format_scalar_to(item, &mut buf)
                                             {
-                                                let child_tag =
+                                                let local_child =
                                                     std::str::from_utf8(&field.xml_name)?;
+                                                let child_tag = if let Some(ctx) = ns_ctx {
+                                                    ctx.qualify_element(
+                                                        local_child,
+                                                        child_element_ns,
+                                                    )
+                                                } else {
+                                                    Cow::Borrowed(local_child)
+                                                };
+
                                                 writer
                                                     .write_event(Event::Start(BytesStart::new(
-                                                        child_tag,
+                                                        child_tag.as_ref(),
                                                     )))
                                                     .map_err(|e| {
                                                         PolyXmlError::SerializationError(
@@ -160,7 +352,7 @@ impl XmlSerializer {
                                                     })?;
                                                 writer
                                                     .write_event(Event::End(BytesEnd::new(
-                                                        child_tag,
+                                                        child_tag.as_ref(),
                                                     )))
                                                     .map_err(|e| {
                                                         PolyXmlError::SerializationError(
@@ -170,11 +362,18 @@ impl XmlSerializer {
                                             }
                                         }
                                         ValueType::Nested(nested_schema) => {
+                                            let nested_ns = field
+                                                .namespace
+                                                .as_deref()
+                                                .or(nested_schema.namespace.as_deref());
                                             Self::write_model(
                                                 writer,
                                                 &field.xml_name,
                                                 item,
                                                 nested_schema,
+                                                ns_ctx,
+                                                false,
+                                                nested_ns,
                                             )?;
                                         }
                                         ValueType::List(_) => {}
@@ -183,7 +382,19 @@ impl XmlSerializer {
                             }
                         }
                         ValueType::Nested(nested_schema) => {
-                            Self::write_model(writer, &field.xml_name, val, nested_schema)?;
+                            let nested_ns = field
+                                .namespace
+                                .as_deref()
+                                .or(nested_schema.namespace.as_deref());
+                            Self::write_model(
+                                writer,
+                                &field.xml_name,
+                                val,
+                                nested_schema,
+                                ns_ctx,
+                                false,
+                                nested_ns,
+                            )?;
                         }
                     }
                 }
@@ -192,7 +403,7 @@ impl XmlSerializer {
 
         // Close element
         writer
-            .write_event(Event::End(BytesEnd::new(std::str::from_utf8(tag_name)?)))
+            .write_event(Event::End(BytesEnd::new(qualified_tag.as_ref())))
             .map_err(|e| PolyXmlError::SerializationError(e.to_string()))?;
 
         Ok(())

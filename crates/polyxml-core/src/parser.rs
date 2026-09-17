@@ -94,6 +94,10 @@ pub struct XmlDeserializer;
 
 fn is_nil_element(e: &BytesStart) -> bool {
     for attr in e.attributes().flatten() {
+        let raw_key = attr.key.as_ref();
+        if raw_key == "xmlns" || raw_key.starts_with("xmlns:") {
+            continue;
+        }
         let key = attr.key.local_name();
         if (key.as_ref() == "nil" || key.as_ref() == "xsi:nil")
             && (attr.value.as_ref() == "true" || attr.value.as_ref() == "1")
@@ -368,6 +372,10 @@ impl XmlDeserializer {
 
     pub(crate) fn parse_attributes(e: &BytesStart, frame: &mut StackFrame) -> Result<()> {
         for attr in e.attributes().flatten() {
+            let raw_key = attr.key.as_ref();
+            if raw_key == "xmlns" || raw_key.starts_with("xmlns:") {
+                continue;
+            }
             let key = attr.key.local_name();
             if let Some(&field_idx) = frame.schema.attribute_map.get(key.as_ref().as_bytes()) {
                 let field = &frame.schema.fields[field_idx];
@@ -407,12 +415,20 @@ impl<R: std::io::BufRead> XmlItemStream<R> {
     }
 
     pub fn next_item(&mut self) -> Result<Option<PolyValue>> {
+        let target_local = if let Some(pos) = self.target_tag.iter().position(|&b| b == b':') {
+            &self.target_tag[pos + 1..]
+        } else {
+            self.target_tag.as_slice()
+        };
+
         loop {
             self.buf.clear();
             match self.reader.read_event_into(&mut self.buf) {
                 Ok(Event::Start(ref e)) => {
                     let local = e.local_name();
-                    if local.as_ref().as_bytes() == self.target_tag.as_slice() {
+                    if local.as_ref().as_bytes() == target_local
+                        || e.name().as_ref().as_bytes() == self.target_tag.as_slice()
+                    {
                         let item = XmlDeserializer::parse_sub_tree(
                             &mut self.reader,
                             Arc::clone(&self.schema),
@@ -424,7 +440,9 @@ impl<R: std::io::BufRead> XmlItemStream<R> {
                 }
                 Ok(Event::Empty(ref e)) => {
                     let local = e.local_name();
-                    if local.as_ref().as_bytes() == self.target_tag.as_slice() {
+                    if local.as_ref().as_bytes() == target_local
+                        || e.name().as_ref().as_bytes() == self.target_tag.as_slice()
+                    {
                         let mut frame = StackFrame::new(Arc::clone(&self.schema));
                         XmlDeserializer::parse_attributes(e, &mut frame)?;
                         return Ok(Some(frame.finish()?));

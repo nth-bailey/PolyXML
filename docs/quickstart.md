@@ -38,7 +38,7 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     sensor = polyxml.deserialize(xml, Sensor)
     print(f"Sensor: {sensor.name}, Reading: {sensor.reading}")
 
-    # 2. Serialize model back to formatted XML
+    # 2. Serialize model back to formatted XML (supports namespaces & ns_map)
     xml_output = polyxml.serialize(sensor, indent=2)
     print(xml_output.decode("utf-8"))
 

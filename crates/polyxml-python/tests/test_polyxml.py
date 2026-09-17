@@ -561,3 +561,69 @@ def test_mixed_content_wildcard_dataclass():
     serialized = polyxml.serialize(decoded)
     assert b"Sample Text Content" in serialized
     assert b'lang="en"' in serialized
+
+
+def test_namespaced_dataclass_serialization():
+    @dataclass
+    class Item:
+        class Meta:
+            name = "item"
+            namespace = "http://example.com/ns1"
+
+        title: str = field(metadata={"type": "Element", "namespace": "http://example.com/ns1"})
+        sku: str = field(metadata={"type": "Attribute", "namespace": "http://example.com/ns2"})
+        local_attr: int = field(default=99, metadata={"type": "Attribute"})
+
+    item = Item(title="Smartphone", sku="SKU-888", local_attr=99)
+
+    # 1. Auto-detected namespaces
+    xml_bytes = polyxml.serialize(item)
+    xml_str = xml_bytes.decode("utf-8")
+    assert 'xmlns:ns0="http://example.com/ns1"' in xml_str
+    assert 'xmlns:ns1="http://example.com/ns2"' in xml_str
+    assert xml_str.startswith("<ns0:item")
+    assert 'ns1:sku="SKU-888"' in xml_str
+    assert 'local_attr="99"' in xml_str
+    assert "<ns0:title>Smartphone</ns0:title>" in xml_str
+    assert xml_str.endswith("</ns0:item>")
+
+    # 2. Custom ns_map with default namespace
+    ns_map = {None: "http://example.com/ns1", "inv": "http://example.com/ns2"}
+    xml_custom = polyxml.serialize(item, ns_map=ns_map).decode("utf-8")
+    assert 'xmlns="http://example.com/ns1"' in xml_custom
+    assert 'xmlns:inv="http://example.com/ns2"' in xml_custom
+    assert xml_custom.startswith("<item")
+    assert 'inv:sku="SKU-888"' in xml_custom
+    assert "<title>Smartphone</title>" in xml_custom
+    assert xml_custom.endswith("</item>")
+
+    # 3. Explicitly disabled namespaces (toggle=False)
+    xml_raw = polyxml.serialize(item, namespaces=False).decode("utf-8")
+    assert "xmlns" not in xml_raw
+    assert xml_raw.startswith("<item")
+    assert 'sku="SKU-888"' in xml_raw
+    assert "<title>Smartphone</title>" in xml_raw
+
+
+def test_namespaced_pydantic_serialization():
+    class PydanticItem(BaseModel):
+        class Meta:
+            name = "product"
+            namespace = "http://example.com/prod"
+
+        name: str = Field(
+            json_schema_extra={"type": "Element", "namespace": "http://example.com/prod"}
+        )
+        code: str = Field(
+            json_schema_extra={"type": "Attribute", "namespace": "http://example.com/meta"}
+        )
+
+    prod = PydanticItem(name="Tablet", code="TAB-1")
+    xml_bytes = polyxml.serialize(prod, namespaces=True)
+    xml_str = xml_bytes.decode("utf-8")
+
+    assert 'xmlns:ns0="http://example.com/prod"' in xml_str
+    assert 'xmlns:ns1="http://example.com/meta"' in xml_str
+    assert xml_str.startswith("<ns0:product")
+    assert 'ns1:code="TAB-1"' in xml_str
+    assert "<ns0:name>Tablet</ns0:name>" in xml_str

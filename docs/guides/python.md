@@ -129,7 +129,78 @@ print(serialized.decode("utf-8"))
 
 ---
 
-## 4. Constant-Memory Streaming with `polyxml.iterparse`
+## 4. XML Namespaces & Prefix Mapping
+
+PolyXML includes high-performance, W3C-compliant XML namespace support during both serialization and deserialization.
+
+### Declaring Namespaces in Models
+
+Define namespaces using an inner `class Meta` on models and `namespace` metadata on fields (standard in `dataclasses` and `pydantic` via `pyxsdata`):
+
+```python
+from dataclasses import dataclass, field
+import polyxml
+
+@dataclass
+class Item:
+    class Meta:
+        name = "item"
+        namespace = "http://example.com/catalog"
+
+    title: str = field(metadata={"type": "Element", "namespace": "http://example.com/catalog"})
+    sku: str = field(metadata={"type": "Attribute", "namespace": "http://example.com/inv"})
+    price: float = field(metadata={"type": "Attribute"})  # Unprefixed attribute
+
+item = Item(title="High Performance Rust", sku="ISBN-999", price=49.99)
+```
+
+### Auto-Generated Prefixes (Default)
+
+By default, PolyXML automatically detects namespaces, assigns clean sequential prefixes (`ns0`, `ns1`, ...), and hoists `xmlns` declarations to the root element:
+
+```python
+xml_bytes = polyxml.serialize(item, indent=2)
+print(xml_bytes.decode("utf-8"))
+```
+
+Output:
+```xml
+<ns0:item xmlns:ns0="http://example.com/catalog" xmlns:ns1="http://example.com/inv" ns1:sku="ISBN-999" price="49.99">
+  <ns0:title>High Performance Rust</ns0:title>
+</ns0:item>
+```
+
+### Custom Prefix Mapping (`ns_map`)
+
+You can control prefix assignments or define a default namespace (`xmlns="..."`) using `ns_map`:
+
+```python
+ns_map = {
+    None: "http://example.com/catalog",  # Default namespace
+    "inv": "http://example.com/inv",     # Custom prefix
+}
+xml_bytes = polyxml.serialize(item, indent=2, ns_map=ns_map)
+print(xml_bytes.decode("utf-8"))
+```
+
+Output:
+```xml
+<item xmlns="http://example.com/catalog" xmlns:inv="http://example.com/inv" inv:sku="ISBN-999" price="49.99">
+  <title>High Performance Rust</title>
+</item>
+```
+
+### Zero-Overhead Fast Path (`namespaces=False`)
+
+If your payload does not use namespaces or you want raw throughput without prefix resolution:
+
+```python
+raw_bytes = polyxml.serialize(item, namespaces=False)
+```
+
+---
+
+## 5. Constant-Memory Streaming with `polyxml.iterparse`
 
 For large documents (hundreds of megabytes to gigabytes), parsing the entire document at once can cause out-of-memory errors. `polyxml.iterparse` yields typed objects one by one in constant $O(1)$ memory:
 

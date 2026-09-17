@@ -37,6 +37,25 @@ pub fn serialize(
     XmlSerializer::serialize(root_name, value, schema, indent)
 }
 
+/// High-level function to serialize a PolyValue with optional namespace support and custom prefix mapping.
+pub fn serialize_with_options(
+    root_name: &str,
+    value: &PolyValue,
+    schema: &ModelSchema,
+    indent: Option<usize>,
+    enable_namespaces: Option<bool>,
+    ns_map: Option<&std::collections::HashMap<String, String>>,
+) -> Result<Vec<u8>> {
+    XmlSerializer::serialize_with_options(
+        root_name,
+        value,
+        schema,
+        indent,
+        enable_namespaces,
+        ns_map,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -211,5 +230,130 @@ mod tests {
 
         let item4 = stream.next_item().unwrap();
         assert!(item4.is_none());
+    }
+
+    #[test]
+    fn test_namespaced_serialization() {
+        use std::collections::HashMap;
+
+        let schema = ModelSchema::builder("Item")
+            .xml_name(b"item")
+            .namespace("http://example.com/ns1")
+            .field(
+                FieldSchema::new(
+                    "title",
+                    b"title",
+                    FieldKind::Element,
+                    ValueType::Scalar(ScalarType::String),
+                )
+                .namespace("http://example.com/ns1"),
+            )
+            .field(
+                FieldSchema::new(
+                    "sku",
+                    b"sku",
+                    FieldKind::Attribute,
+                    ValueType::Scalar(ScalarType::String),
+                )
+                .namespace("http://example.com/ns2"),
+            )
+            .field(FieldSchema::new(
+                "unprefixed_attr",
+                b"unprefixed_attr",
+                FieldKind::Attribute,
+                ValueType::Scalar(ScalarType::Int),
+            ))
+            .build();
+
+        let mut obj = HashMap::new();
+        obj.insert("title".into(), PolyValue::String("Laptop".into()));
+        obj.insert("sku".into(), PolyValue::String("SKU123".into()));
+        obj.insert("unprefixed_attr".into(), PolyValue::Int(42));
+        let poly_val = PolyValue::Object(obj);
+
+        // 1. Auto-detected namespaces
+        let xml_bytes = serialize("item", &poly_val, &schema, None).unwrap();
+        let xml_str = std::str::from_utf8(&xml_bytes).unwrap();
+
+        assert!(xml_str.contains("xmlns:ns0=\"http://example.com/ns1\""));
+        assert!(xml_str.contains("xmlns:ns1=\"http://example.com/ns2\""));
+        assert!(xml_str.starts_with("<ns0:item"));
+        assert!(xml_str.contains("ns1:sku=\"SKU123\""));
+        assert!(xml_str.contains("unprefixed_attr=\"42\""));
+        assert!(xml_str.contains("<ns0:title>Laptop</ns0:title>"));
+        assert!(xml_str.ends_with("</ns0:item>"));
+
+        // 2. Custom ns_map with default namespace for ns1
+        let mut custom_map = HashMap::new();
+        custom_map.insert("".into(), "http://example.com/ns1".into());
+        custom_map.insert("inv".into(), "http://example.com/ns2".into());
+
+        let custom_xml_bytes = serialize_with_options(
+            "item",
+            &poly_val,
+            &schema,
+            None,
+            Some(true),
+            Some(&custom_map),
+        )
+        .unwrap();
+        let custom_str = std::str::from_utf8(&custom_xml_bytes).unwrap();
+
+        assert!(custom_str.contains("xmlns=\"http://example.com/ns1\""));
+        assert!(custom_str.contains("xmlns:inv=\"http://example.com/ns2\""));
+        assert!(custom_str.starts_with("<item"));
+        assert!(custom_str.contains("inv:sku=\"SKU123\""));
+        assert!(custom_str.contains("<title>Laptop</title>"));
+        assert!(custom_str.ends_with("</item>"));
+
+        // 3. Explicitly disabled namespaces (fast-path)
+        let raw_xml_bytes =
+            serialize_with_options("item", &poly_val, &schema, None, Some(false), None).unwrap();
+        let raw_str = std::str::from_utf8(&raw_xml_bytes).unwrap();
+        assert!(!raw_str.contains("xmlns"));
+        assert!(raw_str.starts_with("<item"));
+        assert!(raw_str.contains("sku=\"SKU123\""));
+        assert!(raw_str.contains("<title>Laptop</title>"));
+
+        // 4. Verify deserialization roundtrip ignores xmlns attributes and handles prefixed elements
+        let roundtrip_val = deserialize(&xml_bytes, Arc::clone(&schema)).unwrap();
+        assert_eq!(
+            roundtrip_val.get("title"),
+            Some(&PolyValue::String("Laptop".into()))
+        );
+        assert_eq!(
+            roundtrip_val.get("sku"),
+            Some(&PolyValue::String("SKU123".into()))
+        );
+        assert_eq!(
+            roundtrip_val.get("unprefixed_attr"),
+            Some(&PolyValue::Int(42))
+        );
+    }
+
+    #[test]
+    fn test_deserialization_does_not_confuse_xmlns_with_attributes() {
+        // Schema has an attribute named "prefix"
+        let schema = ModelSchema::builder("Item")
+            .field(FieldSchema::new(
+                "prefix",
+                b"prefix",
+                FieldKind::Attribute,
+                ValueType::Scalar(ScalarType::String),
+            ))
+            .build();
+
+        // XML defines xmlns:prefix="http://example.com" and an actual attribute prefix="actual_val"
+        let xml = br#"<Item xmlns:prefix="http://example.com" prefix="actual_val" />"#;
+        let val = deserialize(xml, Arc::clone(&schema)).unwrap();
+        assert_eq!(
+            val.get("prefix"),
+            Some(&PolyValue::String("actual_val".into()))
+        );
+
+        // XML defines xmlns:prefix="http://example.com" but NO actual attribute prefix
+        let xml2 = br#"<Item xmlns:prefix="http://example.com" />"#;
+        let val2 = deserialize(xml2, Arc::clone(&schema)).unwrap();
+        assert_eq!(val2.get("prefix"), None);
     }
 }
