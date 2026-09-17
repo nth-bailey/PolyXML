@@ -1,3 +1,10 @@
+# [0.11.0](https://github.com/nth-bailey/PolyXML/compare/v0.10.0...v0.11.0) (2026-09-17)
+
+
+### Features
+
+* multi-language feature parity for W3C XML namespaces across C, C++, Go, Node, and Java ([8965862](https://github.com/nth-bailey/PolyXML/commit/896586258ca535c36c1750d1ddbd8fa755369d8e))
+
 # [0.10.0](https://github.com/nth-bailey/PolyXML/compare/v0.9.0...v0.10.0) (2026-09-17)
 
 
