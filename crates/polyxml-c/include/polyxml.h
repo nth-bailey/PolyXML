@@ -45,12 +45,24 @@ typedef enum polyxml_error_code {
 
 /* Schema Builder API */
 polyxml_schema_builder_t* polyxml_schema_builder_create(const char* name);
+void polyxml_schema_builder_set_namespace(
+    polyxml_schema_builder_t* builder,
+    const char* namespace_uri
+);
 void polyxml_schema_builder_add_field(
     polyxml_schema_builder_t* builder,
     const char* name,
     const char* xml_name,
     polyxml_field_kind_t kind,
     polyxml_scalar_type_t scalar_type
+);
+void polyxml_schema_builder_add_field_with_namespace(
+    polyxml_schema_builder_t* builder,
+    const char* name,
+    const char* xml_name,
+    polyxml_field_kind_t kind,
+    polyxml_scalar_type_t scalar_type,
+    const char* namespace_uri
 );
 polyxml_schema_t* polyxml_schema_builder_build(polyxml_schema_builder_t* builder);
 void polyxml_schema_free(polyxml_schema_t* schema);
@@ -68,6 +80,19 @@ polyxml_error_code_t polyxml_serialize(
     const polyxml_value_t* value,
     const polyxml_schema_t* schema,
     int indent,
+    uint8_t** out_bytes,
+    size_t* out_len
+);
+
+polyxml_error_code_t polyxml_serialize_with_options(
+    const char* root_name,
+    const polyxml_value_t* value,
+    const polyxml_schema_t* schema,
+    int indent,
+    int enable_namespaces,
+    const char* const* ns_prefixes,
+    const char* const* ns_uris,
+    size_t ns_count,
     uint8_t** out_bytes,
     size_t* out_len
 );

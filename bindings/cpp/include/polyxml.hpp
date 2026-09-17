@@ -1,11 +1,13 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "polyxml.h"
 
@@ -118,13 +120,20 @@ public:
         }
     }
 
-    SchemaBuilder& add_attribute(const std::string& name, const std::string& xml_name, polyxml_scalar_type_t scalar_type) {
-        polyxml_schema_builder_add_field(raw_, name.c_str(), xml_name.c_str(), POLYXML_FIELD_ATTRIBUTE, scalar_type);
+    SchemaBuilder& set_namespace(const std::string& namespace_uri) {
+        polyxml_schema_builder_set_namespace(raw_, namespace_uri.c_str());
         return *this;
     }
 
-    SchemaBuilder& add_element(const std::string& name, const std::string& xml_name, polyxml_scalar_type_t scalar_type) {
-        polyxml_schema_builder_add_field(raw_, name.c_str(), xml_name.c_str(), POLYXML_FIELD_ELEMENT, scalar_type);
+    SchemaBuilder& add_attribute(const std::string& name, const std::string& xml_name, polyxml_scalar_type_t scalar_type, const std::string& namespace_uri = "") {
+        const char* ns = namespace_uri.empty() ? nullptr : namespace_uri.c_str();
+        polyxml_schema_builder_add_field_with_namespace(raw_, name.c_str(), xml_name.c_str(), POLYXML_FIELD_ATTRIBUTE, scalar_type, ns);
+        return *this;
+    }
+
+    SchemaBuilder& add_element(const std::string& name, const std::string& xml_name, polyxml_scalar_type_t scalar_type, const std::string& namespace_uri = "") {
+        const char* ns = namespace_uri.empty() ? nullptr : namespace_uri.c_str();
+        polyxml_schema_builder_add_field_with_namespace(raw_, name.c_str(), xml_name.c_str(), POLYXML_FIELD_ELEMENT, scalar_type, ns);
         return *this;
     }
 
@@ -156,16 +165,42 @@ inline Value deserialize(std::string_view xml, const Schema& schema) {
     return Value(out_val, true);
 }
 
-inline std::string serialize(std::string_view root_name, const Value& val, const Schema& schema, int indent = 0) {
+inline std::string serialize_with_options(
+    std::string_view root_name,
+    const Value& val,
+    const Schema& schema,
+    int indent = 0,
+    std::optional<bool> enable_namespaces = std::nullopt,
+    const std::map<std::string, std::string>& ns_map = {}
+) {
     uint8_t* out_bytes = nullptr;
     size_t out_len = 0;
     std::string root_str(root_name);
 
-    auto code = polyxml_serialize(
+    int enable_ns_int = -1;
+    if (enable_namespaces.has_value()) {
+        enable_ns_int = enable_namespaces.value() ? 1 : 0;
+    }
+
+    std::vector<const char*> prefixes;
+    std::vector<const char*> uris;
+    prefixes.reserve(ns_map.size());
+    uris.reserve(ns_map.size());
+
+    for (const auto& [prefix, uri] : ns_map) {
+        prefixes.push_back(prefix.c_str());
+        uris.push_back(uri.c_str());
+    }
+
+    auto code = polyxml_serialize_with_options(
         root_str.c_str(),
         val.raw(),
         schema.raw(),
         indent,
+        enable_ns_int,
+        prefixes.empty() ? nullptr : prefixes.data(),
+        uris.empty() ? nullptr : uris.data(),
+        ns_map.size(),
         &out_bytes,
         &out_len
     );
@@ -177,6 +212,10 @@ inline std::string serialize(std::string_view root_name, const Value& val, const
     std::string result(reinterpret_cast<char*>(out_bytes), out_len);
     polyxml_bytes_free(out_bytes, out_len);
     return result;
+}
+
+inline std::string serialize(std::string_view root_name, const Value& val, const Schema& schema, int indent = 0) {
+    return serialize_with_options(root_name, val, schema, indent);
 }
 
 } // namespace polyxml

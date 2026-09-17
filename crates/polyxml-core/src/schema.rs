@@ -61,6 +61,10 @@ impl FieldSchema {
         self
     }
 
+    pub fn with_namespace(self, ns: impl Into<String>) -> Self {
+        self.namespace(ns)
+    }
+
     pub fn required(mut self) -> Self {
         self.required = true;
         self
@@ -109,6 +113,10 @@ impl ModelSchemaBuilder {
     pub fn namespace(mut self, ns: impl Into<String>) -> Self {
         self.namespace = Some(ns.into());
         self
+    }
+
+    pub fn with_namespace(self, ns: impl Into<String>) -> Self {
+        self.namespace(ns)
     }
 
     pub fn field(mut self, field: FieldSchema) -> Self {

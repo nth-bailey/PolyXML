@@ -8,7 +8,7 @@
     "test": "node test/index.test.js"
   },
   "napi": {
-    "name": "polyxml"
+    "binaryName": "polyxml"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0"

@@ -196,8 +196,50 @@ int main() {
 
 ---
 
-## 5. Performance Guidelines for C++20
+## 5. XML Namespaces & Prefix Mapping
+
+PolyXML C++20 bindings support full W3C XML namespace declarations and custom prefix maps:
+
+```cpp
+#include "polyxml.hpp"
+#include <iostream>
+#include <map>
+
+int main() {
+    auto schema = polyxml::SchemaBuilder("Order")
+        .set_namespace("https://example.com/orders")
+        .add_attribute("id", "id", POLYXML_SCALAR_INT)
+        .add_element("item", "item", POLYXML_SCALAR_STRING, "https://example.com/items")
+        .build();
+
+    std::string_view xml = R"(
+        <ns0:Order xmlns:ns0="https://example.com/orders" xmlns:ns1="https://example.com/items" id="505">
+            <ns1:item>Industrial Sensor</ns1:item>
+        </ns0:Order>
+    )";
+
+    polyxml::Value val = polyxml::deserialize(xml, schema);
+    std::cout << "Order ID: " << val.get("id")->as_int().value_or(0) << "\n";
+    std::cout << "Item: " << val.get("item")->as_string().value_or("") << "\n";
+
+    // Serialize with custom prefix mapping
+    std::map<std::string, std::string> ns_map = {
+        {"ord", "https://example.com/orders"},
+        {"itm", "https://example.com/items"}
+    };
+
+    std::string serialized = polyxml::serialize_with_options("Order", val, schema, 2, true, ns_map);
+    std::cout << "Namespaced XML:\n" << serialized << "\n";
+
+    return 0;
+}
+```
+
+---
+
+## 6. Performance Guidelines for C++20
 
 1. **Keep `polyxml::Schema` Instances Long-Lived**: Creating a schema involves heap allocation and string parsing. Create schemas once (e.g. as `static const` or class members) and reuse them across all requests.
 2. **Use `std::string_view`**: The `polyxml::deserialize` function accepts `std::string_view`, allowing zero-copy parsing from network buffers, memory-mapped files (`mmap`), or string literals.
 3. **Avoid Copying String Values**: `val.get("field")->as_string()` returns `std::optional<std::string_view>`, pointing directly into the parsed token memory without heap string allocations.
+

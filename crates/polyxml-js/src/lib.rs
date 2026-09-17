@@ -12,16 +12,21 @@ pub struct JsFieldDef {
     pub xml_name: String,
     pub kind: String,
     pub scalar_type: String,
+    pub namespace: Option<String>,
 }
 
 #[napi(object)]
 pub struct JsModelSchema {
     pub name: String,
     pub fields: Vec<JsFieldDef>,
+    pub namespace: Option<String>,
 }
 
 fn convert_js_schema(schema: &JsModelSchema) -> Arc<ModelSchema> {
     let mut builder = ModelSchema::builder(&schema.name);
+    if let Some(ns) = &schema.namespace {
+        builder = builder.namespace(ns);
+    }
     for f in &schema.fields {
         let kind = match f.kind.as_str() {
             "attribute" => FieldKind::Attribute,
@@ -37,12 +42,12 @@ fn convert_js_schema(schema: &JsModelSchema) -> Arc<ModelSchema> {
             "xml_datetime" => ScalarType::XmlDateTime,
             _ => ScalarType::String,
         };
-        builder = builder.field(FieldSchema::new(
-            &f.name,
-            f.xml_name.as_bytes(),
-            kind,
-            ValueType::Scalar(sc),
-        ));
+        let mut field =
+            FieldSchema::new(&f.name, f.xml_name.as_bytes(), kind, ValueType::Scalar(sc));
+        if let Some(ns) = &f.namespace {
+            field = field.namespace(ns);
+        }
+        builder = builder.field(field);
     }
     builder.build()
 }
@@ -124,6 +129,8 @@ pub fn serialize(
     value: napi::JsObject,
     schema: JsModelSchema,
     indent: Option<u32>,
+    namespaces: Option<bool>,
+    ns_map: Option<std::collections::HashMap<String, String>>,
 ) -> Result<Buffer> {
     use std::collections::HashMap;
 
@@ -138,8 +145,15 @@ pub fn serialize(
     let poly_val = PolyValue::Object(map);
     let model_schema = convert_js_schema(&schema);
     let indent_opt = indent.map(|i| i as usize);
-    let bytes = polyxml::serialize(&root_name, &poly_val, &model_schema, indent_opt)
-        .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))?;
+    let bytes = polyxml::serialize_with_options(
+        &root_name,
+        &poly_val,
+        &model_schema,
+        indent_opt,
+        namespaces,
+        ns_map.as_ref(),
+    )
+    .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))?;
     Ok(bytes.into())
 }
 

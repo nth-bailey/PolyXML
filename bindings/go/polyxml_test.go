@@ -83,3 +83,56 @@ func TestGoDeserializationAndSerialization(t *testing.T) {
 		t.Fatalf("serialized output missing name element: %s", serializedStr)
 	}
 }
+
+func TestGoNamespaces(t *testing.T) {
+	builder, err := polyxml.NewSchemaBuilder("Order")
+	if err != nil {
+		t.Fatalf("failed to create schema builder: %v", err)
+	}
+
+	builder.SetNamespace("https://example.com/orders")
+	builder.AddField("id", "id", polyxml.FieldAttribute, polyxml.ScalarInt)
+	builder.AddFieldWithNamespace("item", "item", polyxml.FieldElement, polyxml.ScalarString, "https://example.com/items")
+
+	schema, err := builder.Build()
+	if err != nil {
+		t.Fatalf("failed to build schema: %v", err)
+	}
+
+	xml := []byte(`<ns0:Order xmlns:ns0="https://example.com/orders" xmlns:ns1="https://example.com/items" id="505"><ns1:item>GoGadget</ns1:item></ns0:Order>`)
+	val, err := polyxml.Deserialize(xml, schema)
+	if err != nil {
+		t.Fatalf("failed to deserialize: %v", err)
+	}
+
+	idField := val.GetField("id")
+	if idField == nil {
+		t.Fatal("id field is nil")
+	}
+	id, err := idField.GetInt()
+	if err != nil || id != 505 {
+		t.Fatalf("expected id 505, got %d (err: %v)", id, err)
+	}
+
+	nsMap := map[string]string{
+		"ord": "https://example.com/orders",
+		"itm": "https://example.com/items",
+	}
+
+	enabled := true
+	serialized, err := polyxml.SerializeWithOptions("Order", val, schema, 0, &enabled, nsMap)
+	if err != nil {
+		t.Fatalf("failed to serialize with options: %v", err)
+	}
+
+	s := string(serialized)
+	if !strings.Contains(s, `xmlns:ord="https://example.com/orders"`) {
+		t.Fatalf("missing xmlns:ord: %s", s)
+	}
+	if !strings.Contains(s, `<ord:Order`) {
+		t.Fatalf("missing <ord:Order: %s", s)
+	}
+	if !strings.Contains(s, `<itm:item>GoGadget</itm:item>`) {
+		t.Fatalf("missing <itm:item>: %s", s)
+	}
+}

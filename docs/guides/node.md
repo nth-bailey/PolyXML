@@ -167,8 +167,44 @@ try {
 
 ---
 
-## 5. Performance Best Practices for Node.js
+## 5. XML Namespaces & Prefix Mapping
+
+PolyXML for Node.js/TypeScript supports full W3C XML namespace declarations and custom prefix maps:
+
+```typescript
+import { deserialize, serialize, ModelSchema } from 'polyxml';
+
+const orderSchema: ModelSchema = {
+  name: 'Order',
+  namespace: 'https://example.com/orders',
+  fields: [
+    { name: 'id', xmlName: 'id', kind: 'attribute', scalarType: 'int' },
+    { name: 'item', xmlName: 'item', kind: 'element', scalarType: 'string', namespace: 'https://example.com/items' },
+  ],
+};
+
+const xml = `
+  <ns0:Order xmlns:ns0="https://example.com/orders" xmlns:ns1="https://example.com/items" id="777">
+    <ns1:item>NodeGadget</ns1:item>
+  </ns0:Order>
+`;
+
+const order = deserialize(xml, orderSchema) as any;
+console.log(`Order ${order.id}: ${order.item}`);
+
+// Serialize with custom prefix mapping
+const outBytes = serialize('Order', order, orderSchema, 2, true, {
+  ord: 'https://example.com/orders',
+  itm: 'https://example.com/items',
+});
+console.log(Buffer.from(outBytes).toString('utf-8'));
+```
+
+---
+
+## 6. Performance Best Practices for Node.js
 
 1. **Avoid Converting Buffers to Strings**: If your XML arrives via HTTP or disk as a `Buffer`, pass it directly to `deserialize(buffer, schema)`. Converting `buffer.toString('utf-8')` forces V8 to allocate a UTF-16 string on the V8 heap unnecessarily.
 2. **Reuse `ModelSchema` Objects**: Schema definitions should be instantiated once as top-level constants rather than recreated inside request handlers.
 3. **Prefer Compact Serialization for APIs**: When sending XML over network APIs, omit the `indent` argument (`serialize(root, val, schema)`) to minimize bandwidth and skip whitespace generation.
+

@@ -237,8 +237,63 @@ func xmlHandler(w http.ResponseWriter, r *http.Request) {
 
 ---
 
-## 5. Memory Management & Garbage Collection
+## 5. XML Namespaces & Prefix Mapping
+
+PolyXML Go bindings support W3C XML namespaces and custom prefix mappings:
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/nth-bailey/PolyXML/bindings/go"
+)
+
+func main() {
+	builder, err := polyxml.NewSchemaBuilder("Order")
+	if err != nil {
+		log.Fatalf("Failed to create builder: %v", err)
+	}
+
+	// Declare model and field namespaces
+	builder.SetNamespace("https://example.com/orders")
+	builder.AddField("id", "id", polyxml.FieldAttribute, polyxml.ScalarInt)
+	builder.AddFieldWithNamespace("item", "item", polyxml.FieldElement, polyxml.ScalarString, "https://example.com/items")
+
+	schema, _ := builder.Build()
+
+	xml := []byte(`<ns0:Order xmlns:ns0="https://example.com/orders" xmlns:ns1="https://example.com/items" id="505"><ns1:item>GoGadget</ns1:item></ns0:Order>`)
+	val, err := polyxml.Deserialize(xml, schema)
+	if err != nil {
+		log.Fatalf("Deserialization error: %v", err)
+	}
+
+	id, _ := val.GetField("id").GetInt()
+	item, _ := val.GetField("item").GetString()
+	fmt.Printf("Order %d: %s\n", id, item)
+
+	// Serialize with custom prefix mapping
+	nsMap := map[string]string{
+		"ord": "https://example.com/orders",
+		"itm": "https://example.com/items",
+	}
+
+	enabled := true
+	outBytes, err := polyxml.SerializeWithOptions("Order", val, schema, 2, &enabled, nsMap)
+	if err != nil {
+		log.Fatalf("Serialization error: %v", err)
+	}
+	fmt.Println(string(outBytes))
+}
+```
+
+---
+
+## 6. Memory Management & Garbage Collection
 
 PolyXML Go bindings bind Go's GC to native Rust resources through `runtime.SetFinalizer`:
 - When a `*polyxml.Schema` or `*polyxml.Value` object becomes unreachable in Go, the Go garbage collector invokes the finalizer which calls `C.polyxml_schema_free` or `C.polyxml_value_free`.
 - **Best Practice**: In high-throughput batch loops, avoid creating new `Schema` objects repeatedly. Construct global or long-lived schemas to eliminate allocation cycles.
+

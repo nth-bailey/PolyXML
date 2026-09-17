@@ -19,10 +19,12 @@ export interface FieldDefinition {
   xmlName: string;
   kind: FieldKind;
   scalarType: ScalarType;
+  namespace?: string | null;
 }
 
 export interface ModelSchema {
   name: string;
+  namespace?: string | null;
   fields: FieldDefinition[];
 }
 
@@ -49,7 +51,9 @@ export function serialize(
   rootName: string,
   value: Record<string, any>,
   schema: ModelSchema,
-  indent?: number | null
+  indent?: number | null,
+  namespaces?: boolean | null,
+  nsMap?: Record<string, string> | null
 ): Uint8Array;
 
 /**

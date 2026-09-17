@@ -52,18 +52,35 @@ func NewSchemaBuilder(name string) (*SchemaBuilder, error) {
 	return &SchemaBuilder{ptr: ptr}, nil
 }
 
+func (b *SchemaBuilder) SetNamespace(namespaceURI string) {
+	cNs := C.CString(namespaceURI)
+	defer C.free(unsafe.Pointer(cNs))
+	C.polyxml_schema_builder_set_namespace(b.ptr, cNs)
+}
+
 func (b *SchemaBuilder) AddField(name, xmlName string, kind FieldKind, scalar ScalarType) {
+	b.AddFieldWithNamespace(name, xmlName, kind, scalar, "")
+}
+
+func (b *SchemaBuilder) AddFieldWithNamespace(name, xmlName string, kind FieldKind, scalar ScalarType, namespaceURI string) {
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
 	cXmlName := C.CString(xmlName)
 	defer C.free(unsafe.Pointer(cXmlName))
 
-	C.polyxml_schema_builder_add_field(
+	var cNs *C.char
+	if namespaceURI != "" {
+		cNs = C.CString(namespaceURI)
+		defer C.free(unsafe.Pointer(cNs))
+	}
+
+	C.polyxml_schema_builder_add_field_with_namespace(
 		b.ptr,
 		cName,
 		cXmlName,
 		C.polyxml_field_kind_t(kind),
 		C.polyxml_scalar_type_t(scalar),
+		cNs,
 	)
 }
 
@@ -116,17 +133,56 @@ func Deserialize(xml []byte, schema *Schema) (*Value, error) {
 }
 
 func Serialize(rootName string, val *Value, schema *Schema, indent int) ([]byte, error) {
+	return SerializeWithOptions(rootName, val, schema, indent, nil, nil)
+}
+
+func SerializeWithOptions(rootName string, val *Value, schema *Schema, indent int, enableNamespaces *bool, nsMap map[string]string) ([]byte, error) {
 	cRoot := C.CString(rootName)
 	defer C.free(unsafe.Pointer(cRoot))
+
+	enableNsInt := C.int(-1)
+	if enableNamespaces != nil {
+		if *enableNamespaces {
+			enableNsInt = C.int(1)
+		} else {
+			enableNsInt = C.int(0)
+		}
+	}
+
+	var prefixesPtr **C.char
+	var urisPtr **C.char
+	nsCount := len(nsMap)
+
+	if nsCount > 0 {
+		cPrefixes := make([]*C.char, nsCount)
+		cUris := make([]*C.char, nsCount)
+		idx := 0
+		for prefix, uri := range nsMap {
+			cPrefix := C.CString(prefix)
+			defer C.free(unsafe.Pointer(cPrefix))
+			cUri := C.CString(uri)
+			defer C.free(unsafe.Pointer(cUri))
+
+			cPrefixes[idx] = cPrefix
+			cUris[idx] = cUri
+			idx++
+		}
+		prefixesPtr = (**C.char)(unsafe.Pointer(&cPrefixes[0]))
+		urisPtr = (**C.char)(unsafe.Pointer(&cUris[0]))
+	}
 
 	var outBytes *C.uint8_t
 	var outLen C.size_t
 
-	code := C.polyxml_serialize(
+	code := C.polyxml_serialize_with_options(
 		cRoot,
 		val.ptr,
 		schema.ptr,
 		C.int(indent),
+		enableNsInt,
+		prefixesPtr,
+		urisPtr,
+		C.size_t(nsCount),
 		&outBytes,
 		&outLen,
 	)

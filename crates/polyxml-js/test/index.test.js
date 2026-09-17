@@ -39,4 +39,29 @@ test('PolyXML JavaScript bindings', (t) => {
   assert.ok(outXml.includes('<name>Barometric Altimeter</name>'));
   assert.ok(outXml.includes('<reading>1013.25</reading>'));
   assert.ok(outXml.includes('<calibrated>true</calibrated>'));
+
+  // Test namespaced schema & serialization
+  const orderSchema = {
+    name: 'Order',
+    namespace: 'https://example.com/orders',
+    fields: [
+      { name: 'id', xmlName: 'id', kind: 'attribute', scalarType: 'int' },
+      { name: 'item', xmlName: 'item', kind: 'element', scalarType: 'string', namespace: 'https://example.com/items' },
+    ],
+  };
+
+  const orderXml = '<ns0:Order xmlns:ns0="https://example.com/orders" xmlns:ns1="https://example.com/items" id="777"><ns1:item>NodeGadget</ns1:item></ns0:Order>';
+  const orderVal = polyxml.deserialize(orderXml, orderSchema);
+  assert.strictEqual(orderVal.id, 777);
+  assert.strictEqual(orderVal.item, 'NodeGadget');
+
+  const orderOut = polyxml.serialize('Order', orderVal, orderSchema, 0, true, {
+    ord: 'https://example.com/orders',
+    itm: 'https://example.com/items',
+  });
+  const orderOutStr = Buffer.from(orderOut).toString('utf-8');
+  assert.ok(orderOutStr.includes('xmlns:ord="https://example.com/orders"'));
+  assert.ok(orderOutStr.includes('xmlns:itm="https://example.com/items"'));
+  assert.ok(orderOutStr.includes('<ord:Order'));
+  assert.ok(orderOutStr.includes('<itm:item>NodeGadget</itm:item>'));
 });
