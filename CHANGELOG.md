@@ -1,3 +1,10 @@
+## [0.11.1](https://github.com/nth-bailey/PolyXML/compare/v0.11.0...v0.11.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* **core:** track unknown element subtree depth and strip duplicate prefixes in qualified serialization ([ee36649](https://github.com/nth-bailey/PolyXML/commit/ee366494739b14f00ad13a43f1d3a04864b3db6e))
+
 # [0.11.0](https://github.com/nth-bailey/PolyXML/compare/v0.10.0...v0.11.0) (2026-09-17)
 
 
