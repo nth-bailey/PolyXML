@@ -71,11 +71,74 @@ void test_namespaced_serialization() {
     std::cout << "PASS: test_namespaced_serialization\n";
 }
 
+#include <filesystem>
+#include <fstream>
+
+std::string load_fixture(const std::string& name) {
+    std::vector<std::string> candidates = {
+        "../../../../tests/fixtures/" + name,
+        "../../../tests/fixtures/" + name,
+        "../../tests/fixtures/" + name,
+        "tests/fixtures/" + name,
+    };
+    for (const auto& path : candidates) {
+        if (std::filesystem::exists(path)) {
+            std::ifstream file(path);
+            return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        }
+    }
+    throw std::runtime_error("Could not locate fixture file: " + name);
+}
+
+void test_conformance_soap_envelope() {
+    std::string xml = load_fixture("soap_envelope.xml");
+
+    auto schema = polyxml::SchemaBuilder("Envelope")
+        .set_namespace("http://www.w3.org/2003/05/soap-envelope")
+        .build();
+
+    auto val = polyxml::deserialize(xml, schema);
+    std::map<std::string, std::string> ns_map = {
+        {"env", "http://www.w3.org/2003/05/soap-envelope"},
+        {"m", "http://example.com/stock"},
+        {"auth", "http://example.com/security"}
+    };
+
+    std::string out = polyxml::serialize_with_options("Envelope", val, schema, 2, true, ns_map);
+    assert(out.find("xmlns:env=\"http://www.w3.org/2003/05/soap-envelope\"") != std::string::npos);
+    assert(out.find("<env:Envelope") != std::string::npos);
+    std::cout << "PASS: test_conformance_soap_envelope\n";
+}
+
+void test_conformance_atom_feed() {
+    std::string xml = load_fixture("atom_feed.xml");
+
+    auto schema = polyxml::SchemaBuilder("feed")
+        .set_namespace("http://www.w3.org/2005/Atom")
+        .add_element("title", "title", POLYXML_SCALAR_STRING)
+        .add_element("id", "id", POLYXML_SCALAR_STRING)
+        .build();
+
+    auto val = polyxml::deserialize(xml, schema);
+    assert(val.get("title")->as_string().value() == "PolyXML Engineering Updates");
+
+    std::map<std::string, std::string> ns_map = {
+        {"", "http://www.w3.org/2005/Atom"}
+    };
+
+    std::string out = polyxml::serialize_with_options("feed", val, schema, 2, true, ns_map);
+    assert(out.find("xmlns=\"http://www.w3.org/2005/Atom\"") != std::string::npos);
+    assert(out.find("<title>PolyXML Engineering Updates</title>") != std::string::npos);
+    std::cout << "PASS: test_conformance_atom_feed\n";
+}
+
 int main() {
     std::cout << "Running PolyXML C++20 Test Suite...\n";
     test_sensor_deserialization();
     test_sensor_serialization_roundtrip();
     test_namespaced_serialization();
+    test_conformance_soap_envelope();
+    test_conformance_atom_feed();
     std::cout << "All C++ tests passed successfully!\n";
     return 0;
 }

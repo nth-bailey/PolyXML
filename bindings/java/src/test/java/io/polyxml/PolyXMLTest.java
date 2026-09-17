@@ -95,4 +95,41 @@ public class PolyXMLTest {
             }
         }
     }
+
+    @Test
+    public void testConformanceAtomFeed() throws Exception {
+        java.nio.file.Path[] candidates = new java.nio.file.Path[] {
+            java.nio.file.Paths.get("../../tests/fixtures/atom_feed.xml"),
+            java.nio.file.Paths.get("tests/fixtures/atom_feed.xml")
+        };
+        java.nio.file.Path target = null;
+        for (java.nio.file.Path p : candidates) {
+            if (java.nio.file.Files.exists(p)) {
+                target = p;
+                break;
+            }
+        }
+        if (target == null) {
+            return;
+        }
+
+        String xml = java.nio.file.Files.readString(target);
+        try (PolyXML.Schema schema = new PolyXML.SchemaBuilder("feed")
+                .setNamespace("http://www.w3.org/2005/Atom")
+                .addField("title", "title", PolyXML.FieldKind.ELEMENT, PolyXML.ScalarType.STRING)
+                .addField("id", "id", PolyXML.FieldKind.ELEMENT, PolyXML.ScalarType.STRING)
+                .build()) {
+
+            try (PolyXML.Value val = PolyXML.deserialize(xml, schema)) {
+                assertNotNull(val);
+                assertEquals("PolyXML Engineering Updates", val.getField("title").getString().orElse(""));
+
+                Map<String, String> nsMap = Map.of("", "http://www.w3.org/2005/Atom");
+                byte[] bytes = PolyXML.serializeWithOptions("feed", val, schema, 2, true, nsMap);
+                String out = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                assertTrue(out.contains("xmlns=\"http://www.w3.org/2005/Atom\""));
+                assertTrue(out.contains("<title>PolyXML Engineering Updates</title>"));
+            }
+        }
+    }
 }

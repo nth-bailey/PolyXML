@@ -1,6 +1,7 @@
 package polyxml_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -134,5 +135,66 @@ func TestGoNamespaces(t *testing.T) {
 	}
 	if !strings.Contains(s, `<itm:item>GoGadget</itm:item>`) {
 		t.Fatalf("missing <itm:item>: %s", s)
+	}
+}
+
+func TestGoConformanceFixtures(t *testing.T) {
+	paths := []string{
+		"../../tests/fixtures/atom_feed.xml",
+		"tests/fixtures/atom_feed.xml",
+	}
+	var data []byte
+	var err error
+	for _, p := range paths {
+		data, err = os.ReadFile(p)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		t.Fatalf("failed to read atom_feed.xml: %v", err)
+	}
+
+	builder, err := polyxml.NewSchemaBuilder("feed")
+	if err != nil {
+		t.Fatalf("failed to create schema builder: %v", err)
+	}
+	builder.SetNamespace("http://www.w3.org/2005/Atom")
+	builder.AddField("title", "title", polyxml.FieldElement, polyxml.ScalarString)
+	builder.AddField("id", "id", polyxml.FieldElement, polyxml.ScalarString)
+
+	schema, err := builder.Build()
+	if err != nil {
+		t.Fatalf("failed to build schema: %v", err)
+	}
+
+	val, err := polyxml.Deserialize(data, schema)
+	if err != nil {
+		t.Fatalf("failed to deserialize atom feed: %v", err)
+	}
+
+	titleField := val.GetField("title")
+	if titleField == nil {
+		t.Fatal("title field is nil")
+	}
+	title, err := titleField.GetString()
+	if err != nil || title != "PolyXML Engineering Updates" {
+		t.Fatalf("expected title 'PolyXML Engineering Updates', got: %s", title)
+	}
+
+	nsMap := map[string]string{
+		"": "http://www.w3.org/2005/Atom",
+	}
+	enabled := true
+	serialized, err := polyxml.SerializeWithOptions("feed", val, schema, 2, &enabled, nsMap)
+	if err != nil {
+		t.Fatalf("failed to serialize atom feed: %v", err)
+	}
+	s := string(serialized)
+	if !strings.Contains(s, `xmlns="http://www.w3.org/2005/Atom"`) {
+		t.Fatalf("missing default xmlns in: %s", s)
+	}
+	if !strings.Contains(s, `<title>PolyXML Engineering Updates</title>`) {
+		t.Fatalf("missing title in: %s", s)
 	}
 }

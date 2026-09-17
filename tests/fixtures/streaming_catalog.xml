@@ -1,0 +1,5003 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catalog>
+    <Item id="1">
+        <Name>Widget #1</Name>
+        <Price>1.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="2">
+        <Name>Widget #2</Name>
+        <Price>3.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="3">
+        <Name>Widget #3</Name>
+        <Price>4.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="4">
+        <Name>Widget #4</Name>
+        <Price>6.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="5">
+        <Name>Widget #5</Name>
+        <Price>7.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="6">
+        <Name>Widget #6</Name>
+        <Price>9.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="7">
+        <Name>Widget #7</Name>
+        <Price>10.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="8">
+        <Name>Widget #8</Name>
+        <Price>12.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="9">
+        <Name>Widget #9</Name>
+        <Price>13.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="10">
+        <Name>Widget #10</Name>
+        <Price>15.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="11">
+        <Name>Widget #11</Name>
+        <Price>16.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="12">
+        <Name>Widget #12</Name>
+        <Price>18.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="13">
+        <Name>Widget #13</Name>
+        <Price>19.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="14">
+        <Name>Widget #14</Name>
+        <Price>21.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="15">
+        <Name>Widget #15</Name>
+        <Price>22.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="16">
+        <Name>Widget #16</Name>
+        <Price>24.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="17">
+        <Name>Widget #17</Name>
+        <Price>25.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="18">
+        <Name>Widget #18</Name>
+        <Price>27.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="19">
+        <Name>Widget #19</Name>
+        <Price>28.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="20">
+        <Name>Widget #20</Name>
+        <Price>30.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="21">
+        <Name>Widget #21</Name>
+        <Price>31.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="22">
+        <Name>Widget #22</Name>
+        <Price>33.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="23">
+        <Name>Widget #23</Name>
+        <Price>34.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="24">
+        <Name>Widget #24</Name>
+        <Price>36.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="25">
+        <Name>Widget #25</Name>
+        <Price>37.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="26">
+        <Name>Widget #26</Name>
+        <Price>39.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="27">
+        <Name>Widget #27</Name>
+        <Price>40.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="28">
+        <Name>Widget #28</Name>
+        <Price>42.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="29">
+        <Name>Widget #29</Name>
+        <Price>43.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="30">
+        <Name>Widget #30</Name>
+        <Price>45.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="31">
+        <Name>Widget #31</Name>
+        <Price>46.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="32">
+        <Name>Widget #32</Name>
+        <Price>48.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="33">
+        <Name>Widget #33</Name>
+        <Price>49.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="34">
+        <Name>Widget #34</Name>
+        <Price>51.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="35">
+        <Name>Widget #35</Name>
+        <Price>52.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="36">
+        <Name>Widget #36</Name>
+        <Price>54.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="37">
+        <Name>Widget #37</Name>
+        <Price>55.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="38">
+        <Name>Widget #38</Name>
+        <Price>57.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="39">
+        <Name>Widget #39</Name>
+        <Price>58.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="40">
+        <Name>Widget #40</Name>
+        <Price>60.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="41">
+        <Name>Widget #41</Name>
+        <Price>61.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="42">
+        <Name>Widget #42</Name>
+        <Price>63.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="43">
+        <Name>Widget #43</Name>
+        <Price>64.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="44">
+        <Name>Widget #44</Name>
+        <Price>66.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="45">
+        <Name>Widget #45</Name>
+        <Price>67.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="46">
+        <Name>Widget #46</Name>
+        <Price>69.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="47">
+        <Name>Widget #47</Name>
+        <Price>70.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="48">
+        <Name>Widget #48</Name>
+        <Price>72.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="49">
+        <Name>Widget #49</Name>
+        <Price>73.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="50">
+        <Name>Widget #50</Name>
+        <Price>75.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="51">
+        <Name>Widget #51</Name>
+        <Price>76.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="52">
+        <Name>Widget #52</Name>
+        <Price>78.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="53">
+        <Name>Widget #53</Name>
+        <Price>79.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="54">
+        <Name>Widget #54</Name>
+        <Price>81.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="55">
+        <Name>Widget #55</Name>
+        <Price>82.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="56">
+        <Name>Widget #56</Name>
+        <Price>84.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="57">
+        <Name>Widget #57</Name>
+        <Price>85.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="58">
+        <Name>Widget #58</Name>
+        <Price>87.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="59">
+        <Name>Widget #59</Name>
+        <Price>88.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="60">
+        <Name>Widget #60</Name>
+        <Price>90.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="61">
+        <Name>Widget #61</Name>
+        <Price>91.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="62">
+        <Name>Widget #62</Name>
+        <Price>93.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="63">
+        <Name>Widget #63</Name>
+        <Price>94.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="64">
+        <Name>Widget #64</Name>
+        <Price>96.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="65">
+        <Name>Widget #65</Name>
+        <Price>97.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="66">
+        <Name>Widget #66</Name>
+        <Price>99.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="67">
+        <Name>Widget #67</Name>
+        <Price>100.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="68">
+        <Name>Widget #68</Name>
+        <Price>102.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="69">
+        <Name>Widget #69</Name>
+        <Price>103.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="70">
+        <Name>Widget #70</Name>
+        <Price>105.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="71">
+        <Name>Widget #71</Name>
+        <Price>106.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="72">
+        <Name>Widget #72</Name>
+        <Price>108.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="73">
+        <Name>Widget #73</Name>
+        <Price>109.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="74">
+        <Name>Widget #74</Name>
+        <Price>111.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="75">
+        <Name>Widget #75</Name>
+        <Price>112.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="76">
+        <Name>Widget #76</Name>
+        <Price>114.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="77">
+        <Name>Widget #77</Name>
+        <Price>115.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="78">
+        <Name>Widget #78</Name>
+        <Price>117.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="79">
+        <Name>Widget #79</Name>
+        <Price>118.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="80">
+        <Name>Widget #80</Name>
+        <Price>120.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="81">
+        <Name>Widget #81</Name>
+        <Price>121.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="82">
+        <Name>Widget #82</Name>
+        <Price>123.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="83">
+        <Name>Widget #83</Name>
+        <Price>124.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="84">
+        <Name>Widget #84</Name>
+        <Price>126.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="85">
+        <Name>Widget #85</Name>
+        <Price>127.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="86">
+        <Name>Widget #86</Name>
+        <Price>129.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="87">
+        <Name>Widget #87</Name>
+        <Price>130.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="88">
+        <Name>Widget #88</Name>
+        <Price>132.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="89">
+        <Name>Widget #89</Name>
+        <Price>133.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="90">
+        <Name>Widget #90</Name>
+        <Price>135.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="91">
+        <Name>Widget #91</Name>
+        <Price>136.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="92">
+        <Name>Widget #92</Name>
+        <Price>138.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="93">
+        <Name>Widget #93</Name>
+        <Price>139.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="94">
+        <Name>Widget #94</Name>
+        <Price>141.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="95">
+        <Name>Widget #95</Name>
+        <Price>142.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="96">
+        <Name>Widget #96</Name>
+        <Price>144.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="97">
+        <Name>Widget #97</Name>
+        <Price>145.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="98">
+        <Name>Widget #98</Name>
+        <Price>147.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="99">
+        <Name>Widget #99</Name>
+        <Price>148.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="100">
+        <Name>Widget #100</Name>
+        <Price>150.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="101">
+        <Name>Widget #101</Name>
+        <Price>151.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="102">
+        <Name>Widget #102</Name>
+        <Price>153.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="103">
+        <Name>Widget #103</Name>
+        <Price>154.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="104">
+        <Name>Widget #104</Name>
+        <Price>156.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="105">
+        <Name>Widget #105</Name>
+        <Price>157.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="106">
+        <Name>Widget #106</Name>
+        <Price>159.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="107">
+        <Name>Widget #107</Name>
+        <Price>160.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="108">
+        <Name>Widget #108</Name>
+        <Price>162.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="109">
+        <Name>Widget #109</Name>
+        <Price>163.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="110">
+        <Name>Widget #110</Name>
+        <Price>165.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="111">
+        <Name>Widget #111</Name>
+        <Price>166.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="112">
+        <Name>Widget #112</Name>
+        <Price>168.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="113">
+        <Name>Widget #113</Name>
+        <Price>169.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="114">
+        <Name>Widget #114</Name>
+        <Price>171.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="115">
+        <Name>Widget #115</Name>
+        <Price>172.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="116">
+        <Name>Widget #116</Name>
+        <Price>174.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="117">
+        <Name>Widget #117</Name>
+        <Price>175.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="118">
+        <Name>Widget #118</Name>
+        <Price>177.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="119">
+        <Name>Widget #119</Name>
+        <Price>178.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="120">
+        <Name>Widget #120</Name>
+        <Price>180.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="121">
+        <Name>Widget #121</Name>
+        <Price>181.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="122">
+        <Name>Widget #122</Name>
+        <Price>183.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="123">
+        <Name>Widget #123</Name>
+        <Price>184.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="124">
+        <Name>Widget #124</Name>
+        <Price>186.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="125">
+        <Name>Widget #125</Name>
+        <Price>187.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="126">
+        <Name>Widget #126</Name>
+        <Price>189.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="127">
+        <Name>Widget #127</Name>
+        <Price>190.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="128">
+        <Name>Widget #128</Name>
+        <Price>192.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="129">
+        <Name>Widget #129</Name>
+        <Price>193.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="130">
+        <Name>Widget #130</Name>
+        <Price>195.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="131">
+        <Name>Widget #131</Name>
+        <Price>196.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="132">
+        <Name>Widget #132</Name>
+        <Price>198.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="133">
+        <Name>Widget #133</Name>
+        <Price>199.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="134">
+        <Name>Widget #134</Name>
+        <Price>201.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="135">
+        <Name>Widget #135</Name>
+        <Price>202.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="136">
+        <Name>Widget #136</Name>
+        <Price>204.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="137">
+        <Name>Widget #137</Name>
+        <Price>205.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="138">
+        <Name>Widget #138</Name>
+        <Price>207.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="139">
+        <Name>Widget #139</Name>
+        <Price>208.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="140">
+        <Name>Widget #140</Name>
+        <Price>210.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="141">
+        <Name>Widget #141</Name>
+        <Price>211.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="142">
+        <Name>Widget #142</Name>
+        <Price>213.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="143">
+        <Name>Widget #143</Name>
+        <Price>214.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="144">
+        <Name>Widget #144</Name>
+        <Price>216.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="145">
+        <Name>Widget #145</Name>
+        <Price>217.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="146">
+        <Name>Widget #146</Name>
+        <Price>219.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="147">
+        <Name>Widget #147</Name>
+        <Price>220.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="148">
+        <Name>Widget #148</Name>
+        <Price>222.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="149">
+        <Name>Widget #149</Name>
+        <Price>223.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="150">
+        <Name>Widget #150</Name>
+        <Price>225.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="151">
+        <Name>Widget #151</Name>
+        <Price>226.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="152">
+        <Name>Widget #152</Name>
+        <Price>228.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="153">
+        <Name>Widget #153</Name>
+        <Price>229.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="154">
+        <Name>Widget #154</Name>
+        <Price>231.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="155">
+        <Name>Widget #155</Name>
+        <Price>232.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="156">
+        <Name>Widget #156</Name>
+        <Price>234.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="157">
+        <Name>Widget #157</Name>
+        <Price>235.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="158">
+        <Name>Widget #158</Name>
+        <Price>237.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="159">
+        <Name>Widget #159</Name>
+        <Price>238.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="160">
+        <Name>Widget #160</Name>
+        <Price>240.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="161">
+        <Name>Widget #161</Name>
+        <Price>241.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="162">
+        <Name>Widget #162</Name>
+        <Price>243.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="163">
+        <Name>Widget #163</Name>
+        <Price>244.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="164">
+        <Name>Widget #164</Name>
+        <Price>246.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="165">
+        <Name>Widget #165</Name>
+        <Price>247.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="166">
+        <Name>Widget #166</Name>
+        <Price>249.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="167">
+        <Name>Widget #167</Name>
+        <Price>250.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="168">
+        <Name>Widget #168</Name>
+        <Price>252.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="169">
+        <Name>Widget #169</Name>
+        <Price>253.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="170">
+        <Name>Widget #170</Name>
+        <Price>255.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="171">
+        <Name>Widget #171</Name>
+        <Price>256.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="172">
+        <Name>Widget #172</Name>
+        <Price>258.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="173">
+        <Name>Widget #173</Name>
+        <Price>259.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="174">
+        <Name>Widget #174</Name>
+        <Price>261.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="175">
+        <Name>Widget #175</Name>
+        <Price>262.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="176">
+        <Name>Widget #176</Name>
+        <Price>264.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="177">
+        <Name>Widget #177</Name>
+        <Price>265.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="178">
+        <Name>Widget #178</Name>
+        <Price>267.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="179">
+        <Name>Widget #179</Name>
+        <Price>268.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="180">
+        <Name>Widget #180</Name>
+        <Price>270.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="181">
+        <Name>Widget #181</Name>
+        <Price>271.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="182">
+        <Name>Widget #182</Name>
+        <Price>273.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="183">
+        <Name>Widget #183</Name>
+        <Price>274.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="184">
+        <Name>Widget #184</Name>
+        <Price>276.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="185">
+        <Name>Widget #185</Name>
+        <Price>277.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="186">
+        <Name>Widget #186</Name>
+        <Price>279.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="187">
+        <Name>Widget #187</Name>
+        <Price>280.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="188">
+        <Name>Widget #188</Name>
+        <Price>282.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="189">
+        <Name>Widget #189</Name>
+        <Price>283.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="190">
+        <Name>Widget #190</Name>
+        <Price>285.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="191">
+        <Name>Widget #191</Name>
+        <Price>286.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="192">
+        <Name>Widget #192</Name>
+        <Price>288.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="193">
+        <Name>Widget #193</Name>
+        <Price>289.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="194">
+        <Name>Widget #194</Name>
+        <Price>291.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="195">
+        <Name>Widget #195</Name>
+        <Price>292.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="196">
+        <Name>Widget #196</Name>
+        <Price>294.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="197">
+        <Name>Widget #197</Name>
+        <Price>295.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="198">
+        <Name>Widget #198</Name>
+        <Price>297.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="199">
+        <Name>Widget #199</Name>
+        <Price>298.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="200">
+        <Name>Widget #200</Name>
+        <Price>300.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="201">
+        <Name>Widget #201</Name>
+        <Price>301.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="202">
+        <Name>Widget #202</Name>
+        <Price>303.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="203">
+        <Name>Widget #203</Name>
+        <Price>304.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="204">
+        <Name>Widget #204</Name>
+        <Price>306.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="205">
+        <Name>Widget #205</Name>
+        <Price>307.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="206">
+        <Name>Widget #206</Name>
+        <Price>309.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="207">
+        <Name>Widget #207</Name>
+        <Price>310.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="208">
+        <Name>Widget #208</Name>
+        <Price>312.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="209">
+        <Name>Widget #209</Name>
+        <Price>313.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="210">
+        <Name>Widget #210</Name>
+        <Price>315.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="211">
+        <Name>Widget #211</Name>
+        <Price>316.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="212">
+        <Name>Widget #212</Name>
+        <Price>318.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="213">
+        <Name>Widget #213</Name>
+        <Price>319.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="214">
+        <Name>Widget #214</Name>
+        <Price>321.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="215">
+        <Name>Widget #215</Name>
+        <Price>322.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="216">
+        <Name>Widget #216</Name>
+        <Price>324.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="217">
+        <Name>Widget #217</Name>
+        <Price>325.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="218">
+        <Name>Widget #218</Name>
+        <Price>327.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="219">
+        <Name>Widget #219</Name>
+        <Price>328.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="220">
+        <Name>Widget #220</Name>
+        <Price>330.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="221">
+        <Name>Widget #221</Name>
+        <Price>331.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="222">
+        <Name>Widget #222</Name>
+        <Price>333.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="223">
+        <Name>Widget #223</Name>
+        <Price>334.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="224">
+        <Name>Widget #224</Name>
+        <Price>336.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="225">
+        <Name>Widget #225</Name>
+        <Price>337.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="226">
+        <Name>Widget #226</Name>
+        <Price>339.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="227">
+        <Name>Widget #227</Name>
+        <Price>340.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="228">
+        <Name>Widget #228</Name>
+        <Price>342.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="229">
+        <Name>Widget #229</Name>
+        <Price>343.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="230">
+        <Name>Widget #230</Name>
+        <Price>345.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="231">
+        <Name>Widget #231</Name>
+        <Price>346.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="232">
+        <Name>Widget #232</Name>
+        <Price>348.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="233">
+        <Name>Widget #233</Name>
+        <Price>349.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="234">
+        <Name>Widget #234</Name>
+        <Price>351.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="235">
+        <Name>Widget #235</Name>
+        <Price>352.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="236">
+        <Name>Widget #236</Name>
+        <Price>354.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="237">
+        <Name>Widget #237</Name>
+        <Price>355.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="238">
+        <Name>Widget #238</Name>
+        <Price>357.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="239">
+        <Name>Widget #239</Name>
+        <Price>358.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="240">
+        <Name>Widget #240</Name>
+        <Price>360.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="241">
+        <Name>Widget #241</Name>
+        <Price>361.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="242">
+        <Name>Widget #242</Name>
+        <Price>363.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="243">
+        <Name>Widget #243</Name>
+        <Price>364.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="244">
+        <Name>Widget #244</Name>
+        <Price>366.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="245">
+        <Name>Widget #245</Name>
+        <Price>367.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="246">
+        <Name>Widget #246</Name>
+        <Price>369.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="247">
+        <Name>Widget #247</Name>
+        <Price>370.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="248">
+        <Name>Widget #248</Name>
+        <Price>372.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="249">
+        <Name>Widget #249</Name>
+        <Price>373.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="250">
+        <Name>Widget #250</Name>
+        <Price>375.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="251">
+        <Name>Widget #251</Name>
+        <Price>376.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="252">
+        <Name>Widget #252</Name>
+        <Price>378.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="253">
+        <Name>Widget #253</Name>
+        <Price>379.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="254">
+        <Name>Widget #254</Name>
+        <Price>381.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="255">
+        <Name>Widget #255</Name>
+        <Price>382.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="256">
+        <Name>Widget #256</Name>
+        <Price>384.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="257">
+        <Name>Widget #257</Name>
+        <Price>385.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="258">
+        <Name>Widget #258</Name>
+        <Price>387.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="259">
+        <Name>Widget #259</Name>
+        <Price>388.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="260">
+        <Name>Widget #260</Name>
+        <Price>390.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="261">
+        <Name>Widget #261</Name>
+        <Price>391.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="262">
+        <Name>Widget #262</Name>
+        <Price>393.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="263">
+        <Name>Widget #263</Name>
+        <Price>394.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="264">
+        <Name>Widget #264</Name>
+        <Price>396.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="265">
+        <Name>Widget #265</Name>
+        <Price>397.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="266">
+        <Name>Widget #266</Name>
+        <Price>399.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="267">
+        <Name>Widget #267</Name>
+        <Price>400.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="268">
+        <Name>Widget #268</Name>
+        <Price>402.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="269">
+        <Name>Widget #269</Name>
+        <Price>403.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="270">
+        <Name>Widget #270</Name>
+        <Price>405.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="271">
+        <Name>Widget #271</Name>
+        <Price>406.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="272">
+        <Name>Widget #272</Name>
+        <Price>408.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="273">
+        <Name>Widget #273</Name>
+        <Price>409.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="274">
+        <Name>Widget #274</Name>
+        <Price>411.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="275">
+        <Name>Widget #275</Name>
+        <Price>412.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="276">
+        <Name>Widget #276</Name>
+        <Price>414.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="277">
+        <Name>Widget #277</Name>
+        <Price>415.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="278">
+        <Name>Widget #278</Name>
+        <Price>417.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="279">
+        <Name>Widget #279</Name>
+        <Price>418.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="280">
+        <Name>Widget #280</Name>
+        <Price>420.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="281">
+        <Name>Widget #281</Name>
+        <Price>421.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="282">
+        <Name>Widget #282</Name>
+        <Price>423.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="283">
+        <Name>Widget #283</Name>
+        <Price>424.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="284">
+        <Name>Widget #284</Name>
+        <Price>426.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="285">
+        <Name>Widget #285</Name>
+        <Price>427.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="286">
+        <Name>Widget #286</Name>
+        <Price>429.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="287">
+        <Name>Widget #287</Name>
+        <Price>430.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="288">
+        <Name>Widget #288</Name>
+        <Price>432.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="289">
+        <Name>Widget #289</Name>
+        <Price>433.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="290">
+        <Name>Widget #290</Name>
+        <Price>435.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="291">
+        <Name>Widget #291</Name>
+        <Price>436.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="292">
+        <Name>Widget #292</Name>
+        <Price>438.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="293">
+        <Name>Widget #293</Name>
+        <Price>439.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="294">
+        <Name>Widget #294</Name>
+        <Price>441.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="295">
+        <Name>Widget #295</Name>
+        <Price>442.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="296">
+        <Name>Widget #296</Name>
+        <Price>444.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="297">
+        <Name>Widget #297</Name>
+        <Price>445.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="298">
+        <Name>Widget #298</Name>
+        <Price>447.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="299">
+        <Name>Widget #299</Name>
+        <Price>448.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="300">
+        <Name>Widget #300</Name>
+        <Price>450.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="301">
+        <Name>Widget #301</Name>
+        <Price>451.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="302">
+        <Name>Widget #302</Name>
+        <Price>453.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="303">
+        <Name>Widget #303</Name>
+        <Price>454.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="304">
+        <Name>Widget #304</Name>
+        <Price>456.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="305">
+        <Name>Widget #305</Name>
+        <Price>457.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="306">
+        <Name>Widget #306</Name>
+        <Price>459.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="307">
+        <Name>Widget #307</Name>
+        <Price>460.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="308">
+        <Name>Widget #308</Name>
+        <Price>462.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="309">
+        <Name>Widget #309</Name>
+        <Price>463.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="310">
+        <Name>Widget #310</Name>
+        <Price>465.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="311">
+        <Name>Widget #311</Name>
+        <Price>466.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="312">
+        <Name>Widget #312</Name>
+        <Price>468.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="313">
+        <Name>Widget #313</Name>
+        <Price>469.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="314">
+        <Name>Widget #314</Name>
+        <Price>471.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="315">
+        <Name>Widget #315</Name>
+        <Price>472.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="316">
+        <Name>Widget #316</Name>
+        <Price>474.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="317">
+        <Name>Widget #317</Name>
+        <Price>475.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="318">
+        <Name>Widget #318</Name>
+        <Price>477.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="319">
+        <Name>Widget #319</Name>
+        <Price>478.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="320">
+        <Name>Widget #320</Name>
+        <Price>480.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="321">
+        <Name>Widget #321</Name>
+        <Price>481.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="322">
+        <Name>Widget #322</Name>
+        <Price>483.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="323">
+        <Name>Widget #323</Name>
+        <Price>484.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="324">
+        <Name>Widget #324</Name>
+        <Price>486.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="325">
+        <Name>Widget #325</Name>
+        <Price>487.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="326">
+        <Name>Widget #326</Name>
+        <Price>489.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="327">
+        <Name>Widget #327</Name>
+        <Price>490.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="328">
+        <Name>Widget #328</Name>
+        <Price>492.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="329">
+        <Name>Widget #329</Name>
+        <Price>493.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="330">
+        <Name>Widget #330</Name>
+        <Price>495.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="331">
+        <Name>Widget #331</Name>
+        <Price>496.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="332">
+        <Name>Widget #332</Name>
+        <Price>498.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="333">
+        <Name>Widget #333</Name>
+        <Price>499.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="334">
+        <Name>Widget #334</Name>
+        <Price>501.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="335">
+        <Name>Widget #335</Name>
+        <Price>502.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="336">
+        <Name>Widget #336</Name>
+        <Price>504.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="337">
+        <Name>Widget #337</Name>
+        <Price>505.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="338">
+        <Name>Widget #338</Name>
+        <Price>507.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="339">
+        <Name>Widget #339</Name>
+        <Price>508.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="340">
+        <Name>Widget #340</Name>
+        <Price>510.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="341">
+        <Name>Widget #341</Name>
+        <Price>511.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="342">
+        <Name>Widget #342</Name>
+        <Price>513.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="343">
+        <Name>Widget #343</Name>
+        <Price>514.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="344">
+        <Name>Widget #344</Name>
+        <Price>516.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="345">
+        <Name>Widget #345</Name>
+        <Price>517.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="346">
+        <Name>Widget #346</Name>
+        <Price>519.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="347">
+        <Name>Widget #347</Name>
+        <Price>520.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="348">
+        <Name>Widget #348</Name>
+        <Price>522.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="349">
+        <Name>Widget #349</Name>
+        <Price>523.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="350">
+        <Name>Widget #350</Name>
+        <Price>525.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="351">
+        <Name>Widget #351</Name>
+        <Price>526.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="352">
+        <Name>Widget #352</Name>
+        <Price>528.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="353">
+        <Name>Widget #353</Name>
+        <Price>529.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="354">
+        <Name>Widget #354</Name>
+        <Price>531.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="355">
+        <Name>Widget #355</Name>
+        <Price>532.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="356">
+        <Name>Widget #356</Name>
+        <Price>534.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="357">
+        <Name>Widget #357</Name>
+        <Price>535.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="358">
+        <Name>Widget #358</Name>
+        <Price>537.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="359">
+        <Name>Widget #359</Name>
+        <Price>538.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="360">
+        <Name>Widget #360</Name>
+        <Price>540.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="361">
+        <Name>Widget #361</Name>
+        <Price>541.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="362">
+        <Name>Widget #362</Name>
+        <Price>543.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="363">
+        <Name>Widget #363</Name>
+        <Price>544.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="364">
+        <Name>Widget #364</Name>
+        <Price>546.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="365">
+        <Name>Widget #365</Name>
+        <Price>547.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="366">
+        <Name>Widget #366</Name>
+        <Price>549.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="367">
+        <Name>Widget #367</Name>
+        <Price>550.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="368">
+        <Name>Widget #368</Name>
+        <Price>552.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="369">
+        <Name>Widget #369</Name>
+        <Price>553.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="370">
+        <Name>Widget #370</Name>
+        <Price>555.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="371">
+        <Name>Widget #371</Name>
+        <Price>556.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="372">
+        <Name>Widget #372</Name>
+        <Price>558.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="373">
+        <Name>Widget #373</Name>
+        <Price>559.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="374">
+        <Name>Widget #374</Name>
+        <Price>561.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="375">
+        <Name>Widget #375</Name>
+        <Price>562.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="376">
+        <Name>Widget #376</Name>
+        <Price>564.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="377">
+        <Name>Widget #377</Name>
+        <Price>565.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="378">
+        <Name>Widget #378</Name>
+        <Price>567.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="379">
+        <Name>Widget #379</Name>
+        <Price>568.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="380">
+        <Name>Widget #380</Name>
+        <Price>570.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="381">
+        <Name>Widget #381</Name>
+        <Price>571.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="382">
+        <Name>Widget #382</Name>
+        <Price>573.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="383">
+        <Name>Widget #383</Name>
+        <Price>574.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="384">
+        <Name>Widget #384</Name>
+        <Price>576.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="385">
+        <Name>Widget #385</Name>
+        <Price>577.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="386">
+        <Name>Widget #386</Name>
+        <Price>579.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="387">
+        <Name>Widget #387</Name>
+        <Price>580.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="388">
+        <Name>Widget #388</Name>
+        <Price>582.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="389">
+        <Name>Widget #389</Name>
+        <Price>583.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="390">
+        <Name>Widget #390</Name>
+        <Price>585.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="391">
+        <Name>Widget #391</Name>
+        <Price>586.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="392">
+        <Name>Widget #392</Name>
+        <Price>588.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="393">
+        <Name>Widget #393</Name>
+        <Price>589.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="394">
+        <Name>Widget #394</Name>
+        <Price>591.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="395">
+        <Name>Widget #395</Name>
+        <Price>592.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="396">
+        <Name>Widget #396</Name>
+        <Price>594.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="397">
+        <Name>Widget #397</Name>
+        <Price>595.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="398">
+        <Name>Widget #398</Name>
+        <Price>597.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="399">
+        <Name>Widget #399</Name>
+        <Price>598.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="400">
+        <Name>Widget #400</Name>
+        <Price>600.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="401">
+        <Name>Widget #401</Name>
+        <Price>601.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="402">
+        <Name>Widget #402</Name>
+        <Price>603.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="403">
+        <Name>Widget #403</Name>
+        <Price>604.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="404">
+        <Name>Widget #404</Name>
+        <Price>606.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="405">
+        <Name>Widget #405</Name>
+        <Price>607.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="406">
+        <Name>Widget #406</Name>
+        <Price>609.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="407">
+        <Name>Widget #407</Name>
+        <Price>610.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="408">
+        <Name>Widget #408</Name>
+        <Price>612.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="409">
+        <Name>Widget #409</Name>
+        <Price>613.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="410">
+        <Name>Widget #410</Name>
+        <Price>615.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="411">
+        <Name>Widget #411</Name>
+        <Price>616.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="412">
+        <Name>Widget #412</Name>
+        <Price>618.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="413">
+        <Name>Widget #413</Name>
+        <Price>619.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="414">
+        <Name>Widget #414</Name>
+        <Price>621.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="415">
+        <Name>Widget #415</Name>
+        <Price>622.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="416">
+        <Name>Widget #416</Name>
+        <Price>624.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="417">
+        <Name>Widget #417</Name>
+        <Price>625.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="418">
+        <Name>Widget #418</Name>
+        <Price>627.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="419">
+        <Name>Widget #419</Name>
+        <Price>628.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="420">
+        <Name>Widget #420</Name>
+        <Price>630.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="421">
+        <Name>Widget #421</Name>
+        <Price>631.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="422">
+        <Name>Widget #422</Name>
+        <Price>633.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="423">
+        <Name>Widget #423</Name>
+        <Price>634.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="424">
+        <Name>Widget #424</Name>
+        <Price>636.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="425">
+        <Name>Widget #425</Name>
+        <Price>637.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="426">
+        <Name>Widget #426</Name>
+        <Price>639.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="427">
+        <Name>Widget #427</Name>
+        <Price>640.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="428">
+        <Name>Widget #428</Name>
+        <Price>642.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="429">
+        <Name>Widget #429</Name>
+        <Price>643.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="430">
+        <Name>Widget #430</Name>
+        <Price>645.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="431">
+        <Name>Widget #431</Name>
+        <Price>646.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="432">
+        <Name>Widget #432</Name>
+        <Price>648.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="433">
+        <Name>Widget #433</Name>
+        <Price>649.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="434">
+        <Name>Widget #434</Name>
+        <Price>651.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="435">
+        <Name>Widget #435</Name>
+        <Price>652.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="436">
+        <Name>Widget #436</Name>
+        <Price>654.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="437">
+        <Name>Widget #437</Name>
+        <Price>655.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="438">
+        <Name>Widget #438</Name>
+        <Price>657.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="439">
+        <Name>Widget #439</Name>
+        <Price>658.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="440">
+        <Name>Widget #440</Name>
+        <Price>660.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="441">
+        <Name>Widget #441</Name>
+        <Price>661.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="442">
+        <Name>Widget #442</Name>
+        <Price>663.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="443">
+        <Name>Widget #443</Name>
+        <Price>664.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="444">
+        <Name>Widget #444</Name>
+        <Price>666.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="445">
+        <Name>Widget #445</Name>
+        <Price>667.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="446">
+        <Name>Widget #446</Name>
+        <Price>669.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="447">
+        <Name>Widget #447</Name>
+        <Price>670.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="448">
+        <Name>Widget #448</Name>
+        <Price>672.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="449">
+        <Name>Widget #449</Name>
+        <Price>673.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="450">
+        <Name>Widget #450</Name>
+        <Price>675.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="451">
+        <Name>Widget #451</Name>
+        <Price>676.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="452">
+        <Name>Widget #452</Name>
+        <Price>678.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="453">
+        <Name>Widget #453</Name>
+        <Price>679.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="454">
+        <Name>Widget #454</Name>
+        <Price>681.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="455">
+        <Name>Widget #455</Name>
+        <Price>682.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="456">
+        <Name>Widget #456</Name>
+        <Price>684.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="457">
+        <Name>Widget #457</Name>
+        <Price>685.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="458">
+        <Name>Widget #458</Name>
+        <Price>687.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="459">
+        <Name>Widget #459</Name>
+        <Price>688.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="460">
+        <Name>Widget #460</Name>
+        <Price>690.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="461">
+        <Name>Widget #461</Name>
+        <Price>691.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="462">
+        <Name>Widget #462</Name>
+        <Price>693.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="463">
+        <Name>Widget #463</Name>
+        <Price>694.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="464">
+        <Name>Widget #464</Name>
+        <Price>696.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="465">
+        <Name>Widget #465</Name>
+        <Price>697.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="466">
+        <Name>Widget #466</Name>
+        <Price>699.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="467">
+        <Name>Widget #467</Name>
+        <Price>700.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="468">
+        <Name>Widget #468</Name>
+        <Price>702.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="469">
+        <Name>Widget #469</Name>
+        <Price>703.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="470">
+        <Name>Widget #470</Name>
+        <Price>705.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="471">
+        <Name>Widget #471</Name>
+        <Price>706.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="472">
+        <Name>Widget #472</Name>
+        <Price>708.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="473">
+        <Name>Widget #473</Name>
+        <Price>709.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="474">
+        <Name>Widget #474</Name>
+        <Price>711.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="475">
+        <Name>Widget #475</Name>
+        <Price>712.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="476">
+        <Name>Widget #476</Name>
+        <Price>714.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="477">
+        <Name>Widget #477</Name>
+        <Price>715.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="478">
+        <Name>Widget #478</Name>
+        <Price>717.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="479">
+        <Name>Widget #479</Name>
+        <Price>718.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="480">
+        <Name>Widget #480</Name>
+        <Price>720.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="481">
+        <Name>Widget #481</Name>
+        <Price>721.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="482">
+        <Name>Widget #482</Name>
+        <Price>723.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="483">
+        <Name>Widget #483</Name>
+        <Price>724.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="484">
+        <Name>Widget #484</Name>
+        <Price>726.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="485">
+        <Name>Widget #485</Name>
+        <Price>727.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="486">
+        <Name>Widget #486</Name>
+        <Price>729.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="487">
+        <Name>Widget #487</Name>
+        <Price>730.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="488">
+        <Name>Widget #488</Name>
+        <Price>732.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="489">
+        <Name>Widget #489</Name>
+        <Price>733.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="490">
+        <Name>Widget #490</Name>
+        <Price>735.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="491">
+        <Name>Widget #491</Name>
+        <Price>736.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="492">
+        <Name>Widget #492</Name>
+        <Price>738.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="493">
+        <Name>Widget #493</Name>
+        <Price>739.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="494">
+        <Name>Widget #494</Name>
+        <Price>741.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="495">
+        <Name>Widget #495</Name>
+        <Price>742.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="496">
+        <Name>Widget #496</Name>
+        <Price>744.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="497">
+        <Name>Widget #497</Name>
+        <Price>745.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="498">
+        <Name>Widget #498</Name>
+        <Price>747.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="499">
+        <Name>Widget #499</Name>
+        <Price>748.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="500">
+        <Name>Widget #500</Name>
+        <Price>750.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="501">
+        <Name>Widget #501</Name>
+        <Price>751.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="502">
+        <Name>Widget #502</Name>
+        <Price>753.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="503">
+        <Name>Widget #503</Name>
+        <Price>754.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="504">
+        <Name>Widget #504</Name>
+        <Price>756.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="505">
+        <Name>Widget #505</Name>
+        <Price>757.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="506">
+        <Name>Widget #506</Name>
+        <Price>759.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="507">
+        <Name>Widget #507</Name>
+        <Price>760.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="508">
+        <Name>Widget #508</Name>
+        <Price>762.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="509">
+        <Name>Widget #509</Name>
+        <Price>763.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="510">
+        <Name>Widget #510</Name>
+        <Price>765.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="511">
+        <Name>Widget #511</Name>
+        <Price>766.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="512">
+        <Name>Widget #512</Name>
+        <Price>768.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="513">
+        <Name>Widget #513</Name>
+        <Price>769.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="514">
+        <Name>Widget #514</Name>
+        <Price>771.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="515">
+        <Name>Widget #515</Name>
+        <Price>772.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="516">
+        <Name>Widget #516</Name>
+        <Price>774.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="517">
+        <Name>Widget #517</Name>
+        <Price>775.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="518">
+        <Name>Widget #518</Name>
+        <Price>777.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="519">
+        <Name>Widget #519</Name>
+        <Price>778.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="520">
+        <Name>Widget #520</Name>
+        <Price>780.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="521">
+        <Name>Widget #521</Name>
+        <Price>781.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="522">
+        <Name>Widget #522</Name>
+        <Price>783.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="523">
+        <Name>Widget #523</Name>
+        <Price>784.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="524">
+        <Name>Widget #524</Name>
+        <Price>786.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="525">
+        <Name>Widget #525</Name>
+        <Price>787.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="526">
+        <Name>Widget #526</Name>
+        <Price>789.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="527">
+        <Name>Widget #527</Name>
+        <Price>790.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="528">
+        <Name>Widget #528</Name>
+        <Price>792.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="529">
+        <Name>Widget #529</Name>
+        <Price>793.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="530">
+        <Name>Widget #530</Name>
+        <Price>795.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="531">
+        <Name>Widget #531</Name>
+        <Price>796.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="532">
+        <Name>Widget #532</Name>
+        <Price>798.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="533">
+        <Name>Widget #533</Name>
+        <Price>799.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="534">
+        <Name>Widget #534</Name>
+        <Price>801.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="535">
+        <Name>Widget #535</Name>
+        <Price>802.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="536">
+        <Name>Widget #536</Name>
+        <Price>804.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="537">
+        <Name>Widget #537</Name>
+        <Price>805.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="538">
+        <Name>Widget #538</Name>
+        <Price>807.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="539">
+        <Name>Widget #539</Name>
+        <Price>808.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="540">
+        <Name>Widget #540</Name>
+        <Price>810.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="541">
+        <Name>Widget #541</Name>
+        <Price>811.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="542">
+        <Name>Widget #542</Name>
+        <Price>813.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="543">
+        <Name>Widget #543</Name>
+        <Price>814.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="544">
+        <Name>Widget #544</Name>
+        <Price>816.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="545">
+        <Name>Widget #545</Name>
+        <Price>817.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="546">
+        <Name>Widget #546</Name>
+        <Price>819.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="547">
+        <Name>Widget #547</Name>
+        <Price>820.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="548">
+        <Name>Widget #548</Name>
+        <Price>822.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="549">
+        <Name>Widget #549</Name>
+        <Price>823.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="550">
+        <Name>Widget #550</Name>
+        <Price>825.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="551">
+        <Name>Widget #551</Name>
+        <Price>826.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="552">
+        <Name>Widget #552</Name>
+        <Price>828.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="553">
+        <Name>Widget #553</Name>
+        <Price>829.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="554">
+        <Name>Widget #554</Name>
+        <Price>831.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="555">
+        <Name>Widget #555</Name>
+        <Price>832.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="556">
+        <Name>Widget #556</Name>
+        <Price>834.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="557">
+        <Name>Widget #557</Name>
+        <Price>835.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="558">
+        <Name>Widget #558</Name>
+        <Price>837.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="559">
+        <Name>Widget #559</Name>
+        <Price>838.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="560">
+        <Name>Widget #560</Name>
+        <Price>840.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="561">
+        <Name>Widget #561</Name>
+        <Price>841.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="562">
+        <Name>Widget #562</Name>
+        <Price>843.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="563">
+        <Name>Widget #563</Name>
+        <Price>844.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="564">
+        <Name>Widget #564</Name>
+        <Price>846.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="565">
+        <Name>Widget #565</Name>
+        <Price>847.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="566">
+        <Name>Widget #566</Name>
+        <Price>849.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="567">
+        <Name>Widget #567</Name>
+        <Price>850.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="568">
+        <Name>Widget #568</Name>
+        <Price>852.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="569">
+        <Name>Widget #569</Name>
+        <Price>853.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="570">
+        <Name>Widget #570</Name>
+        <Price>855.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="571">
+        <Name>Widget #571</Name>
+        <Price>856.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="572">
+        <Name>Widget #572</Name>
+        <Price>858.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="573">
+        <Name>Widget #573</Name>
+        <Price>859.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="574">
+        <Name>Widget #574</Name>
+        <Price>861.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="575">
+        <Name>Widget #575</Name>
+        <Price>862.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="576">
+        <Name>Widget #576</Name>
+        <Price>864.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="577">
+        <Name>Widget #577</Name>
+        <Price>865.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="578">
+        <Name>Widget #578</Name>
+        <Price>867.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="579">
+        <Name>Widget #579</Name>
+        <Price>868.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="580">
+        <Name>Widget #580</Name>
+        <Price>870.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="581">
+        <Name>Widget #581</Name>
+        <Price>871.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="582">
+        <Name>Widget #582</Name>
+        <Price>873.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="583">
+        <Name>Widget #583</Name>
+        <Price>874.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="584">
+        <Name>Widget #584</Name>
+        <Price>876.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="585">
+        <Name>Widget #585</Name>
+        <Price>877.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="586">
+        <Name>Widget #586</Name>
+        <Price>879.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="587">
+        <Name>Widget #587</Name>
+        <Price>880.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="588">
+        <Name>Widget #588</Name>
+        <Price>882.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="589">
+        <Name>Widget #589</Name>
+        <Price>883.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="590">
+        <Name>Widget #590</Name>
+        <Price>885.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="591">
+        <Name>Widget #591</Name>
+        <Price>886.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="592">
+        <Name>Widget #592</Name>
+        <Price>888.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="593">
+        <Name>Widget #593</Name>
+        <Price>889.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="594">
+        <Name>Widget #594</Name>
+        <Price>891.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="595">
+        <Name>Widget #595</Name>
+        <Price>892.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="596">
+        <Name>Widget #596</Name>
+        <Price>894.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="597">
+        <Name>Widget #597</Name>
+        <Price>895.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="598">
+        <Name>Widget #598</Name>
+        <Price>897.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="599">
+        <Name>Widget #599</Name>
+        <Price>898.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="600">
+        <Name>Widget #600</Name>
+        <Price>900.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="601">
+        <Name>Widget #601</Name>
+        <Price>901.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="602">
+        <Name>Widget #602</Name>
+        <Price>903.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="603">
+        <Name>Widget #603</Name>
+        <Price>904.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="604">
+        <Name>Widget #604</Name>
+        <Price>906.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="605">
+        <Name>Widget #605</Name>
+        <Price>907.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="606">
+        <Name>Widget #606</Name>
+        <Price>909.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="607">
+        <Name>Widget #607</Name>
+        <Price>910.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="608">
+        <Name>Widget #608</Name>
+        <Price>912.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="609">
+        <Name>Widget #609</Name>
+        <Price>913.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="610">
+        <Name>Widget #610</Name>
+        <Price>915.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="611">
+        <Name>Widget #611</Name>
+        <Price>916.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="612">
+        <Name>Widget #612</Name>
+        <Price>918.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="613">
+        <Name>Widget #613</Name>
+        <Price>919.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="614">
+        <Name>Widget #614</Name>
+        <Price>921.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="615">
+        <Name>Widget #615</Name>
+        <Price>922.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="616">
+        <Name>Widget #616</Name>
+        <Price>924.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="617">
+        <Name>Widget #617</Name>
+        <Price>925.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="618">
+        <Name>Widget #618</Name>
+        <Price>927.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="619">
+        <Name>Widget #619</Name>
+        <Price>928.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="620">
+        <Name>Widget #620</Name>
+        <Price>930.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="621">
+        <Name>Widget #621</Name>
+        <Price>931.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="622">
+        <Name>Widget #622</Name>
+        <Price>933.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="623">
+        <Name>Widget #623</Name>
+        <Price>934.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="624">
+        <Name>Widget #624</Name>
+        <Price>936.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="625">
+        <Name>Widget #625</Name>
+        <Price>937.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="626">
+        <Name>Widget #626</Name>
+        <Price>939.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="627">
+        <Name>Widget #627</Name>
+        <Price>940.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="628">
+        <Name>Widget #628</Name>
+        <Price>942.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="629">
+        <Name>Widget #629</Name>
+        <Price>943.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="630">
+        <Name>Widget #630</Name>
+        <Price>945.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="631">
+        <Name>Widget #631</Name>
+        <Price>946.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="632">
+        <Name>Widget #632</Name>
+        <Price>948.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="633">
+        <Name>Widget #633</Name>
+        <Price>949.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="634">
+        <Name>Widget #634</Name>
+        <Price>951.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="635">
+        <Name>Widget #635</Name>
+        <Price>952.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="636">
+        <Name>Widget #636</Name>
+        <Price>954.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="637">
+        <Name>Widget #637</Name>
+        <Price>955.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="638">
+        <Name>Widget #638</Name>
+        <Price>957.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="639">
+        <Name>Widget #639</Name>
+        <Price>958.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="640">
+        <Name>Widget #640</Name>
+        <Price>960.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="641">
+        <Name>Widget #641</Name>
+        <Price>961.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="642">
+        <Name>Widget #642</Name>
+        <Price>963.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="643">
+        <Name>Widget #643</Name>
+        <Price>964.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="644">
+        <Name>Widget #644</Name>
+        <Price>966.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="645">
+        <Name>Widget #645</Name>
+        <Price>967.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="646">
+        <Name>Widget #646</Name>
+        <Price>969.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="647">
+        <Name>Widget #647</Name>
+        <Price>970.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="648">
+        <Name>Widget #648</Name>
+        <Price>972.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="649">
+        <Name>Widget #649</Name>
+        <Price>973.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="650">
+        <Name>Widget #650</Name>
+        <Price>975.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="651">
+        <Name>Widget #651</Name>
+        <Price>976.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="652">
+        <Name>Widget #652</Name>
+        <Price>978.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="653">
+        <Name>Widget #653</Name>
+        <Price>979.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="654">
+        <Name>Widget #654</Name>
+        <Price>981.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="655">
+        <Name>Widget #655</Name>
+        <Price>982.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="656">
+        <Name>Widget #656</Name>
+        <Price>984.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="657">
+        <Name>Widget #657</Name>
+        <Price>985.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="658">
+        <Name>Widget #658</Name>
+        <Price>987.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="659">
+        <Name>Widget #659</Name>
+        <Price>988.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="660">
+        <Name>Widget #660</Name>
+        <Price>990.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="661">
+        <Name>Widget #661</Name>
+        <Price>991.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="662">
+        <Name>Widget #662</Name>
+        <Price>993.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="663">
+        <Name>Widget #663</Name>
+        <Price>994.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="664">
+        <Name>Widget #664</Name>
+        <Price>996.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="665">
+        <Name>Widget #665</Name>
+        <Price>997.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="666">
+        <Name>Widget #666</Name>
+        <Price>999.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="667">
+        <Name>Widget #667</Name>
+        <Price>1000.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="668">
+        <Name>Widget #668</Name>
+        <Price>1002.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="669">
+        <Name>Widget #669</Name>
+        <Price>1003.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="670">
+        <Name>Widget #670</Name>
+        <Price>1005.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="671">
+        <Name>Widget #671</Name>
+        <Price>1006.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="672">
+        <Name>Widget #672</Name>
+        <Price>1008.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="673">
+        <Name>Widget #673</Name>
+        <Price>1009.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="674">
+        <Name>Widget #674</Name>
+        <Price>1011.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="675">
+        <Name>Widget #675</Name>
+        <Price>1012.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="676">
+        <Name>Widget #676</Name>
+        <Price>1014.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="677">
+        <Name>Widget #677</Name>
+        <Price>1015.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="678">
+        <Name>Widget #678</Name>
+        <Price>1017.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="679">
+        <Name>Widget #679</Name>
+        <Price>1018.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="680">
+        <Name>Widget #680</Name>
+        <Price>1020.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="681">
+        <Name>Widget #681</Name>
+        <Price>1021.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="682">
+        <Name>Widget #682</Name>
+        <Price>1023.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="683">
+        <Name>Widget #683</Name>
+        <Price>1024.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="684">
+        <Name>Widget #684</Name>
+        <Price>1026.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="685">
+        <Name>Widget #685</Name>
+        <Price>1027.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="686">
+        <Name>Widget #686</Name>
+        <Price>1029.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="687">
+        <Name>Widget #687</Name>
+        <Price>1030.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="688">
+        <Name>Widget #688</Name>
+        <Price>1032.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="689">
+        <Name>Widget #689</Name>
+        <Price>1033.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="690">
+        <Name>Widget #690</Name>
+        <Price>1035.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="691">
+        <Name>Widget #691</Name>
+        <Price>1036.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="692">
+        <Name>Widget #692</Name>
+        <Price>1038.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="693">
+        <Name>Widget #693</Name>
+        <Price>1039.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="694">
+        <Name>Widget #694</Name>
+        <Price>1041.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="695">
+        <Name>Widget #695</Name>
+        <Price>1042.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="696">
+        <Name>Widget #696</Name>
+        <Price>1044.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="697">
+        <Name>Widget #697</Name>
+        <Price>1045.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="698">
+        <Name>Widget #698</Name>
+        <Price>1047.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="699">
+        <Name>Widget #699</Name>
+        <Price>1048.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="700">
+        <Name>Widget #700</Name>
+        <Price>1050.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="701">
+        <Name>Widget #701</Name>
+        <Price>1051.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="702">
+        <Name>Widget #702</Name>
+        <Price>1053.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="703">
+        <Name>Widget #703</Name>
+        <Price>1054.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="704">
+        <Name>Widget #704</Name>
+        <Price>1056.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="705">
+        <Name>Widget #705</Name>
+        <Price>1057.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="706">
+        <Name>Widget #706</Name>
+        <Price>1059.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="707">
+        <Name>Widget #707</Name>
+        <Price>1060.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="708">
+        <Name>Widget #708</Name>
+        <Price>1062.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="709">
+        <Name>Widget #709</Name>
+        <Price>1063.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="710">
+        <Name>Widget #710</Name>
+        <Price>1065.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="711">
+        <Name>Widget #711</Name>
+        <Price>1066.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="712">
+        <Name>Widget #712</Name>
+        <Price>1068.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="713">
+        <Name>Widget #713</Name>
+        <Price>1069.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="714">
+        <Name>Widget #714</Name>
+        <Price>1071.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="715">
+        <Name>Widget #715</Name>
+        <Price>1072.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="716">
+        <Name>Widget #716</Name>
+        <Price>1074.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="717">
+        <Name>Widget #717</Name>
+        <Price>1075.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="718">
+        <Name>Widget #718</Name>
+        <Price>1077.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="719">
+        <Name>Widget #719</Name>
+        <Price>1078.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="720">
+        <Name>Widget #720</Name>
+        <Price>1080.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="721">
+        <Name>Widget #721</Name>
+        <Price>1081.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="722">
+        <Name>Widget #722</Name>
+        <Price>1083.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="723">
+        <Name>Widget #723</Name>
+        <Price>1084.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="724">
+        <Name>Widget #724</Name>
+        <Price>1086.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="725">
+        <Name>Widget #725</Name>
+        <Price>1087.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="726">
+        <Name>Widget #726</Name>
+        <Price>1089.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="727">
+        <Name>Widget #727</Name>
+        <Price>1090.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="728">
+        <Name>Widget #728</Name>
+        <Price>1092.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="729">
+        <Name>Widget #729</Name>
+        <Price>1093.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="730">
+        <Name>Widget #730</Name>
+        <Price>1095.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="731">
+        <Name>Widget #731</Name>
+        <Price>1096.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="732">
+        <Name>Widget #732</Name>
+        <Price>1098.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="733">
+        <Name>Widget #733</Name>
+        <Price>1099.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="734">
+        <Name>Widget #734</Name>
+        <Price>1101.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="735">
+        <Name>Widget #735</Name>
+        <Price>1102.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="736">
+        <Name>Widget #736</Name>
+        <Price>1104.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="737">
+        <Name>Widget #737</Name>
+        <Price>1105.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="738">
+        <Name>Widget #738</Name>
+        <Price>1107.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="739">
+        <Name>Widget #739</Name>
+        <Price>1108.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="740">
+        <Name>Widget #740</Name>
+        <Price>1110.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="741">
+        <Name>Widget #741</Name>
+        <Price>1111.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="742">
+        <Name>Widget #742</Name>
+        <Price>1113.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="743">
+        <Name>Widget #743</Name>
+        <Price>1114.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="744">
+        <Name>Widget #744</Name>
+        <Price>1116.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="745">
+        <Name>Widget #745</Name>
+        <Price>1117.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="746">
+        <Name>Widget #746</Name>
+        <Price>1119.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="747">
+        <Name>Widget #747</Name>
+        <Price>1120.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="748">
+        <Name>Widget #748</Name>
+        <Price>1122.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="749">
+        <Name>Widget #749</Name>
+        <Price>1123.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="750">
+        <Name>Widget #750</Name>
+        <Price>1125.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="751">
+        <Name>Widget #751</Name>
+        <Price>1126.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="752">
+        <Name>Widget #752</Name>
+        <Price>1128.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="753">
+        <Name>Widget #753</Name>
+        <Price>1129.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="754">
+        <Name>Widget #754</Name>
+        <Price>1131.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="755">
+        <Name>Widget #755</Name>
+        <Price>1132.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="756">
+        <Name>Widget #756</Name>
+        <Price>1134.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="757">
+        <Name>Widget #757</Name>
+        <Price>1135.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="758">
+        <Name>Widget #758</Name>
+        <Price>1137.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="759">
+        <Name>Widget #759</Name>
+        <Price>1138.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="760">
+        <Name>Widget #760</Name>
+        <Price>1140.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="761">
+        <Name>Widget #761</Name>
+        <Price>1141.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="762">
+        <Name>Widget #762</Name>
+        <Price>1143.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="763">
+        <Name>Widget #763</Name>
+        <Price>1144.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="764">
+        <Name>Widget #764</Name>
+        <Price>1146.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="765">
+        <Name>Widget #765</Name>
+        <Price>1147.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="766">
+        <Name>Widget #766</Name>
+        <Price>1149.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="767">
+        <Name>Widget #767</Name>
+        <Price>1150.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="768">
+        <Name>Widget #768</Name>
+        <Price>1152.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="769">
+        <Name>Widget #769</Name>
+        <Price>1153.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="770">
+        <Name>Widget #770</Name>
+        <Price>1155.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="771">
+        <Name>Widget #771</Name>
+        <Price>1156.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="772">
+        <Name>Widget #772</Name>
+        <Price>1158.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="773">
+        <Name>Widget #773</Name>
+        <Price>1159.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="774">
+        <Name>Widget #774</Name>
+        <Price>1161.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="775">
+        <Name>Widget #775</Name>
+        <Price>1162.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="776">
+        <Name>Widget #776</Name>
+        <Price>1164.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="777">
+        <Name>Widget #777</Name>
+        <Price>1165.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="778">
+        <Name>Widget #778</Name>
+        <Price>1167.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="779">
+        <Name>Widget #779</Name>
+        <Price>1168.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="780">
+        <Name>Widget #780</Name>
+        <Price>1170.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="781">
+        <Name>Widget #781</Name>
+        <Price>1171.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="782">
+        <Name>Widget #782</Name>
+        <Price>1173.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="783">
+        <Name>Widget #783</Name>
+        <Price>1174.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="784">
+        <Name>Widget #784</Name>
+        <Price>1176.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="785">
+        <Name>Widget #785</Name>
+        <Price>1177.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="786">
+        <Name>Widget #786</Name>
+        <Price>1179.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="787">
+        <Name>Widget #787</Name>
+        <Price>1180.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="788">
+        <Name>Widget #788</Name>
+        <Price>1182.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="789">
+        <Name>Widget #789</Name>
+        <Price>1183.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="790">
+        <Name>Widget #790</Name>
+        <Price>1185.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="791">
+        <Name>Widget #791</Name>
+        <Price>1186.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="792">
+        <Name>Widget #792</Name>
+        <Price>1188.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="793">
+        <Name>Widget #793</Name>
+        <Price>1189.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="794">
+        <Name>Widget #794</Name>
+        <Price>1191.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="795">
+        <Name>Widget #795</Name>
+        <Price>1192.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="796">
+        <Name>Widget #796</Name>
+        <Price>1194.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="797">
+        <Name>Widget #797</Name>
+        <Price>1195.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="798">
+        <Name>Widget #798</Name>
+        <Price>1197.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="799">
+        <Name>Widget #799</Name>
+        <Price>1198.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="800">
+        <Name>Widget #800</Name>
+        <Price>1200.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="801">
+        <Name>Widget #801</Name>
+        <Price>1201.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="802">
+        <Name>Widget #802</Name>
+        <Price>1203.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="803">
+        <Name>Widget #803</Name>
+        <Price>1204.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="804">
+        <Name>Widget #804</Name>
+        <Price>1206.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="805">
+        <Name>Widget #805</Name>
+        <Price>1207.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="806">
+        <Name>Widget #806</Name>
+        <Price>1209.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="807">
+        <Name>Widget #807</Name>
+        <Price>1210.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="808">
+        <Name>Widget #808</Name>
+        <Price>1212.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="809">
+        <Name>Widget #809</Name>
+        <Price>1213.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="810">
+        <Name>Widget #810</Name>
+        <Price>1215.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="811">
+        <Name>Widget #811</Name>
+        <Price>1216.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="812">
+        <Name>Widget #812</Name>
+        <Price>1218.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="813">
+        <Name>Widget #813</Name>
+        <Price>1219.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="814">
+        <Name>Widget #814</Name>
+        <Price>1221.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="815">
+        <Name>Widget #815</Name>
+        <Price>1222.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="816">
+        <Name>Widget #816</Name>
+        <Price>1224.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="817">
+        <Name>Widget #817</Name>
+        <Price>1225.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="818">
+        <Name>Widget #818</Name>
+        <Price>1227.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="819">
+        <Name>Widget #819</Name>
+        <Price>1228.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="820">
+        <Name>Widget #820</Name>
+        <Price>1230.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="821">
+        <Name>Widget #821</Name>
+        <Price>1231.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="822">
+        <Name>Widget #822</Name>
+        <Price>1233.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="823">
+        <Name>Widget #823</Name>
+        <Price>1234.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="824">
+        <Name>Widget #824</Name>
+        <Price>1236.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="825">
+        <Name>Widget #825</Name>
+        <Price>1237.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="826">
+        <Name>Widget #826</Name>
+        <Price>1239.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="827">
+        <Name>Widget #827</Name>
+        <Price>1240.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="828">
+        <Name>Widget #828</Name>
+        <Price>1242.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="829">
+        <Name>Widget #829</Name>
+        <Price>1243.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="830">
+        <Name>Widget #830</Name>
+        <Price>1245.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="831">
+        <Name>Widget #831</Name>
+        <Price>1246.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="832">
+        <Name>Widget #832</Name>
+        <Price>1248.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="833">
+        <Name>Widget #833</Name>
+        <Price>1249.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="834">
+        <Name>Widget #834</Name>
+        <Price>1251.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="835">
+        <Name>Widget #835</Name>
+        <Price>1252.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="836">
+        <Name>Widget #836</Name>
+        <Price>1254.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="837">
+        <Name>Widget #837</Name>
+        <Price>1255.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="838">
+        <Name>Widget #838</Name>
+        <Price>1257.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="839">
+        <Name>Widget #839</Name>
+        <Price>1258.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="840">
+        <Name>Widget #840</Name>
+        <Price>1260.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="841">
+        <Name>Widget #841</Name>
+        <Price>1261.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="842">
+        <Name>Widget #842</Name>
+        <Price>1263.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="843">
+        <Name>Widget #843</Name>
+        <Price>1264.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="844">
+        <Name>Widget #844</Name>
+        <Price>1266.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="845">
+        <Name>Widget #845</Name>
+        <Price>1267.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="846">
+        <Name>Widget #846</Name>
+        <Price>1269.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="847">
+        <Name>Widget #847</Name>
+        <Price>1270.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="848">
+        <Name>Widget #848</Name>
+        <Price>1272.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="849">
+        <Name>Widget #849</Name>
+        <Price>1273.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="850">
+        <Name>Widget #850</Name>
+        <Price>1275.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="851">
+        <Name>Widget #851</Name>
+        <Price>1276.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="852">
+        <Name>Widget #852</Name>
+        <Price>1278.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="853">
+        <Name>Widget #853</Name>
+        <Price>1279.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="854">
+        <Name>Widget #854</Name>
+        <Price>1281.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="855">
+        <Name>Widget #855</Name>
+        <Price>1282.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="856">
+        <Name>Widget #856</Name>
+        <Price>1284.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="857">
+        <Name>Widget #857</Name>
+        <Price>1285.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="858">
+        <Name>Widget #858</Name>
+        <Price>1287.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="859">
+        <Name>Widget #859</Name>
+        <Price>1288.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="860">
+        <Name>Widget #860</Name>
+        <Price>1290.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="861">
+        <Name>Widget #861</Name>
+        <Price>1291.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="862">
+        <Name>Widget #862</Name>
+        <Price>1293.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="863">
+        <Name>Widget #863</Name>
+        <Price>1294.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="864">
+        <Name>Widget #864</Name>
+        <Price>1296.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="865">
+        <Name>Widget #865</Name>
+        <Price>1297.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="866">
+        <Name>Widget #866</Name>
+        <Price>1299.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="867">
+        <Name>Widget #867</Name>
+        <Price>1300.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="868">
+        <Name>Widget #868</Name>
+        <Price>1302.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="869">
+        <Name>Widget #869</Name>
+        <Price>1303.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="870">
+        <Name>Widget #870</Name>
+        <Price>1305.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="871">
+        <Name>Widget #871</Name>
+        <Price>1306.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="872">
+        <Name>Widget #872</Name>
+        <Price>1308.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="873">
+        <Name>Widget #873</Name>
+        <Price>1309.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="874">
+        <Name>Widget #874</Name>
+        <Price>1311.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="875">
+        <Name>Widget #875</Name>
+        <Price>1312.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="876">
+        <Name>Widget #876</Name>
+        <Price>1314.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="877">
+        <Name>Widget #877</Name>
+        <Price>1315.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="878">
+        <Name>Widget #878</Name>
+        <Price>1317.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="879">
+        <Name>Widget #879</Name>
+        <Price>1318.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="880">
+        <Name>Widget #880</Name>
+        <Price>1320.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="881">
+        <Name>Widget #881</Name>
+        <Price>1321.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="882">
+        <Name>Widget #882</Name>
+        <Price>1323.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="883">
+        <Name>Widget #883</Name>
+        <Price>1324.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="884">
+        <Name>Widget #884</Name>
+        <Price>1326.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="885">
+        <Name>Widget #885</Name>
+        <Price>1327.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="886">
+        <Name>Widget #886</Name>
+        <Price>1329.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="887">
+        <Name>Widget #887</Name>
+        <Price>1330.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="888">
+        <Name>Widget #888</Name>
+        <Price>1332.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="889">
+        <Name>Widget #889</Name>
+        <Price>1333.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="890">
+        <Name>Widget #890</Name>
+        <Price>1335.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="891">
+        <Name>Widget #891</Name>
+        <Price>1336.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="892">
+        <Name>Widget #892</Name>
+        <Price>1338.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="893">
+        <Name>Widget #893</Name>
+        <Price>1339.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="894">
+        <Name>Widget #894</Name>
+        <Price>1341.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="895">
+        <Name>Widget #895</Name>
+        <Price>1342.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="896">
+        <Name>Widget #896</Name>
+        <Price>1344.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="897">
+        <Name>Widget #897</Name>
+        <Price>1345.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="898">
+        <Name>Widget #898</Name>
+        <Price>1347.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="899">
+        <Name>Widget #899</Name>
+        <Price>1348.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="900">
+        <Name>Widget #900</Name>
+        <Price>1350.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="901">
+        <Name>Widget #901</Name>
+        <Price>1351.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="902">
+        <Name>Widget #902</Name>
+        <Price>1353.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="903">
+        <Name>Widget #903</Name>
+        <Price>1354.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="904">
+        <Name>Widget #904</Name>
+        <Price>1356.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="905">
+        <Name>Widget #905</Name>
+        <Price>1357.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="906">
+        <Name>Widget #906</Name>
+        <Price>1359.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="907">
+        <Name>Widget #907</Name>
+        <Price>1360.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="908">
+        <Name>Widget #908</Name>
+        <Price>1362.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="909">
+        <Name>Widget #909</Name>
+        <Price>1363.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="910">
+        <Name>Widget #910</Name>
+        <Price>1365.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="911">
+        <Name>Widget #911</Name>
+        <Price>1366.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="912">
+        <Name>Widget #912</Name>
+        <Price>1368.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="913">
+        <Name>Widget #913</Name>
+        <Price>1369.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="914">
+        <Name>Widget #914</Name>
+        <Price>1371.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="915">
+        <Name>Widget #915</Name>
+        <Price>1372.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="916">
+        <Name>Widget #916</Name>
+        <Price>1374.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="917">
+        <Name>Widget #917</Name>
+        <Price>1375.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="918">
+        <Name>Widget #918</Name>
+        <Price>1377.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="919">
+        <Name>Widget #919</Name>
+        <Price>1378.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="920">
+        <Name>Widget #920</Name>
+        <Price>1380.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="921">
+        <Name>Widget #921</Name>
+        <Price>1381.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="922">
+        <Name>Widget #922</Name>
+        <Price>1383.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="923">
+        <Name>Widget #923</Name>
+        <Price>1384.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="924">
+        <Name>Widget #924</Name>
+        <Price>1386.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="925">
+        <Name>Widget #925</Name>
+        <Price>1387.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="926">
+        <Name>Widget #926</Name>
+        <Price>1389.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="927">
+        <Name>Widget #927</Name>
+        <Price>1390.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="928">
+        <Name>Widget #928</Name>
+        <Price>1392.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="929">
+        <Name>Widget #929</Name>
+        <Price>1393.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="930">
+        <Name>Widget #930</Name>
+        <Price>1395.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="931">
+        <Name>Widget #931</Name>
+        <Price>1396.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="932">
+        <Name>Widget #932</Name>
+        <Price>1398.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="933">
+        <Name>Widget #933</Name>
+        <Price>1399.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="934">
+        <Name>Widget #934</Name>
+        <Price>1401.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="935">
+        <Name>Widget #935</Name>
+        <Price>1402.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="936">
+        <Name>Widget #936</Name>
+        <Price>1404.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="937">
+        <Name>Widget #937</Name>
+        <Price>1405.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="938">
+        <Name>Widget #938</Name>
+        <Price>1407.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="939">
+        <Name>Widget #939</Name>
+        <Price>1408.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="940">
+        <Name>Widget #940</Name>
+        <Price>1410.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="941">
+        <Name>Widget #941</Name>
+        <Price>1411.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="942">
+        <Name>Widget #942</Name>
+        <Price>1413.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="943">
+        <Name>Widget #943</Name>
+        <Price>1414.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="944">
+        <Name>Widget #944</Name>
+        <Price>1416.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="945">
+        <Name>Widget #945</Name>
+        <Price>1417.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="946">
+        <Name>Widget #946</Name>
+        <Price>1419.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="947">
+        <Name>Widget #947</Name>
+        <Price>1420.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="948">
+        <Name>Widget #948</Name>
+        <Price>1422.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="949">
+        <Name>Widget #949</Name>
+        <Price>1423.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="950">
+        <Name>Widget #950</Name>
+        <Price>1425.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="951">
+        <Name>Widget #951</Name>
+        <Price>1426.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="952">
+        <Name>Widget #952</Name>
+        <Price>1428.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="953">
+        <Name>Widget #953</Name>
+        <Price>1429.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="954">
+        <Name>Widget #954</Name>
+        <Price>1431.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="955">
+        <Name>Widget #955</Name>
+        <Price>1432.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="956">
+        <Name>Widget #956</Name>
+        <Price>1434.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="957">
+        <Name>Widget #957</Name>
+        <Price>1435.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="958">
+        <Name>Widget #958</Name>
+        <Price>1437.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="959">
+        <Name>Widget #959</Name>
+        <Price>1438.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="960">
+        <Name>Widget #960</Name>
+        <Price>1440.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="961">
+        <Name>Widget #961</Name>
+        <Price>1441.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="962">
+        <Name>Widget #962</Name>
+        <Price>1443.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="963">
+        <Name>Widget #963</Name>
+        <Price>1444.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="964">
+        <Name>Widget #964</Name>
+        <Price>1446.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="965">
+        <Name>Widget #965</Name>
+        <Price>1447.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="966">
+        <Name>Widget #966</Name>
+        <Price>1449.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="967">
+        <Name>Widget #967</Name>
+        <Price>1450.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="968">
+        <Name>Widget #968</Name>
+        <Price>1452.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="969">
+        <Name>Widget #969</Name>
+        <Price>1453.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="970">
+        <Name>Widget #970</Name>
+        <Price>1455.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="971">
+        <Name>Widget #971</Name>
+        <Price>1456.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="972">
+        <Name>Widget #972</Name>
+        <Price>1458.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="973">
+        <Name>Widget #973</Name>
+        <Price>1459.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="974">
+        <Name>Widget #974</Name>
+        <Price>1461.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="975">
+        <Name>Widget #975</Name>
+        <Price>1462.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="976">
+        <Name>Widget #976</Name>
+        <Price>1464.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="977">
+        <Name>Widget #977</Name>
+        <Price>1465.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="978">
+        <Name>Widget #978</Name>
+        <Price>1467.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="979">
+        <Name>Widget #979</Name>
+        <Price>1468.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="980">
+        <Name>Widget #980</Name>
+        <Price>1470.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="981">
+        <Name>Widget #981</Name>
+        <Price>1471.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="982">
+        <Name>Widget #982</Name>
+        <Price>1473.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="983">
+        <Name>Widget #983</Name>
+        <Price>1474.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="984">
+        <Name>Widget #984</Name>
+        <Price>1476.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="985">
+        <Name>Widget #985</Name>
+        <Price>1477.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="986">
+        <Name>Widget #986</Name>
+        <Price>1479.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="987">
+        <Name>Widget #987</Name>
+        <Price>1480.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="988">
+        <Name>Widget #988</Name>
+        <Price>1482.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="989">
+        <Name>Widget #989</Name>
+        <Price>1483.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="990">
+        <Name>Widget #990</Name>
+        <Price>1485.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="991">
+        <Name>Widget #991</Name>
+        <Price>1486.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="992">
+        <Name>Widget #992</Name>
+        <Price>1488.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="993">
+        <Name>Widget #993</Name>
+        <Price>1489.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="994">
+        <Name>Widget #994</Name>
+        <Price>1491.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="995">
+        <Name>Widget #995</Name>
+        <Price>1492.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="996">
+        <Name>Widget #996</Name>
+        <Price>1494.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="997">
+        <Name>Widget #997</Name>
+        <Price>1495.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="998">
+        <Name>Widget #998</Name>
+        <Price>1497.00</Price>
+        <InStock>true</InStock>
+    </Item>
+    <Item id="999">
+        <Name>Widget #999</Name>
+        <Price>1498.50</Price>
+        <InStock>false</InStock>
+    </Item>
+    <Item id="1000">
+        <Name>Widget #1000</Name>
+        <Price>1500.00</Price>
+        <InStock>true</InStock>
+    </Item>
+</Catalog>

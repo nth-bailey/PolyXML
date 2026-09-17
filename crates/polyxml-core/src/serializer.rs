@@ -106,10 +106,15 @@ impl NamespaceContext {
     }
 
     pub fn qualify_element<'a>(&'a self, local_name: &'a str, ns: Option<&str>) -> Cow<'a, str> {
+        let clean_name = if let Some(pos) = local_name.find(':') {
+            &local_name[pos + 1..]
+        } else {
+            local_name
+        };
         if let Some(ns_uri) = ns {
             if let Some(prefix) = self.uri_to_prefix.get(ns_uri) {
                 if !prefix.is_empty() {
-                    return Cow::Owned(format!("{}:{}", prefix, local_name));
+                    return Cow::Owned(format!("{}:{}", prefix, clean_name));
                 }
             }
         }
@@ -117,10 +122,15 @@ impl NamespaceContext {
     }
 
     pub fn qualify_attribute<'a>(&'a self, local_name: &'a str, ns: Option<&str>) -> Cow<'a, str> {
+        let clean_name = if let Some(pos) = local_name.find(':') {
+            &local_name[pos + 1..]
+        } else {
+            local_name
+        };
         if let Some(ns_uri) = ns {
             if let Some(prefix) = self.uri_to_prefix.get(ns_uri) {
                 if !prefix.is_empty() {
-                    return Cow::Owned(format!("{}:{}", prefix, local_name));
+                    return Cow::Owned(format!("{}:{}", prefix, clean_name));
                 }
             }
         }

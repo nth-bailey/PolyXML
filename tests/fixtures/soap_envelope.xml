@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope"
+              xmlns:m="http://example.com/stock"
+              xmlns:auth="http://example.com/security">
+    <env:Header>
+        <auth:SecurityToken env:mustUnderstand="true">sec-tok-987654321</auth:SecurityToken>
+    </env:Header>
+    <env:Body>
+        <m:GetStockPrice>
+            <m:StockName>ACME</m:StockName>
+            <m:Currency>USD</m:Currency>
+            <m:TargetDate>2026-09-17</m:TargetDate>
+        </m:GetStockPrice>
+    </env:Body>
+</env:Envelope>

@@ -64,4 +64,29 @@ test('PolyXML JavaScript bindings', (t) => {
   assert.ok(orderOutStr.includes('xmlns:itm="https://example.com/items"'));
   assert.ok(orderOutStr.includes('<ord:Order'));
   assert.ok(orderOutStr.includes('<itm:item>NodeGadget</itm:item>'));
+
+  // Test real-world fixture conformance: atom_feed.xml
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const atomPath = path.resolve(__dirname, '../../../tests/fixtures/atom_feed.xml');
+  if (fs.existsSync(atomPath)) {
+    const atomXml = fs.readFileSync(atomPath, 'utf-8');
+    const atomSchema = {
+      name: 'feed',
+      namespace: 'http://www.w3.org/2005/Atom',
+      fields: [
+        { name: 'title', xmlName: 'title', kind: 'element', scalarType: 'string' },
+        { name: 'id', xmlName: 'id', kind: 'element', scalarType: 'string' },
+      ],
+    };
+    const atomVal = polyxml.deserialize(atomXml, atomSchema);
+    assert.strictEqual(atomVal.title, 'PolyXML Engineering Updates');
+
+    const atomOut = polyxml.serialize('feed', atomVal, atomSchema, 2, true, {
+      '': 'http://www.w3.org/2005/Atom',
+    });
+    const atomOutStr = Buffer.from(atomOut).toString('utf-8');
+    assert.ok(atomOutStr.includes('xmlns="http://www.w3.org/2005/Atom"'));
+    assert.ok(atomOutStr.includes('<title>PolyXML Engineering Updates</title>'));
+  }
 });

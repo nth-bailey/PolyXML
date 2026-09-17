@@ -189,12 +189,21 @@ impl XmlDeserializer {
         stack.push(root_frame);
 
         let mut active_scalar_field: Option<(usize, ScalarType, bool)> = None;
+        let mut unknown_depth: usize = 0;
         let mut text_buf: Vec<u8> = Vec::new();
         let mut buf = Vec::new();
 
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
+                    if unknown_depth > 0 {
+                        unknown_depth += 1;
+                        continue;
+                    }
+                    if active_scalar_field.is_some() {
+                        unknown_depth = 1;
+                        continue;
+                    }
                     if stack.len() >= max_depth {
                         return Err(PolyXmlError::MaxDepthExceeded {
                             max_depth,
@@ -245,9 +254,14 @@ impl XmlDeserializer {
                                 stack.push(frame);
                             }
                         }
+                    } else {
+                        unknown_depth = 1;
                     }
                 }
                 Ok(Event::Empty(ref e)) => {
+                    if unknown_depth > 0 || active_scalar_field.is_some() {
+                        continue;
+                    }
                     let local_name = e.local_name();
                     let is_nil = is_nil_element(e);
 
@@ -296,6 +310,9 @@ impl XmlDeserializer {
                     }
                 }
                 Ok(Event::Text(ref e)) => {
+                    if unknown_depth > 0 {
+                        continue;
+                    }
                     let unescaped = quick_xml::escape::unescape(e.as_ref())?;
                     if active_scalar_field.is_some() {
                         text_buf.extend_from_slice(unescaped.as_bytes());
@@ -306,6 +323,9 @@ impl XmlDeserializer {
                     }
                 }
                 Ok(Event::CData(ref e)) => {
+                    if unknown_depth > 0 {
+                        continue;
+                    }
                     if active_scalar_field.is_some() {
                         text_buf.extend_from_slice(e.as_ref().as_bytes());
                     } else if let Some(frame) = stack.last_mut() {
@@ -315,10 +335,17 @@ impl XmlDeserializer {
                     }
                 }
                 Ok(Event::GeneralRef(ref e)) => {
+                    if unknown_depth > 0 {
+                        continue;
+                    }
                     let frame_tb = stack.last_mut().and_then(|f| f.frame_text_buf.as_mut());
                     append_general_ref(e, active_scalar_field.is_some(), &mut text_buf, frame_tb)?;
                 }
                 Ok(Event::End(ref e)) => {
+                    if unknown_depth > 0 {
+                        unknown_depth -= 1;
+                        continue;
+                    }
                     if let Some((field_idx, ref scalar_type, is_list)) = active_scalar_field.take()
                     {
                         let field_name = &stack.last().unwrap().schema.fields[field_idx].name;
