@@ -57,6 +57,7 @@ jobs:
     name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
     needs: rust-check
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.python-version == '3.15' }}
     strategy:
       fail-fast: false
       matrix:
@@ -70,6 +71,7 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
