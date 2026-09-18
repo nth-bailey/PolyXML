@@ -383,10 +383,10 @@ def test_binary_serialization_xmldate_and_path():
         date: XmlDate
         path: pathlib.Path
 
-    orig = ExtraItem(date=XmlDate("2026-09-12"), path=pathlib.Path("/tmp/test.xml"))
+    orig = ExtraItem(date=XmlDate.from_string("2026-09-12"), path=pathlib.Path("/tmp/test.xml"))
     payload = polyxml.dumps_binary(orig)
     decoded = polyxml.loads_binary(payload, ExtraItem)
-    assert decoded.date == XmlDate("2026-09-12")
+    assert decoded.date == XmlDate.from_string("2026-09-12")
     assert decoded.path == pathlib.Path("/tmp/test.xml")
 
 

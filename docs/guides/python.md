@@ -15,7 +15,7 @@ PolyXML is the fastest typed XML data-binding engine for Python `>=3.12`. Compil
 pip install polyxml
 ```
 
-PolyXML distributes pre-compiled binary wheels with forward compatibility across **Python 3.12, 3.13, and 3.14**.
+PolyXML distributes pre-compiled binary wheels with forward compatibility across **Python 3.12, 3.13, 3.14, and 3.15**.
 
 ---
 
