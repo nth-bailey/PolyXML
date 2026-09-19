@@ -1,5 +1,6 @@
 import importlib.util
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -111,16 +112,40 @@ def _load_module_from_file(module_name: str, file_path: pathlib.Path):
     return module
 
 
+def _get_polyxml_bin() -> pathlib.Path:
+    repo_root = pathlib.Path(__file__).parent.parent.parent.parent
+    exe_name = "polyxml.exe" if sys.platform == "win32" else "polyxml"
+    candidates = [
+        repo_root / "target" / "debug" / exe_name,
+        repo_root / "target" / "release" / exe_name,
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+
+    which_path = shutil.which(exe_name) or shutil.which("polyxml")
+    if which_path:
+        return pathlib.Path(which_path)
+
+    # Attempt on-the-fly compilation via cargo if not found
+    subprocess.run(
+        ["cargo", "build", "-p", "polyxml-cli"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    for c in candidates:
+        if c.exists():
+            return c
+
+    raise FileNotFoundError(f"polyxml CLI binary could not be found or built at {candidates}")
+
+
 @pytest.fixture(scope="module")
 def generated_models():
     """Generates both Dataclass and Pydantic models from SAMPLE_XSD using polyxml CLI,
     verifying ruff and pyright compliance."""
-    repo_root = pathlib.Path(__file__).parent.parent.parent.parent
-    polyxml_bin = repo_root / "target" / "debug" / "polyxml"
-    if not polyxml_bin.exists():
-        polyxml_bin = repo_root / "target" / "release" / "polyxml"
-
-    assert polyxml_bin.exists(), f"polyxml CLI binary not found at {polyxml_bin}"
+    polyxml_bin = _get_polyxml_bin()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = pathlib.Path(tmpdir)
@@ -313,10 +338,7 @@ def test_generated_dataclass_codecs(generated_models):
 
 
 def test_codecs_flag_disabled():
-    repo_root = pathlib.Path(__file__).parent.parent.parent.parent
-    polyxml_bin = repo_root / "target" / "debug" / "polyxml"
-    if not polyxml_bin.exists():
-        polyxml_bin = repo_root / "target" / "release" / "polyxml"
+    polyxml_bin = _get_polyxml_bin()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = pathlib.Path(tmpdir)
