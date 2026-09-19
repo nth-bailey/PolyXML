@@ -1,8 +1,8 @@
 pub mod tarjan;
 
-use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
+use serde::{Deserialize, Serialize};
 
 /// Fully qualified XML Name (Namespace URI + Local Name).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -103,10 +103,7 @@ pub enum PrimitiveType {
 
 impl PrimitiveType {
     pub fn from_xsd_name(name: &str) -> Option<Self> {
-        let local = name
-            .strip_prefix("xs:")
-            .or_else(|| name.strip_prefix("xsd:"))
-            .unwrap_or(name);
+        let local = name.strip_prefix("xs:").or_else(|| name.strip_prefix("xsd:")).unwrap_or(name);
         match local {
             "string" => Some(Self::String),
             "boolean" => Some(Self::Boolean),

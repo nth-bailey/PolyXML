@@ -341,7 +341,8 @@ impl XsdParser {
             buf.clear();
         }
 
-        if is_choice_model && !choice_branches.is_empty() && fields.len() == choice_branches.len() {
+        if is_choice_model && !choice_branches.is_empty() && fields.len() == choice_branches.len()
+        {
             Ok(Some(TypeDef::Union(UnionDef {
                 qname,
                 branches: choice_branches,
@@ -538,9 +539,12 @@ impl XsdParser {
                         "complexType" => {
                             let anon_name = format!("{}Type", name);
                             let anon_qname = QName::new(target_ns, anon_name);
-                            if let Some(TypeDef::Struct(mut s)) =
-                                self.parse_complex_type(reader, e, target_ns, prefixes)?
-                            {
+                            if let Some(TypeDef::Struct(mut s)) = self.parse_complex_type(
+                                reader,
+                                e,
+                                target_ns,
+                                prefixes,
+                            )? {
                                 s.qname = anon_qname.clone();
                                 ir.add_type(TypeDef::Struct(s));
                                 type_ref = TypeRef::Named(anon_qname);
@@ -652,7 +656,9 @@ fn parse_element_field(
 
     let type_ref = get_attr_value(e, "type")
         .map(|t| resolve_type_ref(&t, target_ns, prefixes))
-        .or_else(|| get_attr_value(e, "ref").map(|r| resolve_type_ref(&r, target_ns, prefixes)))
+        .or_else(|| {
+            get_attr_value(e, "ref").map(|r| resolve_type_ref(&r, target_ns, prefixes))
+        })
         .unwrap_or(TypeRef::Primitive(PrimitiveType::String));
 
     let min_occurs = if in_choice {
@@ -709,12 +715,12 @@ fn parse_attribute_field(
 
     let type_ref = get_attr_value(e, "type")
         .map(|t| resolve_type_ref(&t, target_ns, prefixes))
-        .or_else(|| get_attr_value(e, "ref").map(|r| resolve_type_ref(&r, target_ns, prefixes)))
+        .or_else(|| {
+            get_attr_value(e, "ref").map(|r| resolve_type_ref(&r, target_ns, prefixes))
+        })
         .unwrap_or(TypeRef::Primitive(PrimitiveType::String));
 
-    let is_required = get_attr_value(e, "use")
-        .map(|u| u == "required")
-        .unwrap_or(false);
+    let is_required = get_attr_value(e, "use").map(|u| u == "required").unwrap_or(false);
 
     let cardinality = if is_required {
         Cardinality::required_one()
@@ -765,8 +771,8 @@ fn parse_empty_global_element(
 ) -> Option<ElementDef> {
     let name = get_attr_value(e, "name")?;
     let qname = QName::new(target_ns, name);
-    let substitution_group =
-        get_attr_value(e, "substitutionGroup").map(|s| resolve_qname(&s, target_ns, prefixes));
+    let substitution_group = get_attr_value(e, "substitutionGroup")
+        .map(|s| resolve_qname(&s, target_ns, prefixes));
     let nillable = get_attr_value(e, "nillable")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false);

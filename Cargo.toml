@@ -5,6 +5,7 @@ members = [
     "crates/polyxml-python",
     "crates/polyxml-c",
     "crates/polyxml-js",
+    "crates/polyxml-cli",
 ]
 
 [workspace.package]
