@@ -7,6 +7,7 @@ use std::process::{self, Command};
 use clap::{Args, Parser, Subcommand};
 use config::WorkspaceManifest;
 use polyxml::codegen::cpp::{CppCodegen, CppMode, CppOptions};
+use polyxml::codegen::go::{GoCodegen, GoOptions};
 use polyxml::codegen::java::{JavaCodegen, JavaOptions};
 use polyxml::codegen::python::{PythonBackend, PythonCodegen, PythonOptions};
 use polyxml::codegen::rust::{RustCodegen, RustOptions};
@@ -502,6 +503,30 @@ fn emit_target_code(
             };
 
             let codegen = CppCodegen::new(options);
+            let files = codegen.generate_files(ir, &file_stem);
+
+            for (filename, code) in files {
+                let file_path = out_dir.join(filename);
+                fs::write(file_path, code)?;
+            }
+            Ok(())
+        }
+        "go" => {
+            let pkg = opts.package.unwrap_or("models");
+            let file_stem = schema_path
+                .file_stem()
+                .map(|s| s.to_string_lossy())
+                .unwrap_or_else(|| "models".into());
+
+            let options = GoOptions {
+                package_name: pkg.to_string(),
+                emit_xml_tags: true,
+                validate_choice_exclusivity: true,
+                validate_facets: true,
+                emit_root_aliases: true,
+            };
+
+            let codegen = GoCodegen::new(options);
             let files = codegen.generate_files(ir, &file_stem);
 
             for (filename, code) in files {

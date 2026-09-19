@@ -1,0 +1,512 @@
+use std::fs;
+use std::process::Command;
+use tempfile::tempdir;
+
+use polyxml::codegen::go::{
+    to_go_constant_name, to_go_field_name, to_go_package_name, to_go_type_name, GoCodegen,
+    GoOptions,
+};
+use polyxml::ir::{
+    Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets,
+    SchemaIR, StructDef, TypeDef, TypeRef, UnionBranch, UnionDef,
+};
+
+#[test]
+fn test_go_sanitization() {
+    assert_eq!(to_go_field_name("id"), "ID");
+    assert_eq!(to_go_field_name("url"), "URL");
+    assert_eq!(to_go_field_name("uri"), "URI");
+    assert_eq!(to_go_field_name("xml_name"), "XMLName");
+    assert_eq!(to_go_field_name("customer_id"), "CustomerID");
+    assert_eq!(to_go_field_name("123_count"), "Field123Count");
+    assert_eq!(to_go_field_name("default"), "Default");
+
+    assert_eq!(to_go_type_name("customer_record"), "CustomerRecord");
+    assert_eq!(to_go_type_name("123_type"), "Type123Type");
+    assert_eq!(to_go_type_name("order_id"), "OrderID");
+
+    assert_eq!(
+        to_go_constant_name("OrderStatus", "pending"),
+        "OrderStatusPending"
+    );
+    assert_eq!(
+        to_go_constant_name("OrderStatus", "in-progress"),
+        "OrderStatusInProgress"
+    );
+    assert_eq!(to_go_constant_name("Payment", "10_days"), "PaymentV10Days");
+
+    assert_eq!(to_go_package_name("com.example.crm"), "comexamplecrm");
+    assert_eq!(to_go_package_name("my_models"), "mymodels");
+    assert_eq!(to_go_package_name("123_pkg"), "pkg123pkg");
+}
+
+#[test]
+fn test_go_struct_and_enum_generation() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/crm");
+
+    // Enum: OrderStatus
+    ir.add_type(TypeDef::Enum(EnumDef {
+        qname: QName::new(Some("https://example.com/crm"), "OrderStatus"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        variants: vec![
+            EnumValue {
+                name: "pending".into(),
+                value: "pending".into(),
+                documentation: Some("Pending review".into()),
+            },
+            EnumValue {
+                name: "shipped".into(),
+                value: "shipped".into(),
+                documentation: None,
+            },
+            EnumValue {
+                name: "cancelled".into(),
+                value: "cancelled".into(),
+                documentation: None,
+            },
+        ],
+        documentation: Some("Status of order processing".into()),
+    }));
+
+    // Struct: Customer
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/crm"), "Customer"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "id".into(),
+                xml_name: "id".into(),
+                namespace: None,
+                kind: FieldKind::Attribute,
+                type_ref: TypeRef::Primitive(PrimitiveType::Int),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "name".into(),
+                xml_name: "name".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: Some(RestrictionFacets {
+                    min_length: Some(1),
+                    max_length: Some(100),
+                    ..Default::default()
+                }),
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "email".into(),
+                xml_name: "email".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::optional_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "tags".into(),
+                xml_name: "tag".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::unbounded(0),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "status".into(),
+                xml_name: "status".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Named(QName::new(
+                    Some("https://example.com/crm"),
+                    "OrderStatus",
+                )),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: Some("Customer record definition".into()),
+    }));
+
+    let options = GoOptions {
+        package_name: "crm".to_string(),
+        emit_xml_tags: true,
+        validate_choice_exclusivity: true,
+        validate_facets: true,
+        emit_root_aliases: true,
+    };
+
+    let codegen = GoCodegen::new(options);
+    let go_code = codegen.generate_module(&ir);
+
+    assert!(go_code.contains("package crm"));
+    assert!(go_code.contains("type OrderStatus string"));
+    assert!(go_code.contains("OrderStatusPending OrderStatus = \"pending\""));
+    assert!(go_code.contains("func (e OrderStatus) IsValid() bool"));
+    assert!(go_code.contains("type Customer struct {"));
+    assert!(go_code.contains("ID int32 `xml:\"id,attr\"`"));
+    assert!(go_code.contains("Name string `xml:\"name\"`"));
+    assert!(go_code.contains("Email *string `xml:\"email,omitempty\"`"));
+    assert!(go_code.contains("Tags []string `xml:\"tag\"`"));
+    assert!(go_code.contains("Status OrderStatus `xml:\"status\"`"));
+
+    // Verify Go compilation and test execution
+    let temp = tempdir().unwrap();
+    let mod_path = temp.path().join("models.go");
+    fs::write(&mod_path, &go_code).unwrap();
+
+    let test_path = temp.path().join("models_test.go");
+    fs::write(
+        &test_path,
+        r#"package crm
+
+import (
+    "encoding/xml"
+    "testing"
+)
+
+func TestCustomerRoundtrip(t *testing.T) {
+    email := "alice@example.com"
+    c := Customer{
+        ID:     42,
+        Name:   "Alice",
+        Email:  &email,
+        Tags:   []string{"vip", "retail"},
+        Status: OrderStatusPending,
+    }
+
+    if !c.Status.IsValid() {
+        t.Fatalf("expected status to be valid")
+    }
+
+    data, err := xml.Marshal(c)
+    if err != nil {
+        t.Fatalf("marshal failed: %v", err)
+    }
+
+    var decoded Customer
+    if err := xml.Unmarshal(data, &decoded); err != nil {
+        t.Fatalf("unmarshal failed: %v", err)
+    }
+
+    if decoded.ID != 42 || decoded.Name != "Alice" || decoded.Email == nil || *decoded.Email != "alice@example.com" {
+        t.Fatalf("roundtrip mismatch: %+v", decoded)
+    }
+    if len(decoded.Tags) != 2 || decoded.Tags[0] != "vip" {
+        t.Fatalf("tags mismatch: %+v", decoded.Tags)
+    }
+
+    if err := decoded.Validate(); err != nil {
+        t.Fatalf("validation failed: %v", err)
+    }
+}
+"#,
+    )
+    .unwrap();
+
+    // Init go module
+    let init_status = Command::new("go")
+        .args(["mod", "init", "crm"])
+        .current_dir(temp.path())
+        .status()
+        .expect("Failed to init go module");
+    assert!(init_status.success(), "go mod init failed");
+
+    // Run go test
+    let test_status = Command::new("go")
+        .args(["test", "-v", "."])
+        .current_dir(temp.path())
+        .status()
+        .expect("Failed to run go test");
+    assert!(test_status.success(), "go test failed on generated models");
+}
+
+#[test]
+fn test_go_choice_mutual_exclusivity() {
+    let mut ir = SchemaIR::new().with_target_namespace("urn:payments");
+
+    ir.add_type(TypeDef::Union(UnionDef {
+        qname: QName::new(Some("urn:payments"), "ContactChoice"),
+        branches: vec![
+            UnionBranch {
+                variant_name: "email".into(),
+                xml_name: "email".into(),
+                namespace: None,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                documentation: None,
+            },
+            UnionBranch {
+                variant_name: "phone".into(),
+                xml_name: "phone".into(),
+                namespace: None,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                documentation: None,
+            },
+        ],
+        documentation: Some("Sum type representing email or phone".into()),
+    }));
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("urn:payments"), "PaymentParty"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "name".into(),
+                xml_name: "name".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "contact".into(),
+                xml_name: "contact".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Named(QName::new(Some("urn:payments"), "ContactChoice")),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: None,
+    }));
+
+    let options = GoOptions {
+        package_name: "payments".to_string(),
+        emit_xml_tags: true,
+        validate_choice_exclusivity: true,
+        validate_facets: true,
+        emit_root_aliases: true,
+    };
+
+    let codegen = GoCodegen::new(options);
+    let go_code = codegen.generate_module(&ir);
+
+    assert!(go_code.contains("func (c *ContactChoice) UnmarshalXML("));
+    assert!(go_code.contains("func (c ContactChoice) MarshalXML("));
+    assert!(go_code.contains("func (c ContactChoice) Selected() string"));
+    assert!(go_code.contains("func (c ContactChoice) Validate() error"));
+
+    let temp = tempdir().unwrap();
+    let mod_path = temp.path().join("payments.go");
+    fs::write(&mod_path, &go_code).unwrap();
+
+    let test_path = temp.path().join("payments_test.go");
+    fs::write(
+        &test_path,
+        r#"package payments
+
+import (
+    "encoding/xml"
+    "testing"
+)
+
+func TestChoiceMutualExclusivity(t *testing.T) {
+    // 1. Valid: single email branch
+    validXmlEmail := `<PaymentParty xmlns="urn:payments"><name>Alice</name><contact><email>alice@example.com</email></contact></PaymentParty>`
+    var p1 PaymentParty
+    if err := xml.Unmarshal([]byte(validXmlEmail), &p1); err != nil {
+        t.Fatalf("unexpected unmarshal error: %v", err)
+    }
+    if p1.Contact.Email == nil || *p1.Contact.Email != "alice@example.com" {
+        t.Fatalf("expected email branch to be populated")
+    }
+    if p1.Contact.Phone != nil {
+        t.Fatalf("phone branch should be nil")
+    }
+    if p1.Contact.Selected() != "email" {
+        t.Fatalf("expected Selected() to return email, got %s", p1.Contact.Selected())
+    }
+
+    // 2. Valid: single phone branch
+    validXmlPhone := `<PaymentParty xmlns="urn:payments"><name>Bob</name><contact><phone>+123456789</phone></contact></PaymentParty>`
+    var p2 PaymentParty
+    if err := xml.Unmarshal([]byte(validXmlPhone), &p2); err != nil {
+        t.Fatalf("unexpected unmarshal error: %v", err)
+    }
+    if p2.Contact.Phone == nil || *p2.Contact.Phone != "+123456789" {
+        t.Fatalf("expected phone branch to be populated")
+    }
+    if p2.Contact.Selected() != "phone" {
+        t.Fatalf("expected Selected() to return phone, got %s", p2.Contact.Selected())
+    }
+
+    // 3. Invalid: both email and phone populated -> MUST FAIL UnmarshalXML
+    invalidXmlBoth := `<PaymentParty xmlns="urn:payments"><name>Eve</name><contact><email>eve@example.com</email><phone>999</phone></contact></PaymentParty>`
+    var p3 PaymentParty
+    if err := xml.Unmarshal([]byte(invalidXmlBoth), &p3); err == nil {
+        t.Fatalf("expected mutual exclusivity error, but unmarshal succeeded")
+    } else {
+        t.Logf("Correctly rejected concurrent choice branches: %v", err)
+    }
+}
+"#,
+    )
+    .unwrap();
+
+    let init_status = Command::new("go")
+        .args(["mod", "init", "payments"])
+        .current_dir(temp.path())
+        .status()
+        .expect("Failed to init go module");
+    assert!(init_status.success());
+
+    let test_status = Command::new("go")
+        .args(["test", "-v", "."])
+        .current_dir(temp.path())
+        .status()
+        .expect("Failed to run go test");
+    assert!(test_status.success(), "go test failed on choice validation");
+}
+
+#[test]
+fn test_go_recursive_cycle_pointers() {
+    let mut ir = SchemaIR::new().with_target_namespace("urn:tree");
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("urn:tree"), "TreeNode"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "label".into(),
+                xml_name: "label".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "next".into(),
+                xml_name: "next".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Named(QName::new(Some("urn:tree"), "TreeNode")),
+                cardinality: Cardinality::optional_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: true, // Tarjan cycle cut -> *TreeNode
+            },
+        ],
+        documentation: None,
+    }));
+
+    let options = GoOptions {
+        package_name: "tree".to_string(),
+        emit_xml_tags: true,
+        ..Default::default()
+    };
+
+    let codegen = GoCodegen::new(options);
+    let go_code = codegen.generate_module(&ir);
+
+    assert!(go_code.contains("Next *TreeNode `xml:\"next,omitempty\"`"));
+
+    let temp = tempdir().unwrap();
+    let mod_path = temp.path().join("tree.go");
+    fs::write(&mod_path, &go_code).unwrap();
+
+    let test_path = temp.path().join("tree_test.go");
+    fs::write(
+        &test_path,
+        r#"package tree
+
+import (
+    "encoding/xml"
+    "testing"
+)
+
+func TestRecursiveTree(t *testing.T) {
+    root := TreeNode{
+        Label: "root",
+        Next: &TreeNode{
+            Label: "child1",
+            Next: &TreeNode{
+                Label: "child2",
+            },
+        },
+    }
+
+    data, err := xml.Marshal(root)
+    if err != nil {
+        t.Fatalf("marshal failed: %v", err)
+    }
+
+    var decoded TreeNode
+    if err := xml.Unmarshal(data, &decoded); err != nil {
+        t.Fatalf("unmarshal failed: %v", err)
+    }
+
+    if decoded.Label != "root" || decoded.Next == nil || decoded.Next.Label != "child1" {
+        t.Fatalf("tree decoding mismatch: %+v", decoded)
+    }
+    if decoded.Next.Next == nil || decoded.Next.Next.Label != "child2" {
+        t.Fatalf("deep tree child mismatch: %+v", decoded.Next.Next)
+    }
+}
+"#,
+    )
+    .unwrap();
+
+    let init_status = Command::new("go")
+        .args(["mod", "init", "tree"])
+        .current_dir(temp.path())
+        .status()
+        .expect("Failed to init go module");
+    assert!(init_status.success());
+
+    let test_status = Command::new("go")
+        .args(["test", "-v", "."])
+        .current_dir(temp.path())
+        .status()
+        .expect("Failed to run go test");
+    assert!(test_status.success(), "go test failed on recursive tree");
+}

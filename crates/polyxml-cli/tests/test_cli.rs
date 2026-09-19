@@ -698,3 +698,175 @@ int main() {
         .expect("Failed to run compiled C++ binary");
     assert!(run_status.success(), "C++ test driver failed execution");
 }
+
+#[test]
+fn test_cli_go_generation() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("crm.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.com/crm">
+    <xs:simpleType name="AccountTier">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="standard"/>
+            <xs:enumeration value="premium"/>
+            <xs:enumeration value="enterprise"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="Account">
+        <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+            <xs:element name="tier" type="AccountTier"/>
+            <xs:element name="balance" type="xs:decimal"/>
+            <xs:element name="alias" type="xs:string" minOccurs="0"/>
+            <xs:element name="tag" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="id" type="xs:int" use="required"/>
+    </xs:complexType>
+
+    <xs:element name="AccountRecord" type="Account"/>
+</xs:schema>"#,
+    )
+    .unwrap();
+
+    let go_out = dir.path().join("out_go");
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            "--lang",
+            "go",
+            "--package",
+            "crm",
+            "--out",
+            go_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+            "--format",
+        ])
+        .output()
+        .expect("Failed to execute Go generate");
+
+    assert!(
+        output.status.success(),
+        "CLI generate --lang go failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let generated_file = go_out.join("crm.go");
+    assert!(generated_file.exists(), "crm.go was not created");
+    let go_code = fs::read_to_string(&generated_file).unwrap();
+
+    assert!(go_code.contains("package crm"));
+    assert!(go_code.contains("type AccountTier string"));
+    assert!(go_code.contains("AccountTierStandard"));
+    assert!(go_code.contains("\"standard\""));
+    assert!(go_code.contains("func (e AccountTier) IsValid() bool"));
+    assert!(go_code.contains("type Account struct {"));
+    assert!(go_code.contains("XMLName xml.Name"));
+    assert!(go_code.contains("Name") && go_code.contains("`xml:\"name\"`"));
+    assert!(
+        go_code.contains("Tier")
+            && go_code.contains("AccountTier")
+            && go_code.contains("`xml:\"tier\"`")
+    );
+    assert!(
+        go_code.contains("Balance")
+            && go_code.contains("float64")
+            && go_code.contains("`xml:\"balance\"`")
+    );
+    assert!(
+        go_code.contains("Alias")
+            && go_code.contains("*string")
+            && go_code.contains("`xml:\"alias,omitempty\"`")
+    );
+    assert!(
+        go_code.contains("Tag")
+            && go_code.contains("[]string")
+            && go_code.contains("`xml:\"tag\"`")
+    );
+    assert!(
+        go_code.contains("ID")
+            && go_code.contains("int32")
+            && go_code.contains("`xml:\"id,attr\"`")
+    );
+    assert!(go_code.contains("func (s Account) Validate() error"));
+
+    // Write a Go test driver to verify with `go test` and `go vet`
+    let driver_go = go_out.join("crm_test.go");
+    fs::write(
+        &driver_go,
+        r#"package crm
+
+import (
+    "encoding/xml"
+    "testing"
+)
+
+func TestAccountE2E(t *testing.T) {
+    alias := "AcmeMain"
+    acc := Account{
+        Name:    "Acme Corp",
+        Tier:    AccountTierPremium,
+        Balance: 1250.50,
+        Alias:   &alias,
+        Tag:     []string{"b2b", "strategic"},
+        ID:      1001,
+    }
+
+    if !acc.Tier.IsValid() {
+        t.Fatalf("expected tier to be valid")
+    }
+
+    data, err := xml.MarshalIndent(acc, "", "  ")
+    if err != nil {
+        t.Fatalf("xml.Marshal failed: %v", err)
+    }
+
+    var decoded Account
+    if err := xml.Unmarshal(data, &decoded); err != nil {
+        t.Fatalf("xml.Unmarshal failed: %v", err)
+    }
+
+    if decoded.Name != "Acme Corp" || decoded.Tier != AccountTierPremium || decoded.ID != 1001 {
+        t.Fatalf("mismatched decoded values: %+v", decoded)
+    }
+    if decoded.Alias == nil || *decoded.Alias != "AcmeMain" {
+        t.Fatalf("mismatched alias: %+v", decoded.Alias)
+    }
+    if len(decoded.Tag) != 2 || decoded.Tag[0] != "b2b" {
+        t.Fatalf("mismatched tags: %+v", decoded.Tag)
+    }
+
+    if err := decoded.Validate(); err != nil {
+        t.Fatalf("validation failed: %v", err)
+    }
+}
+"#,
+    )
+    .unwrap();
+
+    let init_status = Command::new("go")
+        .args(["mod", "init", "crm"])
+        .current_dir(&go_out)
+        .status()
+        .expect("Failed to run go mod init");
+    assert!(init_status.success(), "go mod init failed");
+
+    let vet_status = Command::new("go")
+        .args(["vet", "."])
+        .current_dir(&go_out)
+        .status()
+        .expect("Failed to run go vet");
+    assert!(vet_status.success(), "go vet failed on generated Go models");
+
+    let test_status = Command::new("go")
+        .args(["test", "-v", "."])
+        .current_dir(&go_out)
+        .status()
+        .expect("Failed to run go test");
+    assert!(
+        test_status.success(),
+        "go test failed on generated Go models"
+    );
+}
