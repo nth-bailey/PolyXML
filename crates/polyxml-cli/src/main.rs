@@ -8,6 +8,7 @@ use clap::{Args, Parser, Subcommand};
 use config::WorkspaceManifest;
 use polyxml::codegen::python::{PythonBackend, PythonCodegen, PythonOptions};
 use polyxml::codegen::rust::{RustCodegen, RustOptions};
+use polyxml::codegen::typescript::{TypeScriptCodegen, TypeScriptOptions};
 use polyxml::ir::{SchemaIR, TypeDef};
 use polyxml::schema_parser::XsdParser;
 
@@ -56,6 +57,10 @@ pub struct GenerateArgs {
     /// Emit streaming serialization and deserialization codecs (default: true)
     #[arg(long = "codecs", default_missing_value = "true", num_args = 0..=1)]
     pub codecs: Option<bool>,
+
+    /// Emit runtime Zod validation schemas for TypeScript (default: false)
+    #[arg(long = "zod", default_missing_value = "true", num_args = 0..=1)]
+    pub zod: Option<bool>,
 
     /// Output directory for generated source files
     #[arg(short = 'o', long = "out", alias = "out-dir", value_name = "DIR")]
@@ -172,18 +177,15 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         };
 
         fs::create_dir_all(&lang_out)?;
-        println!("Generating {} models into {}", lang, lang_out.display());
+        let emit_opts = TargetEmitOptions {
+            backend: args.backend.as_deref(),
+            zero_copy: args.zero_copy,
+            codecs: args.codecs,
+            zod: args.zod,
+        };
 
         for (schema_path, ir) in &compiled_schemas {
-            emit_target_code(
-                lang,
-                args.backend.as_deref(),
-                args.zero_copy,
-                args.codecs,
-                &lang_out,
-                schema_path,
-                ir,
-            )?;
+            emit_target_code(lang, emit_opts, &lang_out, schema_path, ir)?;
         }
 
         if args.format {
@@ -257,16 +259,15 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
             target_dir.display()
         );
 
+        let emit_opts = TargetEmitOptions {
+            backend: target.backend.as_deref(),
+            zero_copy: target.zero_copy,
+            codecs: target.codecs,
+            zod: target.zod,
+        };
+
         for (schema_path, ir) in &compiled_schemas {
-            emit_target_code(
-                &target.target,
-                target.backend.as_deref(),
-                target.zero_copy,
-                target.codecs,
-                &target_dir,
-                schema_path,
-                ir,
-            )?;
+            emit_target_code(&target.target, emit_opts, &target_dir, schema_path, ir)?;
         }
 
         if args.format {
@@ -350,18 +351,25 @@ fn report_schema_ir(ir: &SchemaIR) {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct TargetEmitOptions<'a> {
+    pub backend: Option<&'a str>,
+    pub zero_copy: Option<bool>,
+    pub codecs: Option<bool>,
+    pub zod: Option<bool>,
+}
+
 fn emit_target_code(
     lang: &str,
-    backend: Option<&str>,
-    zero_copy: Option<bool>,
-    codecs: Option<bool>,
+    opts: TargetEmitOptions<'_>,
     out_dir: &Path,
     schema_path: &Path,
     ir: &SchemaIR,
 ) -> std::io::Result<()> {
     match lang.to_lowercase().as_str() {
         "python" | "py" => {
-            let py_backend = backend
+            let py_backend = opts
+                .backend
                 .and_then(PythonBackend::from_str_loose)
                 .unwrap_or(PythonBackend::Dataclass);
 
@@ -372,7 +380,7 @@ fn emit_target_code(
                 pep695_aliases: true,
                 emit_meta: true,
                 emit_root_aliases: true,
-                emit_codecs: codecs.unwrap_or(true),
+                emit_codecs: opts.codecs.unwrap_or(true),
             };
 
             let codegen = PythonCodegen::new(options);
@@ -394,12 +402,12 @@ fn emit_target_code(
         }
         "rust" | "rs" => {
             let options = RustOptions {
-                zero_copy: zero_copy.unwrap_or(true),
+                zero_copy: opts.zero_copy.unwrap_or(true),
                 derive_serde: true,
                 derive_default: true,
                 emit_polyxml_attrs: true,
                 emit_root_aliases: true,
-                emit_codecs: codecs.unwrap_or(true),
+                emit_codecs: opts.codecs.unwrap_or(true),
             };
 
             let codegen = RustCodegen::new(options);
@@ -419,6 +427,31 @@ fn emit_target_code(
                     &mod_path,
                     format!("pub mod {};\npub use {}::*;\n", file_stem, file_stem),
                 );
+            }
+            Ok(())
+        }
+        "ts" | "typescript" => {
+            let options = TypeScriptOptions {
+                emit_zod: opts.zod.unwrap_or(false),
+                use_interface: true,
+                readonly_fields: false,
+                emit_root_aliases: true,
+            };
+
+            let codegen = TypeScriptCodegen::new(options);
+            let code = codegen.generate_module(ir);
+
+            let file_stem = schema_path
+                .file_stem()
+                .map(|s| s.to_string_lossy())
+                .unwrap_or_else(|| "models".into());
+
+            let file_path = out_dir.join(format!("{}.ts", file_stem));
+            fs::write(file_path, code)?;
+
+            let index_path = out_dir.join("index.ts");
+            if !index_path.exists() {
+                let _ = fs::write(&index_path, format!("export * from \"./{}\";\n", file_stem));
             }
             Ok(())
         }
@@ -506,6 +539,11 @@ fn run_language_formatter(lang: &str, dir: &Path) {
         }
         "cpp" | "c++" => {
             let _ = Command::new("clang-format").args(["-i"]).status();
+        }
+        "ts" | "typescript" => {
+            let _ = Command::new("npx")
+                .args(["prettier", "--write", dir_str])
+                .status();
         }
         _ => {}
     }

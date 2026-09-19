@@ -352,3 +352,128 @@ fn test_cli_generate_rust_zero_copy_and_owned() {
     assert!(!owned_rs.contains("Cow<'a"));
     assert!(owned_rs.contains("pub type CustomerRecord = Customer;"));
 }
+
+#[test]
+fn test_cli_typescript_generation() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("customer.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:crm">
+            <xs:simpleType name="Status">
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="active"/>
+                    <xs:enumeration value="suspended"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Customer">
+                <xs:sequence>
+                    <xs:element name="name" type="xs:string"/>
+                    <xs:element name="status" type="Status"/>
+                    <xs:element name="tag" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="id" type="xs:int" use="required"/>
+            </xs:complexType>
+            <xs:element name="CustomerRecord" type="Customer"/>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    // 1. Generate standard TypeScript
+    let ts_out = dir.path().join("out_ts");
+    let output_ts = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            "--lang",
+            "ts",
+            "--out",
+            ts_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute typescript generate");
+
+    assert!(output_ts.status.success());
+    assert!(ts_out.join("index.ts").exists());
+    let ts_code = fs::read_to_string(ts_out.join("customer.ts")).unwrap();
+    assert!(ts_code.contains("export interface Customer {"));
+    assert!(ts_code.contains("id: number;"));
+    assert!(ts_code.contains("name: string;"));
+    assert!(ts_code.contains("status: Status;"));
+    assert!(ts_code.contains("tag: string[];"));
+    assert!(ts_code.contains("export const Status = {"));
+    assert!(ts_code.contains("export type Status = (typeof Status)[keyof typeof Status];"));
+    assert!(ts_code.contains("export type CustomerRecord = Customer;"));
+
+    // Verify TypeScript compiles cleanly with tsc --strict
+    let tsc_check = Command::new("tsc")
+        .args([
+            "--noEmit",
+            "--strict",
+            "--target",
+            "es2022",
+            ts_out.join("customer.ts").to_str().unwrap(),
+        ])
+        .output();
+    if let Ok(tsc_out) = tsc_check {
+        assert!(
+            tsc_out.status.success(),
+            "tsc failed on customer.ts: {}\nstdout: {}",
+            String::from_utf8_lossy(&tsc_out.stderr),
+            String::from_utf8_lossy(&tsc_out.stdout)
+        );
+    }
+
+    // 2. Generate TypeScript with Zod schemas
+    let zod_out = dir.path().join("out_ts_zod");
+    let output_zod = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            "--lang",
+            "ts",
+            "--zod",
+            "--out",
+            zod_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute typescript zod generate");
+
+    assert!(output_zod.status.success());
+    let zod_code = fs::read_to_string(zod_out.join("customer.ts")).unwrap();
+    assert!(zod_code.contains("import { z } from \"zod\";"));
+    assert!(zod_code.contains("export const StatusSchema = z.enum([\"active\", \"suspended\"]);"));
+    assert!(zod_code.contains("export const CustomerSchema = z.object({"));
+    assert!(zod_code.contains("id: z.number().int(),"));
+    assert!(zod_code.contains("name: z.string(),"));
+    assert!(zod_code.contains("status: StatusSchema,"));
+    assert!(zod_code.contains("tag: z.array(z.string()),"));
+
+    // Verify with tsc using ambient declaration for zod
+    let stub_file = zod_out.join("zod_stub.d.ts");
+    fs::write(
+        &stub_file,
+        "declare module \"zod\" { export const z: any; export namespace z { export type ZodType<T = any> = any; } }\n",
+    )
+    .unwrap();
+
+    let tsc_zod_check = Command::new("tsc")
+        .args([
+            "--noEmit",
+            "--strict",
+            "--target",
+            "es2022",
+            stub_file.to_str().unwrap(),
+            zod_out.join("customer.ts").to_str().unwrap(),
+        ])
+        .output();
+    if let Ok(tsc_out) = tsc_zod_check {
+        assert!(
+            tsc_out.status.success(),
+            "tsc failed on customer.ts with zod: {}\nstdout: {}",
+            String::from_utf8_lossy(&tsc_out.stderr),
+            String::from_utf8_lossy(&tsc_out.stdout)
+        );
+    }
+}

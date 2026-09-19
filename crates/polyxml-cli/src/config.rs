@@ -61,6 +61,7 @@ pub struct TargetConfig {
     pub box_cycles: Option<bool>,
     pub modules: Option<bool>,
     pub serializer: Option<String>,
+    pub zod: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,6 +81,7 @@ pub struct CodegenTargetConfig {
     pub box_cycles: Option<bool>,
     pub modules: Option<bool>,
     pub serializer: Option<String>,
+    pub zod: Option<bool>,
 }
 
 impl std::str::FromStr for WorkspaceManifest {
@@ -135,6 +137,7 @@ impl WorkspaceManifest {
                         box_cycles: cfg.box_cycles,
                         modules: cfg.modules,
                         serializer: cfg.serializer.clone(),
+                        zod: cfg.zod,
                     });
                 }
             }

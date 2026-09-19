@@ -7,9 +7,11 @@ use thiserror::Error;
 
 pub mod python;
 pub mod rust;
+pub mod typescript;
 
 pub use python::{PythonBackend, PythonCodegen, PythonOptions};
 pub use rust::{RustCodegen, RustOptions};
+pub use typescript::{TypeScriptCodegen, TypeScriptOptions};
 
 use crate::ir::{PrimitiveType, TypeRef};
 
