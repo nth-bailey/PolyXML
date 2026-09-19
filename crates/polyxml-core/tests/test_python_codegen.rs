@@ -125,6 +125,7 @@ fn test_python_dataclass_codegen() {
         pep695_aliases: true,
         emit_meta: true,
         emit_root_aliases: true,
+        emit_codecs: true,
     });
 
     let code = codegen.generate_module(&ir);
@@ -218,6 +219,7 @@ fn test_python_pydantic_codegen_with_facets() {
         pep695_aliases: true,
         emit_meta: true,
         emit_root_aliases: true,
+        emit_codecs: true,
     });
 
     let code = codegen.generate_module(&ir);
@@ -348,4 +350,43 @@ fn test_python_recursive_type_codegen() {
     assert!(code.contains("class Department:"));
     assert!(code.contains("sub_departments: list[Department] = field(default_factory=list"));
     assert!(code.contains("parent: Department | None = field(default=None"));
+}
+
+#[test]
+fn test_python_codecs_generation() {
+    let mut ir = SchemaIR::new();
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("Item"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![FieldDef::new(
+            "name",
+            "name",
+            FieldKind::Element,
+            TypeRef::Primitive(PrimitiveType::String),
+        )],
+        documentation: None,
+    }));
+
+    // With codecs enabled
+    let codegen_enabled = PythonCodegen::new(PythonOptions {
+        emit_codecs: true,
+        ..Default::default()
+    });
+    let code_enabled = codegen_enabled.generate_module(&ir);
+    assert!(code_enabled.contains("def from_xml(cls, data: bytes | str) -> Self:"));
+    assert!(code_enabled.contains("def to_xml("));
+    assert!(code_enabled.contains("return polyxml.deserialize(raw_bytes, cls)"));
+    assert!(code_enabled.contains(
+        "return polyxml.serialize(self, indent=indent, namespaces=namespaces, ns_map=ns_map)"
+    ));
+
+    // With codecs disabled
+    let codegen_disabled = PythonCodegen::new(PythonOptions {
+        emit_codecs: false,
+        ..Default::default()
+    });
+    let code_disabled = codegen_disabled.generate_module(&ir);
+    assert!(!code_disabled.contains("def from_xml("));
+    assert!(!code_disabled.contains("def to_xml("));
 }

@@ -132,6 +132,7 @@ fn test_rust_zero_copy_codegen() {
         derive_default: true,
         emit_polyxml_attrs: true,
         emit_root_aliases: true,
+        emit_codecs: false,
     });
 
     let code = codegen.generate_module(&ir);
@@ -181,6 +182,7 @@ fn test_rust_owned_codegen() {
         derive_default: true,
         emit_polyxml_attrs: true,
         emit_root_aliases: true,
+        emit_codecs: false,
     });
 
     let code = codegen.generate_module(&ir);
@@ -368,4 +370,68 @@ fn test_rust_recursive_cycle_boxing() {
     assert!(code.contains("pub left: Option<Box<TreeNode<'a>>>,"));
     assert!(code.contains("pub right: Option<Box<TreeNode<'a>>>,"));
     assert!(code.contains("pub children: Vec<TreeNode<'a>>,"));
+}
+
+#[test]
+fn test_rust_codecs_codegen() {
+    let mut ir = SchemaIR::new();
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("Order"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "id".into(),
+                xml_name: "id".into(),
+                namespace: None,
+                kind: FieldKind::Attribute,
+                type_ref: TypeRef::Primitive(PrimitiveType::Int),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "customer".into(),
+                xml_name: "customer".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: None,
+    }));
+
+    let codegen_enabled = RustCodegen::new(RustOptions {
+        emit_codecs: true,
+        ..Default::default()
+    });
+    let code_enabled = codegen_enabled.generate_module(&ir);
+    assert!(code_enabled.contains("pub fn from_xml(xml: &'a str) -> Result<Self>"));
+    assert!(code_enabled.contains("pub fn from_xml_bytes(xml_bytes: &'a [u8]) -> Result<Self>"));
+    assert!(code_enabled.contains(
+        "pub fn decode_xml(reader: &mut Reader<&'a [u8]>, start: &BytesStart<'_>) -> Result<Self>"
+    ));
+    assert!(code_enabled.contains("pub fn to_xml(&self) -> Result<Vec<u8>>"));
+    assert!(code_enabled.contains("pub fn to_xml_string(&self) -> Result<String>"));
+    assert!(code_enabled.contains("pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()>"));
+
+    let codegen_disabled = RustCodegen::new(RustOptions {
+        emit_codecs: false,
+        ..Default::default()
+    });
+    let code_disabled = codegen_disabled.generate_module(&ir);
+    assert!(!code_disabled.contains("pub fn from_xml("));
+    assert!(!code_disabled.contains("pub fn to_xml(&self)"));
 }

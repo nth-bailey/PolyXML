@@ -277,3 +277,70 @@ def test_generated_pydantic_deserialization_and_serialization(generated_models):
     xml_out = polyxml.serialize(inv)
     assert b"Central Distribution" in xml_out
     assert b"ENG-1234" in xml_out
+
+    # Test inherent codecs on Pydantic model: from_xml and to_xml
+    inv_codec = mod.Inventory.from_xml(SAMPLE_XML)
+    assert inv_codec.warehouse_name == "Central Distribution"
+    assert len(inv_codec.items) == 2
+
+    # String input support
+    inv_str = mod.Inventory.from_xml(SAMPLE_XML.decode("utf-8"))
+    assert inv_str.warehouse_name == "Central Distribution"
+
+    # to_xml support with indentation
+    xml_codec_bytes = inv_codec.to_xml(indent=2)
+    assert b"Central Distribution" in xml_codec_bytes
+    assert b"\n" in xml_codec_bytes
+
+
+def test_generated_dataclass_codecs(generated_models):
+    mod = generated_models["dataclass"]
+
+    # Inherent from_xml on Dataclass model
+    inv = mod.Inventory.from_xml(SAMPLE_XML)
+    assert inv.warehouse_name == "Central Distribution"
+    assert len(inv.items) == 2
+    assert inv.items[0].sku == "ENG-1234"
+
+    # String input
+    inv_str = mod.Inventory.from_xml(SAMPLE_XML.decode("utf-8"))
+    assert inv_str.warehouse_name == "Central Distribution"
+
+    # Inherent to_xml
+    xml_bytes = inv.to_xml(indent=4)
+    assert b"Central Distribution" in xml_bytes
+    assert b"ENG-1234" in xml_bytes
+
+
+def test_codecs_flag_disabled():
+    repo_root = pathlib.Path(__file__).parent.parent.parent.parent
+    polyxml_bin = repo_root / "target" / "debug" / "polyxml"
+    if not polyxml_bin.exists():
+        polyxml_bin = repo_root / "target" / "release" / "polyxml"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = pathlib.Path(tmpdir)
+        xsd_file = tmp_path / "warehouse.xsd"
+        xsd_file.write_text(SAMPLE_XSD)
+
+        out_dir = tmp_path / "no_codecs"
+        out_dir.mkdir()
+        res = subprocess.run(
+            [
+                str(polyxml_bin),
+                "generate",
+                "--lang",
+                "python",
+                "--codecs",
+                "false",
+                "--out",
+                str(out_dir),
+                str(xsd_file),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert res.returncode == 0
+        mod = _load_module_from_file("gen_no_codecs", out_dir / "warehouse.py")
+        assert not hasattr(mod.Inventory, "from_xml")
+        assert not hasattr(mod.Inventory, "to_xml")

@@ -23,6 +23,8 @@ pub struct RustOptions {
     pub emit_polyxml_attrs: bool,
     /// Emit root element type aliases (default: true).
     pub emit_root_aliases: bool,
+    /// Emit streaming XML codecs (from_xml, to_xml, decode_xml, encode_xml) (default: true).
+    pub emit_codecs: bool,
 }
 
 impl Default for RustOptions {
@@ -33,6 +35,7 @@ impl Default for RustOptions {
             derive_default: true,
             emit_polyxml_attrs: true,
             emit_root_aliases: true,
+            emit_codecs: true,
         }
     }
 }
@@ -212,13 +215,17 @@ impl RustCodegen {
         // Sort types topologically (base types before derived types)
         let sorted_types = self.order_types(ir);
 
+        if self.options.emit_codecs {
+            self.emit_codec_helpers(&mut out);
+        }
+
         for type_def in sorted_types {
             out.push('\n');
             match type_def {
                 TypeDef::Simple(s) => self.emit_simple_type(&mut out, s, &types_with_lifetime),
                 TypeDef::Enum(e) => self.emit_enum(&mut out, e),
-                TypeDef::Union(u) => self.emit_union(&mut out, u, &types_with_lifetime),
-                TypeDef::Struct(s) => self.emit_struct(&mut out, s, &types_with_lifetime),
+                TypeDef::Union(u) => self.emit_union(&mut out, u, &types_with_lifetime, ir),
+                TypeDef::Struct(s) => self.emit_struct(&mut out, s, &types_with_lifetime, ir),
             }
         }
 
@@ -314,11 +321,19 @@ impl RustCodegen {
     }
 
     fn emit_imports(&self, out: &mut String, has_borrowed_types: bool) {
-        if self.options.zero_copy && has_borrowed_types {
+        if (self.options.zero_copy && has_borrowed_types)
+            || (self.options.zero_copy && self.options.emit_codecs)
+        {
             out.push_str("use std::borrow::Cow;\n");
         }
         if self.options.derive_serde {
             out.push_str("use serde::{Deserialize, Serialize};\n");
+        }
+        if self.options.emit_codecs {
+            out.push_str("use std::str::FromStr;\n");
+            out.push_str("use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};\n");
+            out.push_str("use quick_xml::{Reader, Writer};\n");
+            out.push_str("use polyxml::{PolyXmlError, Result};\n");
         }
     }
 
@@ -472,7 +487,13 @@ impl RustCodegen {
         out.push_str("}\n");
     }
 
-    fn emit_union(&self, out: &mut String, u: &UnionDef, types_with_lifetime: &HashSet<QName>) {
+    fn emit_union(
+        &self,
+        out: &mut String,
+        u: &UnionDef,
+        types_with_lifetime: &HashSet<QName>,
+        ir: &SchemaIR,
+    ) {
         let union_name = AsPascalCase(&u.qname.local).to_string();
         let needs_lifetime = types_with_lifetime.contains(&u.qname);
 
@@ -524,9 +545,19 @@ impl RustCodegen {
         }
 
         out.push_str("}\n");
+
+        if self.options.emit_codecs {
+            self.emit_union_codecs(out, u, types_with_lifetime, ir);
+        }
     }
 
-    fn emit_struct(&self, out: &mut String, s: &StructDef, types_with_lifetime: &HashSet<QName>) {
+    fn emit_struct(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        types_with_lifetime: &HashSet<QName>,
+        ir: &SchemaIR,
+    ) {
         let struct_name = AsPascalCase(&s.qname.local).to_string();
         let needs_lifetime = types_with_lifetime.contains(&s.qname);
 
@@ -560,6 +591,10 @@ impl RustCodegen {
         }
 
         out.push_str("}\n");
+
+        if self.options.emit_codecs {
+            self.emit_struct_codecs(out, s, types_with_lifetime, ir);
+        }
     }
 
     fn unique_rust_field_name(&self, name: &str, seen: &mut HashSet<String>) -> String {
@@ -704,5 +739,1188 @@ impl RustCodegen {
                 }
             }
         }
+    }
+
+    fn emit_codec_helpers(&self, out: &mut String) {
+        out.push_str("\n#[allow(dead_code)]\n");
+        out.push_str("fn skip_xml_element(reader: &mut Reader<&[u8]>) -> Result<()> {\n");
+        out.push_str("    let mut depth = 1;\n");
+        out.push_str("    loop {\n");
+        out.push_str("        match reader.read_event()? {\n");
+        out.push_str("            Event::Start(_) => depth += 1,\n");
+        out.push_str("            Event::End(_) => {\n");
+        out.push_str("                depth -= 1;\n");
+        out.push_str("                if depth == 0 {\n");
+        out.push_str("                    break;\n");
+        out.push_str("                }\n");
+        out.push_str("            }\n");
+        out.push_str("            Event::Eof => break,\n");
+        out.push_str("            _ => {}\n");
+        out.push_str("        }\n");
+        out.push_str("    }\n");
+        out.push_str("    Ok(())\n");
+        out.push_str("}\n\n");
+
+        if self.options.zero_copy {
+            out.push_str("#[allow(dead_code)]\n");
+            out.push_str("fn read_element_text<'a>(reader: &mut Reader<&'a [u8]>, tag_name: &str) -> Result<Cow<'a, str>> {\n");
+            out.push_str("    let mut text = Cow::Borrowed(\"\");\n");
+            out.push_str("    loop {\n");
+            out.push_str("        match reader.read_event()? {\n");
+            out.push_str("            Event::Text(t) => {\n");
+            out.push_str("                let raw = match t.into_inner() {\n");
+            out.push_str(
+                "                    Cow::Borrowed(b) => match quick_xml::escape::unescape(b)? {\n",
+            );
+            out.push_str("                        Cow::Borrowed(s) => Cow::Borrowed(s),\n");
+            out.push_str("                        Cow::Owned(s) => Cow::Owned(s),\n");
+            out.push_str("                    },\n");
+            out.push_str("                    Cow::Owned(s) => Cow::Owned(quick_xml::escape::unescape(&s)?.into_owned()),\n");
+            out.push_str("                };\n");
+            out.push_str("                text = raw;\n");
+            out.push_str("            }\n");
+            out.push_str(
+                "            Event::End(e) if e.local_name().as_ref() == tag_name => break,\n",
+            );
+            out.push_str("            Event::Eof => break,\n");
+            out.push_str("            _ => {}\n");
+            out.push_str("        }\n");
+            out.push_str("    }\n");
+            out.push_str("    Ok(text)\n");
+            out.push_str("}\n");
+        } else {
+            out.push_str("#[allow(dead_code)]\n");
+            out.push_str("fn read_element_text(reader: &mut Reader<&[u8]>, tag_name: &str) -> Result<String> {\n");
+            out.push_str("    let mut text = String::new();\n");
+            out.push_str("    loop {\n");
+            out.push_str("        match reader.read_event()? {\n");
+            out.push_str("            Event::Text(t) => {\n");
+            out.push_str(
+                "                let unescaped = quick_xml::escape::unescape(t.as_ref())?;\n",
+            );
+            out.push_str("                text = unescaped.into_owned();\n");
+            out.push_str("            }\n");
+            out.push_str(
+                "            Event::End(e) if e.local_name().as_ref() == tag_name => break,\n",
+            );
+            out.push_str("            Event::Eof => break,\n");
+            out.push_str("            _ => {}\n");
+            out.push_str("        }\n");
+            out.push_str("    }\n");
+            out.push_str("    Ok(text)\n");
+            out.push_str("}\n");
+        }
+    }
+
+    fn field_is_string(&self, type_ref: &TypeRef, ir: &SchemaIR) -> bool {
+        match type_ref {
+            TypeRef::Primitive(prim) => matches!(
+                prim,
+                PrimitiveType::String
+                    | PrimitiveType::NormalizedString
+                    | PrimitiveType::Token
+                    | PrimitiveType::Language
+                    | PrimitiveType::NMTOKEN
+                    | PrimitiveType::NMTOKENS
+                    | PrimitiveType::Name
+                    | PrimitiveType::NCName
+                    | PrimitiveType::Id
+                    | PrimitiveType::IdRef
+                    | PrimitiveType::IdRefs
+                    | PrimitiveType::Entity
+                    | PrimitiveType::Entities
+                    | PrimitiveType::AnyUri
+                    | PrimitiveType::QName
+            ),
+            TypeRef::Named(qname) => {
+                if let Some(TypeDef::Simple(s)) = ir.types.get(qname) {
+                    self.field_is_string(&s.base_type, ir)
+                } else {
+                    false
+                }
+            }
+            TypeRef::Boxed(inner) | TypeRef::List(inner) => self.field_is_string(inner, ir),
+        }
+    }
+
+    fn field_numeric_type(&self, type_ref: &TypeRef, ir: &SchemaIR) -> Option<&'static str> {
+        match type_ref {
+            TypeRef::Primitive(prim) => match prim {
+                PrimitiveType::Int => Some("i32"),
+                PrimitiveType::Integer
+                | PrimitiveType::Long
+                | PrimitiveType::NonPositiveInteger
+                | PrimitiveType::NegativeInteger => Some("i64"),
+                PrimitiveType::Short => Some("i16"),
+                PrimitiveType::Byte => Some("i8"),
+                PrimitiveType::PositiveInteger
+                | PrimitiveType::NonNegativeInteger
+                | PrimitiveType::UnsignedLong => Some("u64"),
+                PrimitiveType::UnsignedInt => Some("u32"),
+                PrimitiveType::UnsignedShort => Some("u16"),
+                PrimitiveType::UnsignedByte => Some("u8"),
+                PrimitiveType::Decimal | PrimitiveType::Double => Some("f64"),
+                PrimitiveType::Float => Some("f32"),
+                _ => None,
+            },
+            TypeRef::Named(qname) => {
+                if let Some(TypeDef::Simple(s)) = ir.types.get(qname) {
+                    self.field_numeric_type(&s.base_type, ir)
+                } else {
+                    None
+                }
+            }
+            TypeRef::Boxed(inner) | TypeRef::List(inner) => self.field_numeric_type(inner, ir),
+        }
+    }
+
+    fn field_is_bool(&self, type_ref: &TypeRef, ir: &SchemaIR) -> bool {
+        match type_ref {
+            TypeRef::Primitive(PrimitiveType::Boolean) => true,
+            TypeRef::Named(qname) => {
+                if let Some(TypeDef::Simple(s)) = ir.types.get(qname) {
+                    self.field_is_bool(&s.base_type, ir)
+                } else {
+                    false
+                }
+            }
+            TypeRef::Boxed(inner) | TypeRef::List(inner) => self.field_is_bool(inner, ir),
+            _ => false,
+        }
+    }
+
+    fn field_is_enum(&self, type_ref: &TypeRef, ir: &SchemaIR) -> Option<String> {
+        match type_ref {
+            TypeRef::Named(qname) => {
+                if let Some(TypeDef::Enum(_)) = ir.types.get(qname) {
+                    Some(AsPascalCase(&qname.local).to_string())
+                } else {
+                    None
+                }
+            }
+            TypeRef::Boxed(inner) | TypeRef::List(inner) => self.field_is_enum(inner, ir),
+            _ => None,
+        }
+    }
+
+    fn resolve_union_def<'a>(
+        &self,
+        type_ref: &'a TypeRef,
+        ir: &'a SchemaIR,
+    ) -> Option<&'a UnionDef> {
+        match type_ref {
+            TypeRef::Named(qname) => {
+                if let Some(TypeDef::Union(u)) = ir.types.get(qname) {
+                    Some(u)
+                } else {
+                    None
+                }
+            }
+            TypeRef::Boxed(inner) | TypeRef::List(inner) => self.resolve_union_def(inner, ir),
+            _ => None,
+        }
+    }
+
+    fn emit_struct_codecs(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        types_with_lifetime: &HashSet<QName>,
+        ir: &SchemaIR,
+    ) {
+        let struct_name = AsPascalCase(&s.qname.local).to_string();
+        let needs_lifetime = types_with_lifetime.contains(&s.qname);
+
+        let impl_header = if needs_lifetime {
+            format!("impl<'a> {}<'a>", struct_name)
+        } else {
+            format!("impl {}", struct_name)
+        };
+
+        out.push('\n');
+        let _ = writeln!(out, "{} {{", impl_header);
+
+        let from_xml_sig = if needs_lifetime {
+            "pub fn from_xml(xml: &'a str) -> Result<Self>"
+        } else {
+            "pub fn from_xml(xml: &str) -> Result<Self>"
+        };
+        let _ = writeln!(out, "    {}", from_xml_sig);
+        out.push_str("    {\n");
+        out.push_str("        let mut reader = Reader::from_str(xml);\n");
+        out.push_str("        loop {\n");
+        out.push_str("            match reader.read_event()? {\n");
+        out.push_str(
+            "                Event::Start(e) => return Self::decode_xml(&mut reader, &e),\n",
+        );
+        out.push_str("                Event::Empty(e) => return Self::decode_xml_empty(&e),\n");
+        out.push_str("                Event::Eof => break,\n");
+        out.push_str("                _ => {}\n");
+        out.push_str("            }\n");
+        out.push_str("        }\n");
+        let _ = writeln!(
+            out,
+            "        Err(PolyXmlError::SchemaError(\"Unexpected EOF while parsing {}\".into()))",
+            struct_name
+        );
+        out.push_str("    }\n\n");
+
+        let from_bytes_sig = if needs_lifetime {
+            "pub fn from_xml_bytes(xml_bytes: &'a [u8]) -> Result<Self>"
+        } else {
+            "pub fn from_xml_bytes(xml_bytes: &[u8]) -> Result<Self>"
+        };
+        let _ = writeln!(out, "    {}", from_bytes_sig);
+        out.push_str("    {\n");
+        out.push_str("        let s = std::str::from_utf8(xml_bytes)?;\n");
+        out.push_str("        Self::from_xml(s)\n");
+        out.push_str("    }\n\n");
+
+        let decode_sig = if needs_lifetime {
+            "pub fn decode_xml(reader: &mut Reader<&'a [u8]>, start: &BytesStart<'_>) -> Result<Self>"
+        } else {
+            "pub fn decode_xml(reader: &mut Reader<&'_ [u8]>, start: &BytesStart<'_>) -> Result<Self>"
+        };
+        let _ = writeln!(out, "    {}", decode_sig);
+        out.push_str("    {\n");
+
+        let mut seen_fields = HashSet::new();
+        struct FieldMeta {
+            field: FieldDef,
+            rust_name: String,
+        }
+        let mut field_metas = Vec::new();
+        for field in &s.fields {
+            let rust_name = self.unique_rust_field_name(&field.name, &mut seen_fields);
+            field_metas.push(FieldMeta {
+                field: field.clone(),
+                rust_name,
+            });
+        }
+
+        for meta in &field_metas {
+            let is_list = meta.field.cardinality.is_list() || meta.field.type_ref.is_list();
+            if is_list {
+                let _ = writeln!(out, "        let mut var_{} = Vec::new();", meta.rust_name);
+            } else {
+                let _ = writeln!(out, "        let mut var_{} = None;", meta.rust_name);
+            }
+        }
+
+        let attr_fields: Vec<_> = field_metas
+            .iter()
+            .filter(|m| m.field.kind == FieldKind::Attribute)
+            .collect();
+        if !attr_fields.is_empty() {
+            out.push_str("\n        for attr in start.attributes() {\n");
+            out.push_str("            let attr = attr?;\n");
+            out.push_str("            match attr.key.local_name().as_ref() {\n");
+            for meta in &attr_fields {
+                let _ = writeln!(out, "                \"{}\" => {{", meta.field.xml_name);
+                self.emit_attr_parse(out, &meta.field, &meta.rust_name, ir);
+                out.push_str("                }\n");
+            }
+            out.push_str("                _ => {}\n");
+            out.push_str("            }\n");
+            out.push_str("        }\n");
+        }
+
+        let elem_fields: Vec<_> = field_metas
+            .iter()
+            .filter(|m| m.field.kind == FieldKind::Element)
+            .collect();
+
+        if !elem_fields.is_empty() {
+            out.push_str("\n        loop {\n");
+            out.push_str("            match reader.read_event()? {\n");
+            out.push_str("                Event::Start(e) => match e.local_name().as_ref() {\n");
+
+            for meta in &elem_fields {
+                if let Some(union_def) = self.resolve_union_def(&meta.field.type_ref, ir) {
+                    let branch_tags: Vec<_> = union_def
+                        .branches
+                        .iter()
+                        .map(|b| format!("\"{}\"", b.xml_name))
+                        .collect();
+                    let _ = writeln!(out, "                    {} => {{", branch_tags.join(" | "));
+                    let union_name = AsPascalCase(&union_def.qname.local).to_string();
+                    let _ = writeln!(
+                        out,
+                        "                        let val = {}::decode_xml(reader, &e)?;",
+                        union_name
+                    );
+                    let is_list = meta.field.cardinality.is_list() || meta.field.type_ref.is_list();
+                    if is_list {
+                        let _ = writeln!(
+                            out,
+                            "                        var_{}.push(val);",
+                            meta.rust_name
+                        );
+                    } else {
+                        let _ = writeln!(
+                            out,
+                            "                        var_{} = Some(val);",
+                            meta.rust_name
+                        );
+                    }
+                    out.push_str("                    }\n");
+                } else {
+                    let _ = writeln!(out, "                    \"{}\" => {{", meta.field.xml_name);
+                    self.emit_element_parse(
+                        out,
+                        &meta.field,
+                        &meta.rust_name,
+                        ir,
+                        types_with_lifetime,
+                    );
+                    out.push_str("                    }\n");
+                }
+            }
+
+            out.push_str("                    _ => {\n");
+            out.push_str("                        skip_xml_element(reader)?;\n");
+            out.push_str("                    }\n");
+            out.push_str("                },\n");
+
+            out.push_str("                Event::Empty(e) => match e.local_name().as_ref() {\n");
+            for meta in &elem_fields {
+                if let Some(union_def) = self.resolve_union_def(&meta.field.type_ref, ir) {
+                    let branch_tags: Vec<_> = union_def
+                        .branches
+                        .iter()
+                        .map(|b| format!("\"{}\"", b.xml_name))
+                        .collect();
+                    let _ = writeln!(out, "                    {} => {{", branch_tags.join(" | "));
+                    let union_name = AsPascalCase(&union_def.qname.local).to_string();
+                    let _ = writeln!(
+                        out,
+                        "                        let val = {}::decode_xml(reader, &e)?;",
+                        union_name
+                    );
+                    let is_list = meta.field.cardinality.is_list() || meta.field.type_ref.is_list();
+                    if is_list {
+                        let _ = writeln!(
+                            out,
+                            "                        var_{}.push(val);",
+                            meta.rust_name
+                        );
+                    } else {
+                        let _ = writeln!(
+                            out,
+                            "                        var_{} = Some(val);",
+                            meta.rust_name
+                        );
+                    }
+                    out.push_str("                    }\n");
+                } else {
+                    let _ = writeln!(out, "                    \"{}\" => {{", meta.field.xml_name);
+                    self.emit_empty_element_parse(
+                        out,
+                        &meta.field,
+                        &meta.rust_name,
+                        ir,
+                        types_with_lifetime,
+                    );
+                    out.push_str("                    }\n");
+                }
+            }
+            out.push_str("                    _ => {}\n");
+            out.push_str("                },\n");
+
+            out.push_str("                Event::End(e) if e.local_name().as_ref() == start.local_name().as_ref() => break,\n");
+            out.push_str("                Event::Eof => break,\n");
+            out.push_str("                _ => {}\n");
+            out.push_str("            }\n");
+            out.push_str("        }\n");
+        }
+
+        out.push_str("\n        Ok(Self {\n");
+        for meta in &field_metas {
+            let is_list = meta.field.cardinality.is_list() || meta.field.type_ref.is_list();
+            let is_optional = meta.field.cardinality.is_optional() || meta.field.nillable;
+
+            if is_list || is_optional {
+                let _ = writeln!(
+                    out,
+                    "            {}: var_{},",
+                    meta.rust_name, meta.rust_name
+                );
+            } else {
+                let _ = writeln!(
+                    out,
+                    "            {}: var_{}.ok_or_else(|| PolyXmlError::SchemaError(\"Missing required field '{}'\".into()))?,",
+                    meta.rust_name, meta.rust_name, meta.field.xml_name
+                );
+            }
+        }
+        out.push_str("        })\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    pub fn decode_xml_empty(start: &BytesStart<'_>) -> Result<Self> {\n");
+        for meta in &field_metas {
+            let is_list = meta.field.cardinality.is_list() || meta.field.type_ref.is_list();
+            if is_list {
+                let _ = writeln!(out, "        let var_{} = Vec::new();", meta.rust_name);
+            } else {
+                let _ = writeln!(out, "        let mut var_{} = None;", meta.rust_name);
+            }
+        }
+
+        if !attr_fields.is_empty() {
+            out.push_str("\n        for attr in start.attributes() {\n");
+            out.push_str("            let attr = attr?;\n");
+            out.push_str("            match attr.key.local_name().as_ref() {\n");
+            for meta in &attr_fields {
+                let _ = writeln!(out, "                \"{}\" => {{", meta.field.xml_name);
+                self.emit_attr_parse(out, &meta.field, &meta.rust_name, ir);
+                out.push_str("                }\n");
+            }
+            out.push_str("                _ => {}\n");
+            out.push_str("            }\n");
+            out.push_str("        }\n");
+        }
+
+        out.push_str("\n        Ok(Self {\n");
+        for meta in &field_metas {
+            let is_list = meta.field.cardinality.is_list() || meta.field.type_ref.is_list();
+            let is_optional = meta.field.cardinality.is_optional() || meta.field.nillable;
+
+            if is_list || is_optional {
+                let _ = writeln!(
+                    out,
+                    "            {}: var_{},",
+                    meta.rust_name, meta.rust_name
+                );
+            } else if meta.field.kind == FieldKind::Attribute {
+                let _ = writeln!(
+                    out,
+                    "            {}: var_{}.ok_or_else(|| PolyXmlError::SchemaError(\"Missing required attribute '{}'\".into()))?,",
+                    meta.rust_name, meta.rust_name, meta.field.xml_name
+                );
+            } else if self.field_is_string(&meta.field.type_ref, ir) {
+                if self.options.zero_copy {
+                    let _ = writeln!(
+                        out,
+                        "            {}: var_{}.unwrap_or(Cow::Borrowed(\"\")),",
+                        meta.rust_name, meta.rust_name
+                    );
+                } else {
+                    let _ = writeln!(
+                        out,
+                        "            {}: var_{}.unwrap_or_default(),",
+                        meta.rust_name, meta.rust_name
+                    );
+                }
+            } else {
+                let _ = writeln!(
+                    out,
+                    "            {}: var_{}.ok_or_else(|| PolyXmlError::SchemaError(\"Missing required field '{}'\".into()))?,",
+                    meta.rust_name, meta.rust_name, meta.field.xml_name
+                );
+            }
+        }
+        out.push_str("        })\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    pub fn to_xml(&self) -> Result<Vec<u8>> {\n");
+        out.push_str("        let mut buf = Vec::new();\n");
+        out.push_str("        let mut writer = Writer::new(std::io::Cursor::new(&mut buf));\n");
+        out.push_str("        self.encode_xml(&mut writer, None)?;\n");
+        out.push_str("        Ok(buf)\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    pub fn to_xml_string(&self) -> Result<String> {\n");
+        out.push_str("        let bytes = self.to_xml()?;\n");
+        out.push_str("        String::from_utf8(bytes).map_err(|e| PolyXmlError::Utf8Error(e.utf8_error()))\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n");
+        let _ = writeln!(
+            out,
+            "        let tag = tag_name.unwrap_or(\"{}\");",
+            s.qname.local
+        );
+        out.push_str("        let mut start = BytesStart::new(tag);\n");
+
+        for meta in &attr_fields {
+            self.emit_attr_serialize(out, &meta.field, &meta.rust_name, ir);
+        }
+
+        out.push_str("        writer.write_event(Event::Start(start))?;\n");
+
+        for meta in &elem_fields {
+            self.emit_element_serialize(out, &meta.field, &meta.rust_name, ir);
+        }
+
+        out.push_str("        writer.write_event(Event::End(BytesEnd::new(tag)))?;\n");
+        out.push_str("        Ok(())\n");
+        out.push_str("    }\n");
+
+        out.push_str("}\n");
+    }
+
+    fn emit_attr_parse(&self, out: &mut String, field: &FieldDef, rust_name: &str, ir: &SchemaIR) {
+        if self.field_is_string(&field.type_ref, ir) {
+            out.push_str("                    let s = attr.value.as_ref();\n");
+            out.push_str("                    let val = match quick_xml::escape::unescape(s)? {\n");
+            out.push_str(
+                "                        Cow::Borrowed(s) => Cow::Owned(s.to_string()),\n",
+            );
+            out.push_str("                        Cow::Owned(s) => Cow::Owned(s),\n");
+            out.push_str("                    };\n");
+            self.emit_facet_checks(out, field, "val");
+            if self.options.zero_copy {
+                let _ = writeln!(out, "                    var_{} = Some(val);", rust_name);
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                    var_{} = Some(val.into_owned());",
+                    rust_name
+                );
+            }
+        } else if let Some(num) = self.field_numeric_type(&field.type_ref, ir) {
+            out.push_str("                    let s = attr.value.as_ref().trim();\n");
+            let _ = writeln!(
+                out,
+                "                    let val = s.parse::<{}>().map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;",
+                num, field.name, num
+            );
+            self.emit_facet_checks(out, field, "val");
+            let _ = writeln!(out, "                    var_{} = Some(val);", rust_name);
+        } else if self.field_is_bool(&field.type_ref, ir) {
+            out.push_str("                    let s = attr.value.as_ref().trim();\n");
+            out.push_str("                    let val = s == \"true\" || s == \"1\";\n");
+            let _ = writeln!(out, "                    var_{} = Some(val);", rust_name);
+        } else if let Some(enum_name) = self.field_is_enum(&field.type_ref, ir) {
+            out.push_str("                    let s = attr.value.as_ref().trim();\n");
+            let _ = writeln!(
+                out,
+                "                    let val = {}::from_str(s).map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;",
+                enum_name, field.name, enum_name
+            );
+            let _ = writeln!(out, "                    var_{} = Some(val);", rust_name);
+        }
+    }
+
+    fn emit_element_parse(
+        &self,
+        out: &mut String,
+        field: &FieldDef,
+        rust_name: &str,
+        ir: &SchemaIR,
+        types_with_lifetime: &HashSet<QName>,
+    ) {
+        let is_list = field.cardinality.is_list() || field.type_ref.is_list();
+        let is_boxed = field.is_cycle_cut || field.type_ref.is_boxed();
+
+        if self.field_is_string(&field.type_ref, ir) {
+            let _ = writeln!(
+                out,
+                "                        let text = read_element_text(reader, \"{}\")?;",
+                field.xml_name
+            );
+            self.emit_facet_checks(out, field, "text");
+            if is_list {
+                let _ = writeln!(out, "                        var_{}.push(text);", rust_name);
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                        var_{} = Some(text);",
+                    rust_name
+                );
+            }
+        } else if let Some(num) = self.field_numeric_type(&field.type_ref, ir) {
+            let _ = writeln!(
+                out,
+                "                        let text = read_element_text(reader, \"{}\")?;",
+                field.xml_name
+            );
+            out.push_str("                        let s = text.trim();\n");
+            let _ = writeln!(
+                out,
+                "                        let val = s.parse::<{}>().map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;",
+                num, field.name, num
+            );
+            self.emit_facet_checks(out, field, "val");
+            if is_list {
+                let _ = writeln!(out, "                        var_{}.push(val);", rust_name);
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                        var_{} = Some(val);",
+                    rust_name
+                );
+            }
+        } else if self.field_is_bool(&field.type_ref, ir) {
+            let _ = writeln!(
+                out,
+                "                        let text = read_element_text(reader, \"{}\")?;",
+                field.xml_name
+            );
+            out.push_str("                        let s = text.trim();\n");
+            out.push_str("                        let val = s == \"true\" || s == \"1\";\n");
+            if is_list {
+                let _ = writeln!(out, "                        var_{}.push(val);", rust_name);
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                        var_{} = Some(val);",
+                    rust_name
+                );
+            }
+        } else if let Some(enum_name) = self.field_is_enum(&field.type_ref, ir) {
+            let _ = writeln!(
+                out,
+                "                        let text = read_element_text(reader, \"{}\")?;",
+                field.xml_name
+            );
+            out.push_str("                        let s = text.trim();\n");
+            let _ = writeln!(
+                out,
+                "                        let val = {}::from_str(s).map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;",
+                enum_name, field.name, enum_name
+            );
+            if is_list {
+                let _ = writeln!(out, "                        var_{}.push(val);", rust_name);
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                        var_{} = Some(val);",
+                    rust_name
+                );
+            }
+        } else {
+            let target_type = self.format_rust_type_ref(&field.type_ref, types_with_lifetime);
+            let target_clean = target_type.split('<').next().unwrap_or(&target_type);
+            let _ = writeln!(
+                out,
+                "                        let val = {}::decode_xml(reader, &e)?;",
+                target_clean
+            );
+            let final_val = if is_boxed { "Box::new(val)" } else { "val" };
+            if is_list {
+                let _ = writeln!(
+                    out,
+                    "                        var_{}.push({});",
+                    rust_name, final_val
+                );
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                        var_{} = Some({});",
+                    rust_name, final_val
+                );
+            }
+        }
+    }
+
+    fn emit_empty_element_parse(
+        &self,
+        out: &mut String,
+        field: &FieldDef,
+        rust_name: &str,
+        ir: &SchemaIR,
+        types_with_lifetime: &HashSet<QName>,
+    ) {
+        let is_list = field.cardinality.is_list() || field.type_ref.is_list();
+        let is_boxed = field.is_cycle_cut || field.type_ref.is_boxed();
+
+        if self.field_is_string(&field.type_ref, ir) {
+            if self.options.zero_copy {
+                if is_list {
+                    let _ = writeln!(
+                        out,
+                        "                        var_{}.push(Cow::Borrowed(\"\"));",
+                        rust_name
+                    );
+                } else {
+                    let _ = writeln!(
+                        out,
+                        "                        var_{} = Some(Cow::Borrowed(\"\"));",
+                        rust_name
+                    );
+                }
+            } else {
+                if is_list {
+                    let _ = writeln!(
+                        out,
+                        "                        var_{}.push(String::new());",
+                        rust_name
+                    );
+                } else {
+                    let _ = writeln!(
+                        out,
+                        "                        var_{} = Some(String::new());",
+                        rust_name
+                    );
+                }
+            }
+        } else if self.field_numeric_type(&field.type_ref, ir).is_none()
+            && !self.field_is_bool(&field.type_ref, ir)
+            && self.field_is_enum(&field.type_ref, ir).is_none()
+        {
+            let target_type = self.format_rust_type_ref(&field.type_ref, types_with_lifetime);
+            let target_clean = target_type.split('<').next().unwrap_or(&target_type);
+            let _ = writeln!(
+                out,
+                "                        let val = {}::decode_xml_empty(&e)?;",
+                target_clean
+            );
+            let final_val = if is_boxed { "Box::new(val)" } else { "val" };
+            if is_list {
+                let _ = writeln!(
+                    out,
+                    "                        var_{}.push({});",
+                    rust_name, final_val
+                );
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                        var_{} = Some({});",
+                    rust_name, final_val
+                );
+            }
+        }
+    }
+
+    fn emit_facet_checks(&self, out: &mut String, field: &FieldDef, val_var: &str) {
+        if let Some(ref facets) = field.facets {
+            if let Some(min_len) = facets.min_length {
+                let _ = writeln!(
+                    out,
+                    "                    if {}.len() < {} {{ return Err(PolyXmlError::FacetViolation {{ field: \"{}\".into(), expected: \"minLength {}\".into(), actual: format!(\"length {{}}\", {}.len()) }}); }}",
+                    val_var, min_len, field.name, min_len, val_var
+                );
+            }
+            if let Some(max_len) = facets.max_length {
+                let _ = writeln!(
+                    out,
+                    "                    if {}.len() > {} {{ return Err(PolyXmlError::FacetViolation {{ field: \"{}\".into(), expected: \"maxLength {}\".into(), actual: format!(\"length {{}}\", {}.len()) }}); }}",
+                    val_var, max_len, field.name, max_len, val_var
+                );
+            }
+            if let Some(ref min_inc) = facets.min_inclusive {
+                let _ = writeln!(
+                    out,
+                    "                    if {} < {} {{ return Err(PolyXmlError::FacetViolation {{ field: \"{}\".into(), expected: \"minInclusive {}\".into(), actual: {}.to_string() }}); }}",
+                    val_var, min_inc, field.name, min_inc, val_var
+                );
+            }
+            if let Some(ref max_inc) = facets.max_inclusive {
+                let _ = writeln!(
+                    out,
+                    "                    if {} > {} {{ return Err(PolyXmlError::FacetViolation {{ field: \"{}\".into(), expected: \"maxInclusive {}\".into(), actual: {}.to_string() }}); }}",
+                    val_var, max_inc, field.name, max_inc, val_var
+                );
+            }
+        }
+    }
+
+    fn emit_attr_serialize(
+        &self,
+        out: &mut String,
+        field: &FieldDef,
+        rust_name: &str,
+        ir: &SchemaIR,
+    ) {
+        let is_optional = field.cardinality.is_optional() || field.nillable;
+        if self.field_is_string(&field.type_ref, ir) {
+            if is_optional {
+                let _ = writeln!(out, "        if let Some(ref val) = self.{} {{", rust_name);
+                let _ = writeln!(
+                    out,
+                    "            start.push_attribute((\"{}\", val.as_ref()));",
+                    field.xml_name
+                );
+                out.push_str("        }\n");
+            } else {
+                let _ = writeln!(
+                    out,
+                    "        start.push_attribute((\"{}\", self.{}.as_ref()));",
+                    field.xml_name, rust_name
+                );
+            }
+        } else if is_optional {
+            let _ = writeln!(out, "        if let Some(ref val) = self.{} {{", rust_name);
+            let _ = writeln!(out, "            let val_s = val.to_string();");
+            let _ = writeln!(
+                out,
+                "            start.push_attribute((\"{}\", val_s.as_str()));",
+                field.xml_name
+            );
+            out.push_str("        }\n");
+        } else {
+            let _ = writeln!(
+                out,
+                "        let val_s_{} = self.{}.to_string();",
+                rust_name, rust_name
+            );
+            let _ = writeln!(
+                out,
+                "        start.push_attribute((\"{}\", val_s_{}.as_str()));",
+                field.xml_name, rust_name
+            );
+        }
+    }
+
+    fn emit_element_serialize(
+        &self,
+        out: &mut String,
+        field: &FieldDef,
+        rust_name: &str,
+        ir: &SchemaIR,
+    ) {
+        let is_list = field.cardinality.is_list() || field.type_ref.is_list();
+        let is_optional = field.cardinality.is_optional() || field.nillable;
+        let is_string = self.field_is_string(&field.type_ref, ir);
+        let is_scalar = self.field_numeric_type(&field.type_ref, ir).is_some()
+            || self.field_is_bool(&field.type_ref, ir);
+        let is_enum = self.field_is_enum(&field.type_ref, ir).is_some();
+
+        if is_list {
+            let _ = writeln!(out, "        for item in &self.{} {{", rust_name);
+            if is_string {
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                out.push_str("            writer.write_event(Event::Text(BytesText::new(item.as_ref())))?;\n");
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else if is_scalar {
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                out.push_str("            writer.write_event(Event::Text(BytesText::new(&item.to_string())))?;\n");
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else if is_enum {
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                out.push_str("            writer.write_event(Event::Text(BytesText::new(item.as_str())))?;\n");
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else {
+                let _ = writeln!(
+                    out,
+                    "            item.encode_xml(writer, Some(\"{}\"))?;",
+                    field.xml_name
+                );
+            }
+            out.push_str("        }\n");
+        } else if is_optional {
+            let _ = writeln!(out, "        if let Some(ref val) = self.{} {{", rust_name);
+            if is_string {
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                out.push_str(
+                    "            writer.write_event(Event::Text(BytesText::new(val.as_ref())))?;\n",
+                );
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else if is_scalar {
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                out.push_str("            writer.write_event(Event::Text(BytesText::new(&val.to_string())))?;\n");
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else if is_enum {
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                out.push_str(
+                    "            writer.write_event(Event::Text(BytesText::new(val.as_str())))?;\n",
+                );
+                let _ = writeln!(
+                    out,
+                    "            writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else {
+                let _ = writeln!(
+                    out,
+                    "            val.encode_xml(writer, Some(\"{}\"))?;",
+                    field.xml_name
+                );
+            }
+            out.push_str("        }\n");
+        } else {
+            if is_string {
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(Event::Text(BytesText::new(self.{}.as_ref())))?;",
+                    rust_name
+                );
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else if is_scalar {
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                let _ = writeln!(out, "        writer.write_event(Event::Text(BytesText::new(&self.{}.to_string())))?;", rust_name);
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else if is_enum {
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(Event::Start(BytesStart::new(\"{}\")))?;",
+                    field.xml_name
+                );
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(Event::Text(BytesText::new(self.{}.as_str())))?;",
+                    rust_name
+                );
+                let _ = writeln!(
+                    out,
+                    "        writer.write_event(Event::End(BytesEnd::new(\"{}\")))?;",
+                    field.xml_name
+                );
+            } else {
+                let _ = writeln!(
+                    out,
+                    "        self.{}.encode_xml(writer, Some(\"{}\"))?;",
+                    rust_name, field.xml_name
+                );
+            }
+        }
+    }
+
+    fn emit_union_codecs(
+        &self,
+        out: &mut String,
+        u: &UnionDef,
+        types_with_lifetime: &HashSet<QName>,
+        ir: &SchemaIR,
+    ) {
+        let union_name = AsPascalCase(&u.qname.local).to_string();
+        let needs_lifetime = types_with_lifetime.contains(&u.qname);
+
+        let impl_header = if needs_lifetime {
+            format!("impl<'a> {}<'a>", union_name)
+        } else {
+            format!("impl {}", union_name)
+        };
+
+        out.push('\n');
+        let _ = writeln!(out, "{} {{", impl_header);
+
+        let from_xml_sig = if needs_lifetime {
+            "pub fn from_xml(xml: &'a str) -> Result<Self>"
+        } else {
+            "pub fn from_xml(xml: &str) -> Result<Self>"
+        };
+        let _ = writeln!(out, "    {}", from_xml_sig);
+        out.push_str("    {\n");
+        out.push_str("        let mut reader = Reader::from_str(xml);\n");
+        out.push_str("        loop {\n");
+        out.push_str("            match reader.read_event()? {\n");
+        out.push_str(
+            "                Event::Start(e) => return Self::decode_xml(&mut reader, &e),\n",
+        );
+        out.push_str("                Event::Eof => break,\n");
+        out.push_str("                _ => {}\n");
+        out.push_str("            }\n");
+        out.push_str("        }\n");
+        let _ = writeln!(
+            out,
+            "        Err(PolyXmlError::SchemaError(\"Unexpected EOF while parsing {}\".into()))",
+            union_name
+        );
+        out.push_str("    }\n\n");
+
+        let from_bytes_sig = if needs_lifetime {
+            "pub fn from_xml_bytes(xml_bytes: &'a [u8]) -> Result<Self>"
+        } else {
+            "pub fn from_xml_bytes(xml_bytes: &[u8]) -> Result<Self>"
+        };
+        let _ = writeln!(out, "    {}", from_bytes_sig);
+        out.push_str("    {\n");
+        out.push_str("        let s = std::str::from_utf8(xml_bytes)?;\n");
+        out.push_str("        Self::from_xml(s)\n");
+        out.push_str("    }\n\n");
+
+        let decode_sig = if needs_lifetime {
+            "pub fn decode_xml(reader: &mut Reader<&'a [u8]>, start: &BytesStart<'_>) -> Result<Self>"
+        } else {
+            "pub fn decode_xml(reader: &mut Reader<&'_ [u8]>, start: &BytesStart<'_>) -> Result<Self>"
+        };
+        let _ = writeln!(out, "    {}", decode_sig);
+        out.push_str("    {\n");
+        out.push_str("        match start.local_name().as_ref() {\n");
+
+        for branch in &u.branches {
+            let var_id = to_rust_variant_identifier(&branch.variant_name);
+            let _ = writeln!(out, "            \"{}\" => {{", branch.xml_name);
+            if self.field_is_string(&branch.type_ref, ir) {
+                let _ = writeln!(
+                    out,
+                    "                let text = read_element_text(reader, \"{}\")?;",
+                    branch.xml_name
+                );
+                let _ = writeln!(out, "                Ok({}::{}(text))", union_name, var_id);
+            } else if let Some(num) = self.field_numeric_type(&branch.type_ref, ir) {
+                let _ = writeln!(
+                    out,
+                    "                let text = read_element_text(reader, \"{}\")?;",
+                    branch.xml_name
+                );
+                out.push_str("                let s = text.trim();\n");
+                let _ = writeln!(out, "                let val = s.parse::<{}>().map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;", num, branch.xml_name, num);
+                let _ = writeln!(out, "                Ok({}::{}(val))", union_name, var_id);
+            } else if self.field_is_bool(&branch.type_ref, ir) {
+                let _ = writeln!(
+                    out,
+                    "                let text = read_element_text(reader, \"{}\")?;",
+                    branch.xml_name
+                );
+                out.push_str("                let s = text.trim();\n");
+                out.push_str("                let val = s == \"true\" || s == \"1\";\n");
+                let _ = writeln!(out, "                Ok({}::{}(val))", union_name, var_id);
+            } else if let Some(enum_name) = self.field_is_enum(&branch.type_ref, ir) {
+                let _ = writeln!(
+                    out,
+                    "                let text = read_element_text(reader, \"{}\")?;",
+                    branch.xml_name
+                );
+                out.push_str("                let s = text.trim();\n");
+                let _ = writeln!(out, "                let val = {}::from_str(s).map_err(|_| PolyXmlError::ScalarParseError {{ field: \"{}\".into(), expected: \"{}\", value: s.into() }})?;", enum_name, branch.xml_name, enum_name);
+                let _ = writeln!(out, "                Ok({}::{}(val))", union_name, var_id);
+            } else {
+                let target_type = self.format_rust_type_ref(&branch.type_ref, types_with_lifetime);
+                let target_clean = target_type.split('<').next().unwrap_or(&target_type);
+                let _ = writeln!(
+                    out,
+                    "                let val = {}::decode_xml(reader, start)?;",
+                    target_clean
+                );
+                let _ = writeln!(out, "                Ok({}::{}(val))", union_name, var_id);
+            }
+            out.push_str("            }\n");
+        }
+
+        let branch_names: Vec<_> = u.branches.iter().map(|b| b.xml_name.as_str()).collect();
+        let _ = writeln!(out, "            other => Err(PolyXmlError::UnexpectedRootElement {{ expected: \"{}\".into(), actual: other.into() }}),", branch_names.join(" or "));
+        out.push_str("        }\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    pub fn to_xml(&self) -> Result<Vec<u8>> {\n");
+        out.push_str("        let mut buf = Vec::new();\n");
+        out.push_str("        let mut writer = Writer::new(std::io::Cursor::new(&mut buf));\n");
+        out.push_str("        self.encode_xml(&mut writer, None)?;\n");
+        out.push_str("        Ok(buf)\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    pub fn to_xml_string(&self) -> Result<String> {\n");
+        out.push_str(
+            "        let bytes = self.to_xml()?;
+",
+        );
+        out.push_str("        String::from_utf8(bytes).map_err(|e| PolyXmlError::Utf8Error(e.utf8_error()))\n");
+        out.push_str("    }\n\n");
+
+        out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n");
+        out.push_str("        match self {\n");
+        for branch in &u.branches {
+            let var_id = to_rust_variant_identifier(&branch.variant_name);
+            if self.field_is_string(&branch.type_ref, ir) {
+                let _ = writeln!(out, "            {}::{}(ref val) => {{", union_name, var_id);
+                let _ = writeln!(
+                    out,
+                    "                let tag = tag_name.unwrap_or(\"{}\");",
+                    branch.xml_name
+                );
+                out.push_str(
+                    "                writer.write_event(Event::Start(BytesStart::new(tag)))?;\n",
+                );
+                out.push_str("                writer.write_event(Event::Text(BytesText::new(val.as_ref())))?;\n");
+                out.push_str(
+                    "                writer.write_event(Event::End(BytesEnd::new(tag)))?;\n",
+                );
+                out.push_str("                Ok(())\n");
+                out.push_str("            }\n");
+            } else if self.field_numeric_type(&branch.type_ref, ir).is_some()
+                || self.field_is_bool(&branch.type_ref, ir)
+            {
+                let _ = writeln!(out, "            {}::{}(ref val) => {{", union_name, var_id);
+                let _ = writeln!(
+                    out,
+                    "                let tag = tag_name.unwrap_or(\"{}\");",
+                    branch.xml_name
+                );
+                out.push_str(
+                    "                writer.write_event(Event::Start(BytesStart::new(tag)))?;\n",
+                );
+                out.push_str("                writer.write_event(Event::Text(BytesText::new(&val.to_string())))?;\n");
+                out.push_str(
+                    "                writer.write_event(Event::End(BytesEnd::new(tag)))?;\n",
+                );
+                out.push_str("                Ok(())\n");
+                out.push_str("            }\n");
+            } else if self.field_is_enum(&branch.type_ref, ir).is_some() {
+                let _ = writeln!(out, "            {}::{}(ref val) => {{", union_name, var_id);
+                let _ = writeln!(
+                    out,
+                    "                let tag = tag_name.unwrap_or(\"{}\");",
+                    branch.xml_name
+                );
+                out.push_str(
+                    "                writer.write_event(Event::Start(BytesStart::new(tag)))?;\n",
+                );
+                out.push_str("                writer.write_event(Event::Text(BytesText::new(val.as_str())))?;\n");
+                out.push_str(
+                    "                writer.write_event(Event::End(BytesEnd::new(tag)))?;\n",
+                );
+                out.push_str("                Ok(())\n");
+                out.push_str("            }\n");
+            } else {
+                let _ = writeln!(out, "            {}::{}(ref val) => val.encode_xml(writer, tag_name.or(Some(\"{}\"))),", union_name, var_id, branch.xml_name);
+            }
+        }
+        out.push_str("        }\n");
+        out.push_str("    }\n");
+        out.push_str("}\n");
     }
 }

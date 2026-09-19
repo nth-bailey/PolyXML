@@ -37,6 +37,7 @@ pub struct PythonOptions {
     pub pep695_aliases: bool,
     pub emit_meta: bool,
     pub emit_root_aliases: bool,
+    pub emit_codecs: bool,
 }
 
 impl Default for PythonOptions {
@@ -48,6 +49,7 @@ impl Default for PythonOptions {
             pep695_aliases: true,
             emit_meta: true,
             emit_root_aliases: true,
+            emit_codecs: true,
         }
     }
 }
@@ -267,8 +269,15 @@ impl PythonCodegen {
         if has_enums {
             out.push_str("from enum import StrEnum\n");
         }
+        let mut typing_imports = Vec::new();
         if has_annotated {
-            out.push_str("from typing import Annotated\n");
+            typing_imports.push("Annotated");
+        }
+        if has_structs && self.options.emit_codecs {
+            typing_imports.push("Self");
+        }
+        if !typing_imports.is_empty() {
+            let _ = writeln!(out, "from typing import {}", typing_imports.join(", "));
         }
         if self.options.backend == PythonBackend::Pydantic && has_structs {
             out.push_str("from pydantic import BaseModel, ConfigDict, Field\n");
@@ -464,21 +473,46 @@ impl PythonCodegen {
             has_body = true;
         }
 
-        if s.fields.is_empty() {
-            if !has_body {
-                out.push_str("    pass\n");
+        if !s.fields.is_empty() {
+            if has_body {
+                out.push('\n');
             }
-            return;
+
+            let mut seen_fields = HashSet::new();
+            for field in &s.fields {
+                let py_field_name = self.unique_field_name(&field.name, &mut seen_fields);
+                self.emit_field(out, field, &py_field_name);
+            }
+            has_body = true;
         }
 
-        if has_body {
-            out.push('\n');
+        if self.options.emit_codecs {
+            if has_body {
+                out.push('\n');
+            }
+            out.push_str("    @classmethod\n");
+            out.push_str("    def from_xml(cls, data: bytes | str) -> Self:\n");
+            out.push_str("        \"\"\"Deserialize XML bytes or string into this model.\"\"\"\n");
+            out.push_str("        import polyxml\n");
+            out.push_str(
+                "        raw_bytes = data.encode(\"utf-8\") if isinstance(data, str) else data\n",
+            );
+            out.push_str("        return polyxml.deserialize(raw_bytes, cls)\n\n");
+            out.push_str("    def to_xml(\n");
+            out.push_str("        self,\n");
+            out.push_str("        *,\n");
+            out.push_str("        indent: int | None = None,\n");
+            out.push_str("        namespaces: bool | None = None,\n");
+            out.push_str("        ns_map: dict[str, str] | None = None,\n");
+            out.push_str("    ) -> bytes:\n");
+            out.push_str("        \"\"\"Serialize this model instance into XML bytes.\"\"\"\n");
+            out.push_str("        import polyxml\n");
+            out.push_str("        return polyxml.serialize(self, indent=indent, namespaces=namespaces, ns_map=ns_map)\n");
+            has_body = true;
         }
 
-        let mut seen_fields = HashSet::new();
-        for field in &s.fields {
-            let py_field_name = self.unique_field_name(&field.name, &mut seen_fields);
-            self.emit_field(out, field, &py_field_name);
+        if !has_body {
+            out.push_str("    pass\n");
         }
     }
 

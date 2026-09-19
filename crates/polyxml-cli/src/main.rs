@@ -53,6 +53,10 @@ pub struct GenerateArgs {
     #[arg(long = "zero-copy", default_missing_value = "true", num_args = 0..=1)]
     pub zero_copy: Option<bool>,
 
+    /// Emit streaming serialization and deserialization codecs (default: true)
+    #[arg(long = "codecs", default_missing_value = "true", num_args = 0..=1)]
+    pub codecs: Option<bool>,
+
     /// Output directory for generated source files
     #[arg(short = 'o', long = "out", alias = "out-dir", value_name = "DIR")]
     pub out: Option<PathBuf>,
@@ -175,6 +179,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
                 lang,
                 args.backend.as_deref(),
                 args.zero_copy,
+                args.codecs,
                 &lang_out,
                 schema_path,
                 ir,
@@ -257,6 +262,7 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
                 &target.target,
                 target.backend.as_deref(),
                 target.zero_copy,
+                target.codecs,
                 &target_dir,
                 schema_path,
                 ir,
@@ -348,6 +354,7 @@ fn emit_target_code(
     lang: &str,
     backend: Option<&str>,
     zero_copy: Option<bool>,
+    codecs: Option<bool>,
     out_dir: &Path,
     schema_path: &Path,
     ir: &SchemaIR,
@@ -365,6 +372,7 @@ fn emit_target_code(
                 pep695_aliases: true,
                 emit_meta: true,
                 emit_root_aliases: true,
+                emit_codecs: codecs.unwrap_or(true),
             };
 
             let codegen = PythonCodegen::new(options);
@@ -391,6 +399,7 @@ fn emit_target_code(
                 derive_default: true,
                 emit_polyxml_attrs: true,
                 emit_root_aliases: true,
+                emit_codecs: codecs.unwrap_or(true),
             };
 
             let codegen = RustCodegen::new(options);
