@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::codegen::{sanitize_keyword, LanguageContext};
 use crate::ir::{
-    EnumDef, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets, SchemaIR,
-    SimpleTypeDef, StructDef, TypeDef, TypeRef, UnionDef,
+    EnumDef, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef,
+    StructDef, TypeDef, TypeRef, UnionDef,
 };
 
 /// Target backend for Python code emission.
@@ -247,7 +247,10 @@ impl PythonCodegen {
                         has_decimal = true;
                     }
                     if self.options.backend == PythonBackend::Pydantic
-                        && f.facets.as_ref().map(|fac| !fac.is_empty()).unwrap_or(false)
+                        && f.facets
+                            .as_ref()
+                            .map(|fac| !fac.is_empty())
+                            .unwrap_or(false)
                     {
                         has_annotated = true;
                     }
@@ -443,7 +446,9 @@ impl PythonCodegen {
         }
 
         if self.options.backend == PythonBackend::Pydantic {
-            out.push_str("    model_config = ConfigDict(defer_build=True, populate_by_name=True)\n");
+            out.push_str(
+                "    model_config = ConfigDict(defer_build=True, populate_by_name=True)\n",
+            );
             has_body = true;
         }
 

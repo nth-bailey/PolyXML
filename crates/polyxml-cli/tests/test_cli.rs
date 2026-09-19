@@ -276,3 +276,79 @@ fn test_cli_generate_python_backends() {
     assert!(pyd_py.contains("total: Decimal = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"Total\", \"namespace\": \"https://example.com/invoice\"})"));
     assert!(pyd_py.contains("note: str | None = Field(default=None, json_schema_extra={\"type\": \"Element\", \"name\": \"Note\", \"namespace\": \"https://example.com/invoice\", \"nillable\": True})"));
 }
+
+#[test]
+fn test_cli_generate_rust_zero_copy_and_owned() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("customer.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:customers">
+            <xs:simpleType name="Status">
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="Active"/>
+                    <xs:enumeration value="Suspended"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Customer">
+                <xs:sequence>
+                    <xs:element name="Name" type="xs:string"/>
+                    <xs:element name="Status" type="Status"/>
+                    <xs:element name="Balance" type="xs:decimal"/>
+                </xs:sequence>
+                <xs:attribute name="id" type="xs:int" use="required"/>
+            </xs:complexType>
+            <xs:element name="CustomerRecord" type="Customer"/>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    // 1. Generate zero-copy Rust
+    let zc_out = dir.path().join("out_rust_zc");
+    let output_zc = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            "--lang",
+            "rust",
+            "--zero-copy",
+            "--out",
+            zc_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute rust zero-copy generate");
+
+    assert!(output_zc.status.success());
+    assert!(zc_out.join("mod.rs").exists());
+    let zc_rs = fs::read_to_string(zc_out.join("customer.rs")).unwrap();
+    assert!(zc_rs.contains("use std::borrow::Cow;"));
+    assert!(zc_rs.contains("pub struct Customer<'a>"));
+    assert!(zc_rs.contains("pub name: Cow<'a, str>"));
+    assert!(zc_rs.contains("pub enum Status"));
+    assert!(zc_rs.contains("impl Status"));
+    assert!(zc_rs.contains("pub type CustomerRecord<'a> = Customer<'a>;"));
+
+    // 2. Generate owned Rust
+    let owned_out = dir.path().join("out_rust_owned");
+    let output_owned = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            "--lang",
+            "rust",
+            "--zero-copy",
+            "false",
+            "--out",
+            owned_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute rust owned generate");
+
+    assert!(output_owned.status.success());
+    let owned_rs = fs::read_to_string(owned_out.join("customer.rs")).unwrap();
+    assert!(owned_rs.contains("pub struct Customer {"));
+    assert!(owned_rs.contains("pub name: String"));
+    assert!(!owned_rs.contains("Cow<'a"));
+    assert!(owned_rs.contains("pub type CustomerRecord = Customer;"));
+}

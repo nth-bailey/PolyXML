@@ -174,11 +174,19 @@ def generated_models():
         assert pyd_file.exists()
 
         # 3. Verify ruff check on both
-        ruff_check_dc = subprocess.run(["ruff", "check", str(dc_dir)], capture_output=True, text=True)
-        assert ruff_check_dc.returncode == 0, f"Ruff check failed on dataclasses: {ruff_check_dc.stdout}\n{ruff_check_dc.stderr}"
+        ruff_check_dc = subprocess.run(
+            ["ruff", "check", str(dc_dir)], capture_output=True, text=True
+        )
+        assert ruff_check_dc.returncode == 0, (
+            f"Ruff check failed on dataclasses: {ruff_check_dc.stdout}\n{ruff_check_dc.stderr}"
+        )
 
-        ruff_check_pyd = subprocess.run(["ruff", "check", str(pyd_dir)], capture_output=True, text=True)
-        assert ruff_check_pyd.returncode == 0, f"Ruff check failed on pydantic: {ruff_check_pyd.stdout}\n{ruff_check_pyd.stderr}"
+        ruff_check_pyd = subprocess.run(
+            ["ruff", "check", str(pyd_dir)], capture_output=True, text=True
+        )
+        assert ruff_check_pyd.returncode == 0, (
+            f"Ruff check failed on pydantic: {ruff_check_pyd.stdout}\n{ruff_check_pyd.stderr}"
+        )
 
         # 4. Verify pyright static type checker on both
         pyright_dc = subprocess.run(["pyright", str(dc_file)], capture_output=True, text=True)
@@ -269,4 +277,3 @@ def test_generated_pydantic_deserialization_and_serialization(generated_models):
     xml_out = polyxml.serialize(inv)
     assert b"Central Distribution" in xml_out
     assert b"ENG-1234" in xml_out
-

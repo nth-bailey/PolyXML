@@ -6,8 +6,10 @@ use minijinja::{Environment, Error as JinjaError, Value};
 use thiserror::Error;
 
 pub mod python;
+pub mod rust;
 
 pub use python::{PythonBackend, PythonCodegen, PythonOptions};
+pub use rust::{RustCodegen, RustOptions};
 
 use crate::ir::{PrimitiveType, TypeRef};
 
