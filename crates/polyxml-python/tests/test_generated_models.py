@@ -213,12 +213,13 @@ def generated_models():
             f"Ruff check failed on pydantic: {ruff_check_pyd.stdout}\n{ruff_check_pyd.stderr}"
         )
 
-        # 4. Verify pyright static type checker on both
-        pyright_dc = subprocess.run(["pyright", str(dc_file)], capture_output=True, text=True)
-        assert pyright_dc.returncode == 0, f"Pyright failed on dataclasses: {pyright_dc.stdout}"
+        # 4. Verify pyright static type checker on both if installed
+        if shutil.which("pyright"):
+            pyright_dc = subprocess.run(["pyright", str(dc_file)], capture_output=True, text=True)
+            assert pyright_dc.returncode == 0, f"Pyright failed on dataclasses: {pyright_dc.stdout}"
 
-        pyright_pyd = subprocess.run(["pyright", str(pyd_file)], capture_output=True, text=True)
-        assert pyright_pyd.returncode == 0, f"Pyright failed on pydantic: {pyright_pyd.stdout}"
+            pyright_pyd = subprocess.run(["pyright", str(pyd_file)], capture_output=True, text=True)
+            assert pyright_pyd.returncode == 0, f"Pyright failed on pydantic: {pyright_pyd.stdout}"
 
         # 5. Load modules dynamically
         mod_dc = _load_module_from_file("gen_warehouse_dc", dc_file)
