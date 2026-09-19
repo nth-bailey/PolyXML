@@ -30,9 +30,11 @@
   <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/Rust-1.80%2B-orange.svg?logo=rust" alt="Rust: 1.80+"></a>
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/Python-3.12%20%7C%203.13%20%7C%203.14%20%7C%203.15-3776AB.svg?logo=python&logoColor=white" alt="Python: 3.12 | 3.13 | 3.14 | 3.15"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-20%20%7C%2022-339933.svg?logo=node.js&logoColor=white" alt="Node.js: 20 | 22"></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.0%2B-3178C6.svg?logo=typescript&logoColor=white" alt="TypeScript: 5.0+"></a>
   <a href="https://openjdk.org/projects/panama/"><img src="https://img.shields.io/badge/Java-22%2B%20Panama-ED8B00.svg?logo=openjdk&logoColor=white" alt="Java: 22+ Panama"></a>
   <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-1.22%2B-00ADD8.svg?logo=go&logoColor=white" alt="Go: 1.22+"></a>
   <a href="https://en.cppreference.com/w/cpp/20"><img src="https://img.shields.io/badge/C%2B%2B-20-00599C.svg?logo=c%2B%2B" alt="C++: 20"></a>
+  <a href="https://dotnet.microsoft.com"><img src="https://img.shields.io/badge/.NET-8.0%2B-512BD4.svg?logo=dotnet&logoColor=white" alt=".NET: 8.0+"></a>
 </p>
 
 ---
@@ -78,6 +80,7 @@ While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critic
 - **🔄 Bidirectional**: Full support for both **deserialization** (XML $\to$ typed models) and **serialization** (typed models $\to$ XML).
 - **📦 Native Binary Serialization**: Ultra-fast MessagePack binary encoding/decoding via `polyxml.dumps_binary()` and `polyxml.loads_binary()` for key-value stores (MDBX, LMDB, Redis) and IPC (up to 350,000+ objs/s).
 - **🌐 Polyglot by Design**: The core engine is 100% pure Rust with zero Python or language runtime dependencies, ready to be embedded anywhere.
+- **🛠️ Polyglot Schema Compiler (`polyxml`)**: Compile W3C XSD 1.0/1.1 schemas directly into modern Python, Rust, C++, Java, TypeScript, Go, and C# data models with cycle detection and streaming codecs.
 - **🎯 Full Schema Support**: Namespaces, attributes vs. elements, text nodes, `xsi:nil`, choice, lists, and ISO-8601 date/time scalar types.
 
 ---
@@ -142,6 +145,7 @@ When caching parsed models in transactional key-value databases (`libmdbx`, `LMD
 | **Java** | [![Maven Central](https://img.shields.io/maven-central/v/io.github.nth-bailey/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven)](https://central.sonatype.com/artifact/io.github.nth-bailey/polyxml) | `<artifactId>polyxml</artifactId>` | Java 22+ Panama FFI | 🟢 Stable |
 | **Go** | [![Go Reference](https://pkg.go.dev/badge/github.com/nth-bailey/PolyXML/bindings/go.svg)](https://pkg.go.dev/github.com/nth-bailey/PolyXML/bindings/go) | `go get github.com/nth-bailey/PolyXML/bindings/go` | Cgo (`polyxml.h`) | 🟢 Stable |
 | **Modern C++20 / C** | [Conan](conan/) / [vcpkg](packaging/vcpkg/) (`polyxml`) | `conan install` / `vcpkg install polyxml` | Header-Only C++20 & Native Lib | 🟢 Stable |
+| **C# / .NET 8+** | NuGet / Native | `dotnet add package PolyXML` | C# 12 Records & `System.Xml` | 🟢 Stable |
 | **macOS & Linux** | [Homebrew Tap](https://github.com/nth-bailey/homebrew-polyxml) | `brew install nth-bailey/polyxml/polyxml` | Native Headers & Dynamic Lib | 🟢 Stable |
 
 ---
@@ -251,13 +255,100 @@ try (var schema = new PolyXML.SchemaBuilder("Sensor")
 
 ---
 
+## 🛠️ PolyXML Schema Compiler & Toolchain (`polyxml`)
+
+PolyXML includes a high-performance, polyglot schema compiler and CLI toolchain (`polyxml`) that transforms W3C XSD 1.0 and 1.1 schemas into strongly-typed data contracts and high-performance codecs across 7 modern programming languages.
+
+### Target Language Matrix
+
+| Language | Flag (`--lang`) | Generated Code Paradigm | Key Features |
+| :--- | :--- | :--- | :--- |
+| **Python 3.12+** | `python` | `@dataclass` (stdlib) & Pydantic v2 | Full facet validation, regex patterns, zero-copy streaming codecs |
+| **Rust 2021/2024** | `rust` | Zero-copy `Cow<'a, str>` & Owned structs | Automatic Tarjan SCC recursive boxing (`Box<T>`), streaming serializers/deserializers |
+| **C++20 / C++23** | `cpp` | Modern value types & `std::variant` | C++20 concepts, cycle unique pointers, CMake/Meson export |
+| **Java 21+** | `java` | Modern `record` & `sealed interface` | Exhaustive pattern matching, Jakarta Bean Validation annotations |
+| **TypeScript 5+** | `typescript` | Type interfaces & discriminated unions | Runtime Zod schemas, circular reference resolution with `z.lazy()` |
+| **Go 1.22+** | `go` | Idiomatic structs with `encoding/xml` | Pointer cycle cuts, choice mutual-exclusivity custom unmarshalers |
+| **C# 12 / .NET 8+** | `csharp` | Modern `record` with primary constructors | `System.Xml.Serialization` attributes, polymorphic choice records, `IValidatableObject` validation |
+
+### CLI Usage
+
+```bash
+# Generate Python models with Pydantic v2 validation
+polyxml generate --lang python --backend pydantic-v2 --out ./generated/python schema.xsd
+
+# Generate zero-copy Rust models and high-performance codecs
+polyxml generate --lang rust --zero-copy --codecs --out ./generated/rust schema.xsd
+
+# Compile schema to all 7 targets simultaneously in a single invocation
+polyxml generate \
+  --lang python --lang rust --lang cpp --lang java \
+  --lang typescript --lang go --lang csharp \
+  --out ./generated schema.xsd
+
+# Declarative workspace build with polyxml.toml
+polyxml build --config polyxml.toml
+
+# Validate schema structure and cycle topology
+polyxml validate schemas/*.xsd
+```
+
+### Workspace Manifest (`polyxml.toml`)
+
+```toml
+[workspace]
+name = "enterprise-data-pipeline"
+schemas = ["schemas/iso20022/*.xsd"]
+include_dirs = ["schemas/common/"]
+output_base_dir = "./generated"
+
+[[generate]]
+target = "python"
+output = "src/generated/python"
+backend = "pydantic-v2"
+codecs = true
+
+[[generate]]
+target = "rust"
+output = "src/generated/rust"
+zero_copy = true
+codecs = true
+
+[[generate]]
+target = "java"
+output = "src/generated/java"
+package = "com.enterprise.banking.iso20022"
+
+[[generate]]
+target = "typescript"
+output = "src/generated/ts"
+
+[[generate]]
+target = "cpp"
+output = "src/generated/cpp"
+
+[[generate]]
+target = "go"
+output = "src/generated/go"
+package = "payments"
+
+[[generate]]
+target = "csharp"
+output = "src/generated/csharp"
+namespace = "Enterprise.Banking.Iso20022"
+```
+
+---
+
 ## Repository Structure
 
 ```
 PolyXML/
 ├── Cargo.toml                  # Workspace manifest
+├── polyxml.toml                # PolyXML compiler project manifest
 ├── crates/
-│   ├── polyxml-core/           # Pure Rust core streaming engine
+│   ├── polyxml-core/           # Pure Rust core streaming engine, XSD parser, IR, and 7-target codegen
+│   ├── polyxml-cli/            # Unified CLI compiler toolchain (`polyxml`)
 │   ├── polyxml-python/         # Python bindings (PyO3 + Maturin)
 │   ├── polyxml-c/              # Universal C-ABI shared library + polyxml.h
 │   └── polyxml-js/             # Node.js & TypeScript bindings (napi-rs)
