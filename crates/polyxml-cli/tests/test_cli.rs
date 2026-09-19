@@ -870,3 +870,185 @@ func TestAccountE2E(t *testing.T) {
         "go test failed on generated Go models"
     );
 }
+
+#[test]
+fn test_cli_csharp_generation() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("customer.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.com/crm">
+    <xs:simpleType name="AccountTier">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="standard"/>
+            <xs:enumeration value="premium"/>
+            <xs:enumeration value="enterprise"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="Account">
+        <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+            <xs:element name="tier" type="AccountTier"/>
+            <xs:element name="balance" type="xs:decimal"/>
+            <xs:element name="alias" type="xs:string" minOccurs="0"/>
+            <xs:element name="tag" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="id" type="xs:int" use="required"/>
+    </xs:complexType>
+
+    <xs:element name="AccountRecord" type="Account"/>
+</xs:schema>"#,
+    )
+    .unwrap();
+
+    let cs_out = dir.path().join("out_cs");
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            "--lang",
+            "csharp",
+            "--package",
+            "Enterprise.Crm",
+            "--out",
+            cs_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+            "--format",
+        ])
+        .output()
+        .expect("Failed to execute C# generate");
+
+    assert!(
+        output.status.success(),
+        "CLI generate --lang csharp failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let generated_file = cs_out.join("Customer.cs");
+    assert!(generated_file.exists(), "Customer.cs was not created");
+    let cs_code = fs::read_to_string(&generated_file).unwrap();
+
+    assert!(cs_code.contains("namespace Enterprise.Crm;"));
+    assert!(cs_code.contains("public enum AccountTier"));
+    assert!(cs_code.contains("[XmlEnum(\"standard\")]"));
+    assert!(cs_code.contains("public static bool IsValid(this AccountTier value)"));
+    assert!(cs_code.contains("public record Account("));
+    assert!(cs_code.contains("[property: XmlAttribute(\"id\")]") && cs_code.contains("int Id"));
+    assert!(
+        cs_code.contains("[property: XmlElement(\"name\")]") && cs_code.contains("string Name")
+    );
+    assert!(
+        cs_code.contains("[property: XmlElement(\"tier\")]")
+            && cs_code.contains("AccountTier Tier")
+    );
+    assert!(
+        cs_code.contains("[property: XmlElement(\"balance\")]")
+            && cs_code.contains("decimal Balance")
+    );
+    assert!(
+        cs_code.contains("[property: XmlElement(\"alias\")]") && cs_code.contains("string? Alias")
+    );
+    assert!(
+        cs_code.contains("[property: XmlElement(\"tag\")]")
+            && cs_code.contains("List<string>? Tag")
+    );
+    assert!(cs_code.contains("public Account() : this("));
+
+    // Verify .NET build and test driver
+    let app_dir = dir.path().join("cli_csharp_app");
+    let init_status = Command::new("dotnet")
+        .args([
+            "new",
+            "console",
+            "-o",
+            app_dir.to_str().unwrap(),
+            "-n",
+            "CrmCliApp",
+        ])
+        .status()
+        .expect("Failed to run dotnet new console");
+    assert!(init_status.success(), "dotnet new console failed");
+
+    fs::copy(&generated_file, app_dir.join("Customer.cs")).unwrap();
+
+    fs::write(
+        app_dir.join("Program.cs"),
+        r#"using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Xml.Serialization;
+using Enterprise.Crm;
+
+public class Program
+{
+    public static int Main()
+    {
+        var acc = new Account(
+            Id: 999,
+            Name: "Enterprise LLC",
+            Tier: AccountTier.Enterprise,
+            Balance: 5000.75m,
+            Alias: "EntCorp",
+            Tag: new List<string> { "b2b", "tier1" }
+        );
+
+        if (!acc.Tier.IsValid() || acc.Tier.ToXmlValue() != "enterprise")
+        {
+            Console.WriteLine("Tier enum methods failed");
+            return 1;
+        }
+
+        var serializer = new XmlSerializer(typeof(Account));
+        using var sw = new StringWriter();
+        serializer.Serialize(sw, acc);
+        var xml = sw.ToString();
+
+        using var sr = new StringReader(xml);
+        var decoded = (Account?)serializer.Deserialize(sr);
+        if (decoded == null)
+        {
+            Console.WriteLine("Deserialization failed");
+            return 1;
+        }
+
+        if (decoded.Id != 999 || decoded.Name != "Enterprise LLC" || decoded.Tier != AccountTier.Enterprise || decoded.Balance != 5000.75m)
+        {
+            Console.WriteLine("Account fields mismatch");
+            return 1;
+        }
+
+        if (decoded.Alias != "EntCorp" || decoded.Tag == null || decoded.Tag.Count != 2)
+        {
+            Console.WriteLine("Alias or Tag mismatch");
+            return 1;
+        }
+
+        Console.WriteLine("E2E C# CLI test passed successfully!");
+        return 0;
+    }
+}
+"#,
+    )
+    .unwrap();
+
+    let build_status = Command::new("dotnet")
+        .args(["build", "--warnaserror"])
+        .current_dir(&app_dir)
+        .status()
+        .expect("Failed to run dotnet build");
+    assert!(
+        build_status.success(),
+        "dotnet build failed on CLI generated C# files"
+    );
+
+    let run_status = Command::new("dotnet")
+        .args(["run"])
+        .current_dir(&app_dir)
+        .status()
+        .expect("Failed to run dotnet run");
+    assert!(
+        run_status.success(),
+        "dotnet run failed on CLI generated C# files"
+    );
+}

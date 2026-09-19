@@ -7,6 +7,7 @@ use std::process::{self, Command};
 use clap::{Args, Parser, Subcommand};
 use config::WorkspaceManifest;
 use polyxml::codegen::cpp::{CppCodegen, CppMode, CppOptions};
+use polyxml::codegen::csharp::{CSharpCodegen, CSharpOptions, CSharpRecordKind};
 use polyxml::codegen::go::{GoCodegen, GoOptions};
 use polyxml::codegen::java::{JavaCodegen, JavaOptions};
 use polyxml::codegen::python::{PythonBackend, PythonCodegen, PythonOptions};
@@ -535,6 +536,31 @@ fn emit_target_code(
             }
             Ok(())
         }
+        "csharp" | "c#" | "cs" => {
+            let ns = opts.package.unwrap_or("Generated");
+            let file_stem = schema_path
+                .file_stem()
+                .map(|s| s.to_string_lossy())
+                .unwrap_or_else(|| "Models".into());
+
+            let options = CSharpOptions {
+                namespace: ns.to_string(),
+                emit_xml_attributes: true,
+                emit_validation: true,
+                record_kind: CSharpRecordKind::Class,
+                use_file_scoped_namespaces: true,
+                emit_root_records: true,
+            };
+
+            let codegen = CSharpCodegen::new(options);
+            let files = codegen.generate_files(ir, &file_stem);
+
+            for (filename, code) in files {
+                let file_path = out_dir.join(filename);
+                fs::write(file_path, code)?;
+            }
+            Ok(())
+        }
         _ => emit_target_placeholder(lang, out_dir, schema_path, ir),
     }
 }
@@ -647,6 +673,14 @@ fn run_language_formatter(lang: &str, dir: &Path) {
             let _ = Command::new("google-java-format")
                 .args(["-i", dir_str])
                 .status();
+        }
+        "csharp" | "c#" | "cs" => {
+            let status = Command::new("csharpier").args([dir_str]).status();
+            if status.is_err() || !status.as_ref().map(|s| s.success()).unwrap_or(false) {
+                let _ = Command::new("dotnet")
+                    .args(["format", "whitespace", dir_str])
+                    .status();
+            }
         }
         _ => {}
     }
