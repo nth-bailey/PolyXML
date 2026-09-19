@@ -1,7 +1,10 @@
+pub mod codegen;
 pub mod converters;
 pub mod error;
+pub mod ir;
 pub mod parser;
 pub mod schema;
+pub mod schema_parser;
 pub mod serializer;
 pub mod value;
 

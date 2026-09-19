@@ -1,0 +1,802 @@
+﻿Next-Generation Polyglot XML Data-Binding and Schema Compiler (PolyXML): Technical Evaluation and Architectural Blueprint
+Executive Summary: Market Stagnation and the Modernization Opportunity
+XML and W3C XML Schema (XSD) underpin the critical transactional infrastructure of global commerce, governance, and industry1. Core protocols across interbank financial messaging (ISO 20022)1, civil aviation telematics (FIXM, AIXM), defense command and control, healthcare information interchange (HL7 CDA/FHIR XML), and enterprise resource planning rely strictly on deeply nested, heavily constrained XML schemas3. These standards enforce stringent data validation rules through structural facets, substitution groups, and identity constraints1.
+Despite the enduring centrality of XML in mission-critical operations, the developer tooling landscape for XML data-binding and schema compilation has suffered from chronic stagnation7. While modern serialization ecosystems such as Protocol Buffers (protoc), FlatBuffers (flatc), and OpenAPI have evolved unified, cross-platform compilers driven by high-performance intermediate representations and zero-cost abstractions10, XML toolchains remain fragmented in language-specific silos12. Contemporary software engineering teams targeting modern language runtimes—including Rust 2021/2024, C++20/23, Java 21+, Python 3.12+, Go, and TypeScript—face a stark compromise14. They are compelled to choose between unmaintained open-source libraries, antiquated code generators that emit legacy Java Beans or pre-C++11 code laden with raw pointers, or proprietary commercial toolchains burdened with restrictive dual licenses and massive monolithic runtimes like Apache Xerces-C++13.
+This systemic tooling failure creates substantial operational friction9. Industrial schemas frequently cause existing compilers to panic, exhaust system memory, or emit non-compiling source code due to unresolved cyclic inclusions, ambiguous namespace shadowing, and poorly mapped polymorphic choices5. At runtime, traditional XML data-binding solutions incur severe performance penalties caused by character-at-a-time parsing state machines, intermediate Document Object Model (DOM) allocations, and redundant string transcoding13.
+The PolyXML initiative resolves this stagnation by delivering an industrial-grade, polyglot schema compiler and streaming data-binding runtime. Implemented in pure Rust, PolyXML couples a multi-phase schema parser and an optimizing intermediate representation (PolyXML-IR) with a SIMD-vectorized streaming parser runtime19. By leveraging hardware-accelerated structural classification and carry-less multiplication (PCLMULQDQ/PMULL), PolyXML eliminates intermediate DOM overhead and achieves multi-gigabyte-per-second deserialization directly into idiomatically mapped, immutable native structures13. PolyXML provides a single, cohesive developer experience across modern platforms, matching the operational rigor of protoc while mastering the structural complexity of W3C XML Schema10.
+Landscape Analysis of Existing XML Binding and Code Generation Toolchains
+The legacy XML binding ecosystem is fragmented across distinct language ecosystems, with each runtime environment reflecting historical design constraints rather than modern programming patterns7.
+Java Ecosystem
+The Java platform established early architectural patterns for XML data-binding, but its primary tooling remains constrained by legacy Java Enterprise Edition (Java EE) paradigms12.
+* Jakarta XML Binding (JAXB / xjc): JAXB was integrated into the Java standard library in Java 6 and subsequently extracted in Java 11, moving under the stewardship of the Eclipse Foundation within Jakarta EE12. The internal Abstract Syntax Tree (AST) of the xjc compiler lowers XML Schema components into classical JavaBeans characterized by public zero-argument constructors, mutable private fields, and pervasive getter and setter methods23. The architectural limitation of xjc lies in its inability to emit modern Java idioms15. It cannot natively generate immutable record types, sealed interfaces, or pattern-matching hierarchies without third-party plugins that destabilize the compilation pipeline15. JAXB remains tied to runtime reflection, dynamic bytecode inspection, and JAXP/StAX parsing layers that generate extensive heap allocations, complicating its use in GraalVM native images and modern containerized microservices12.
+* Apache XMLBeans: XMLBeans departs from standard object-relational mapping by generating Java interfaces that extend XmlObject, backed internally by a persistent XML store12. This design allows applications to navigate the full XML Infoset—including comments, whitespace, and precise attribute ordering—while retaining static type accessors26. However, this fidelity imposes a heavy cost: every access operation traverses internal pointer trees, leading to memory bloat that frequently exceeds the raw document size by an order of magnitude23. The build tooling relies on complex Apache Ant and Maven configurations, and the project exhibits limited optimization for modular Java runtimes.
+* EclipseLink MOXy: Developed as an optimized, enterprise-grade JAXB implementation, MOXy supports dynamic mapping through external XML configuration files without requiring schema annotations within source files12. While it handles complex XPath-based structural mappings and delivers higher throughput than the JAXB reference implementation12, it remains architecturally committed to mutable JavaBean lifecycles and carries heavy enterprise runtime dependencies.
+* JiBX: JiBX bypasses runtime reflection by utilizing direct bytecode enhancement via ASM or BCEL to bind XML streams directly to Java class fields26. In historical benchmarks, JiBX consistently demonstrated superior throughput and minimal memory consumption26. Nevertheless, JiBX requires a convoluted post-compilation bytecode manipulation step, and the compiler frequently fails on Windows environments due to long file paths generated from complex namespaces26. The project is effectively unmaintained, leaving it incompatible with modern JVM module boundaries and contemporary bytecode verifiers.
+C++ Ecosystem
+The C++ data-binding domain is defined by a reliance on legacy dependencies and restrictive commercial licensing13.
+* CodeSynthesis XSD: CodeSynthesis XSD represents the long-standing standard for C++ schema compilation, offering two operational modes: an in-memory object model (C++/Tree) and an event-driven parser hierarchy (C++/Parser)13. The primary liability of CodeSynthesis XSD is its architectural dependency on Apache Xerces-C++ for XML parsing, schema validation, and character transcoding17. Xerces-C++ introduces substantial binary footprints, deep heap allocation patterns, legacy custom collection classes, and 16-bit XMLCh string encodings that necessitate continuous, expensive transcoding between UTF-8 and UTF-1617. The generated code relies on pre-C++11 idioms, using raw pointers, manual memory ownership semantics, and Boost-derived smart pointer wrappers rather than modern std::unique_ptr, std::optional, or std::variant4. Furthermore, CodeSynthesis enforces a dual-licensing structure (GPL v2 and proprietary commercial licenses) that imposes steep commercial fees on proprietary software distribution13.
+* CodeSynthesis XSD/e: Engineered specifically for embedded systems and resource-constrained environments, XSD/e eliminates the Xerces-C++ dependency, providing the option to utilize Expat or a proprietary minimal parser17. While memory footprints are dramatically reduced18, the generated API is difficult to maintain: it lacks modern C++ type abstractions, enforces manual lifecycle management via intrusive reference counting, and restricts polymorphic schema expressiveness13.
+* gSOAP (wsdl2h / soapcpp2): Widely adopted for legacy SOAP/WSDL client and server implementations, gSOAP processes schemas into an internal C-style AST. The compiler emits macro-heavy C and C++ source files that rely on global state tables and unified serialization contexts. This design causes namespace collisions in multi-schema enterprise environments and exposes applications to memory corruption if serialization contexts are accessed concurrently. Licensing is divided between a restrictive GPL v2 model and proprietary commercial tiers.
+* Liquid XML Data Binder: A commercial, closed-source compiler producing C++ classes with extensive schema validation support. While offering robust coverage of XML Schema 1.0/1.1 features, its closed-source nature, per-seat and per-platform pricing models, and lack of integration with modern build tools like CMake and Meson limit its viability in modern cloud infrastructure.
+Python Ecosystem
+Python's dynamic type system has historically clashed with the strict grammatical models enforced by XML Schema30.
+* xsdata: xsdata represents the most architecturally modern open-source tool in the Python ecosystem30. It employs a multi-stage compilation pipeline: a SchemaParser ingest layer, a ClassBuilder mapping stage, an optimization/reduction pass (ClassReducer), and template-based code emission (CodeWriter)30. It targets Python standard @dataclass, attrs, and Pydantic v2 models, fully supporting PEP 484 type annotations and XML Schema 1.1 test suites30. However, its runtime performance is bottlenecked by its parsing layer: it relies on Python-level traversal over lxml or native xml.etree event streams, introducing latency when parsing multi-megabyte payloads in high-throughput microservices30.
+* generateDS: An early Python data-binding compiler that emits single, monolithic source files containing raw Python classes with hand-coded parsing methods. The generated code lacks modern typing annotations, relies on archaic string-matching dispatch tables, and fails when encountering substitution groups, circular type graphs, or complex inheritance models.
+Rust Ecosystem
+The Rust ecosystem contains high-performance lower-level XML parsers, but lacks an industrial, end-to-end schema compiler9.
+* xsd-parser: Originating as a fork of xsd-parser-rs, this crate underwent an architectural rewrite to introduce a decoupled compilation pipeline comprising Parser, Interpreter, Optimizer, Generator, and Renderer stages19. It parses schemas into a normalized MetaTypes intermediate representation, applies type deduplication, and generates Rust structs annotated for quick-xml or serde-xml-rs5. Despite this modular design, the tool exhibits frequent compilation failures when processing large enterprise schemas (such as ISO 20022 or WSDL specifications), struggling with circular type definitions, nested choices, and substitution groups5.
+* quick-xml Serde Integration: While quick-xml is an exceptionally fast, low-level pull parser with zero-copy capabilities36, its Serde deserialization backend cannot bridge the architectural gap between Serde's generic data model and XML semantics34. The Serde model assumes self-describing key-value mappings or homogenous sequences34. It cannot natively represent mixed content, distinguish between attributes and child elements without custom wrappers, or handle ordered sequences that contain duplicate element names5.
+* zeep (mibes404/zeep): An effort to deliver a Prost-like code generation experience for WSDL and XSD files in Rust, targeting yaserde9. When applied to complex industrial schemas like the VMware vSphere WSDL, zeep fails: it cannot traverse multi-level type hierarchies, mismanages type aliases, generates invalid Rust syntax for complex types, and panics during AST traversal9.
+Go and TypeScript Ecosystems
+* Go (xgen, goxsd, xsd-2-go): xgen processes XSD files into Go structs compatible with encoding/xml22. However, Go’s structural type system cannot capture XML Schema choice semantics without collapsing xs:choice branches into structs where all fields are optional pointers22. This strips out compile-time mutual exclusivity22. Furthermore, Go's standard xml tag annotations lack native support for multi-namespace isolation and dynamic validation facets8.
+* TypeScript (cxsd, xgen): cxsd processes schemas into TypeScript declaration files (.d.ts) alongside runtime parsing helpers1. However, development on cxsd has ceased; it lacks support for modern ES module standards, cannot resolve circular schema imports present in schemas such as ISO 20022, and lacks integrated runtime schema validation based on facets1.
+Comparative Evaluation Matrix of Existing Tools
+The following matrix provides an architectural comparison of existing XML binding and code generation tools across the major language ecosystems:
+
+
+Language
+	Tool / Framework
+	AST / IR Design Model
+	Underlying Runtime Engine
+	Licensing Structure
+	Modern Idiom Alignment
+	Critical Operational Friction Points
+	Java
+	Jakarta JAXB (xjc)12
+	Hierarchical Java Model AST; maps XML to JavaBeans12
+	JAXP / StAX (Woodstox, Sun SJSXP)
+	EPL 2.0 / GPL v2 with CPE12
+	Low; generates mutable JavaBeans with no-arg constructors15
+	No native support for immutable records or sealed interfaces; reflection overhead; unmaintained plugins15.
+	Java
+	Apache XMLBeans12
+	In-memory XML Store maintaining full Infoset26
+	Proprietary XML store over StAX26
+	Apache 2.0
+	Very Low; generates classes extending XmlObject
+[cite: 26]
+	Extreme memory bloat; performance degradation on large documents; obsolete build plugins23.
+	Java
+	EclipseLink MOXy12
+	Extended JAXB AST with dynamic XPath metadata12
+	JAXP / StAX with native optimizations12
+	EPL 2.0 / EDL 1.0
+	Low to Moderate; enterprise JavaBean focus12
+	Complex enterprise configuration; heavy runtime dependencies; lacks modern Java 21+ record ergonomics12.
+	Java
+	JiBX43
+	Direct binding definition mapped to bytecode AST26
+	Custom streaming pull parser with bytecode hooks26
+	BSD 3-Clause
+	Obsolete; pre-generics architecture26
+	Abandoned project; post-compilation bytecode instrumentation breaks modern JVM modularity26.
+	C++
+	CodeSynthesis XSD13
+	Dual-target AST (C++/Tree object graph, C++/Parser SAX)13
+	Apache Xerces-C++17
+	Dual: GPL v2 / Commercial13
+	Low; pre-C++11 idioms, auto_ptr/boost wrappers4
+	Hard dependency on Xerces-C++; massive binary footprint; UTF-16 string transcoding overhead; costly commercial licensing17.
+	C++
+	CodeSynthesis XSD/e29
+	Resource-constrained event AST13
+	Expat or minimal internal parser17
+	Dual: GPL v2 / Commercial13
+	Very Low; C-like C++ without STL containers29
+	Manual memory management; lack of modern smart pointers or std::string_view; high integration friction29.
+	C++
+	gSOAP (soapcpp2)
+	C-struct symbol table AST
+	Custom low-level socket and XML parser
+	Dual: GPL v2 / Commercial
+	Very Low; legacy C/C++ procedural code
+	Heavy macro reliance; global state variables; namespace collisions; fragile memory ownership models.
+	Python
+	xsdata
+[cite: 30]
+	Explicit IR (Class, Attr, Extension) with reducer pipeline30
+	Standard lxml or Python xml.etree
+[cite: 31, 32]
+	MIT32
+	High; supports @dataclass(slots=True) and Pydantic v231
+	Deserialization speed bound by Python interpreter and lxml overhead on complex schemas30.
+	Python
+	generateDS
+	Concrete syntax tree mapped directly to Python classes
+	Python xml.sax / minidom
+	MIT
+	Very Low; procedural legacy Python classes
+	Monolithic file output; lack of type hints; failure on substitution groups and recursive definitions.
+	Rust
+	xsd-parser
+[cite: 19]
+	Decoupled pipeline (Schemas -> MetaTypes -> DataTypes)20
+	quick-xml or serde-xml-rs
+[cite: 5, 19]
+	MIT / Apache 2.044
+	High; idiomatic Rust structs and enums5
+	Fragile on complex multi-namespace schemas; struggles with circular dependencies and complex choice models5.
+	Rust
+	zeep
+[cite: 38]
+	WSDL/XSD AST targeting yaserde derive attributes38
+	yaserde pull parser9
+	MIT38
+	Moderate; Rust structs with macro annotations38
+	Panics on complex enterprise schemas; cannot resolve multi-level nested complex types9.
+	Go
+	xgen
+[cite: 39]
+	Direct syntax mapping from SAX-like schema parsing22
+	Go standard library encoding/xml
+[cite: 39]
+	BSD 3-Clause22
+	Moderate; standard Go structs39
+	xs:choice flattened to optional pointer fields; poor namespace handling; no facet validation8.
+	TypeScript
+	cxsd
+[cite: 1]
+	Internal JSON-like schema representation1
+	Custom JavaScript streaming runtime41
+	MIT
+	Low to Moderate; ambient .d.ts classes42
+	Abandoned project; no ES Module support; crashes on circular imports in ISO 200221.
+	Modern Schema Compiler Best Practices: Architectural Lessons from Protobuf, FlatBuffers, OpenAPI, and QuickType
+Modern polyglot code generation toolchains have solved cross-platform compilation by decoupling the compiler frontend from backend code emission, establishing robust intermediate type systems, and standardizing extension interfaces10.
+Compiler Frontend Decoupling: Protobuf (protoc) and FlatBuffers (flatc)
+The design of protoc demonstrates the value of isolating the compiler frontend from backend code generation targets10. The protoc compiler acts as a universal parser and validator10. It ingests .proto files, constructs an in-memory concrete syntax tree, validates semantic invariants across imports, and lowers the validated definitions into a serialized binary payload: the FileDescriptorSet10.
+
+
+
+
+
+
+Schema Files (.proto)
+        │
+        ▼
+Compiler Frontend (protoc)
+        │  Parses, validates, and resolves symbol table
+        ▼
+Intermediate Representation (FileDescriptorSet)
+        │  Marshals CodeGeneratorRequest via standard input
+        ├──────────────────────────┬──────────────────────────┐
+        ▼                          ▼                          ▼
+Plugin: protoc-gen-go      Plugin: protoc-gen-rust    Plugin: protoc-gen-python
+        │                          │                          │
+        ▼                          ▼                          ▼
+Go Structs                 Rust Types                 Python Models
+
+The generation phase is completely decoupled through an inter-process communication (IPC) protocol executing over standard input and standard output (stdin/stdout)10. When a specific language generator is invoked—such as protoc-gen-go or protoc-gen-rust—the main protoc process launches the plugin as an independent child process, transmitting a binary CodeGeneratorRequest protocol buffer payload over stdin10. This payload encapsulates the full schema descriptor tree alongside user-specified generator parameters10. The plugin executes its generation logic in isolation and writes a binary CodeGeneratorResponse containing the synthesized file names, file contents, and insertion points back to stdout10.
+This architecture provides fundamental engineering advantages:
+* The compiler frontend is implemented once in a systems language, guaranteeing identical parsing and validation semantics across all target platforms10.
+* Language plugin authors operate in their target language's native environment, writing generator logic using familiar native data structures without needing to navigate the internal C++ codebase of the compiler10.
+* A crash or fatal error in a specific code generator cannot corrupt the compiler state or compromise other target language generators10.
+FlatBuffers (flatc) follows a structurally similar approach by converting schemas into a unified abstract syntax tree, but optimizes generation via a monolithic, templated in-process compiler written in C++. Crucially, flatc can serialize its validated AST into a binary schema reflection format (.bfbs). This allows dynamic environments, such as runtime validation proxies or dynamic scripting languages, to inspect type layouts without requiring ahead-of-time code generation.
+Type Unification and Normalization: OpenAPI Generator and QuickType
+OpenAPI Generator and QuickType highlight the differences between template-driven string generation and formal type-graph transformations11.
+OpenAPI Generator parses OpenAPI specifications into an object model, extracts schemas into data maps, and relies on text-substitution template engines (Mustache and Handlebars) to emit source code. This reliance on string templates presents major architectural failure modes:
+* Template Logic Leaks: Complex structural requirements—such as determining whether a type requires indirection to break memory layout cycles in Rust or evaluating lifetime scopes—must be expressed inside template conditional tags, leading to severe maintenance complexity7.
+* Target Inconsistency: Because logic is duplicated across hundreds of disparate template files, edge-case behavior diverges significantly between languages; an OpenAPI specification that compiles into valid Java may yield non-compiling TypeScript or Rust.
+QuickType resolves this issue through a unified Type Graph architecture (TypeGraph)11. Rather than passing raw AST dictionaries directly to text templates, QuickType constructs a directed graph of types and executes multiple optimization and normalization passes11:
+* Equivalence Graph Rewriting: QuickType detects structurally equivalent anonymous schemas across different endpoints and unifies them into canonical shared types.
+* Union Simplification: Nested unions and disjoint sum types are flattened into minimal canonical representations.
+* Programmatic Renderers: QuickType replaces text templates with programmatic language renderers11. Each renderer interacts with structured code-builder abstractions that manage identifier sanitization, scope indentation, import tracking, and type formatting programmatically11.
+Pluggable Architecture for PolyXML
+PolyXML synthesizes these modern architectural patterns by adopting a unified intermediate representation (PolyXML-IR) combined with a hybrid plugin architecture10:
+
+
+
+
+
+
+                     PolyXML Ingestion & Normalization
+                                    │
+                                    ▼
+                  [ Canonical Type Graph: PolyXML-IR ]
+                                    │
+           ┌────────────────────────┴────────────────────────┐
+           ▼                                                 ▼
+Tier-1 In-Process Backends                         External Plugin Boundary
+(Rust, C++, Java, Python, Go, TS)             (WASI Sandbox or Stdin/Stdout IPC)
+           │                                                 │
+           ▼                                                 ▼
+High-Speed Programmatic Emission              Community & Enterprise Custom Backends
+
+* Tier-1 In-Process Backends: Native generators for Rust, C++20/23, Java 21+, Python 3.12+, Go, and TypeScript are compiled directly into the polyxml binary15. This provides maximum execution speed and zero-dependency distribution14.
+* Tier-2 Isolated Extension Boundary: External plugins can be authored in any language via standard Protobuf-compatible CodeGeneratorRequest payloads transmitted over standard input/output10. Furthermore, PolyXML embeds a sandboxed WebAssembly (WASI) runtime using Wasmtime. This enables developers to distribute custom company-internal generators as compiled, portable .wasm modules that run cross-platform without host environment dependencies.
+Deep-Dive Technical Engineering: Mapping Complex XSD Specifications to Modern Type Systems
+Translating W3C XML Schema semantics into modern type systems involves resolving fundamental paradigm mismatches30. XML Schema is structurally dynamic, supports open content models, permits cyclic dependency graphs, and enforces validation facets outside conventional static type models1.
+xs:choice and Substitution Groups: Algebraic Data Types
+An xs:choice construct specifies that only one out of a collection of child elements or model groups may appear within an instance document. Substitution groups extend this concept schema-wide by allowing external elements to declare themselves as valid substitutes for an abstract or concrete head element5. Legacy binding tools typically map xs:choice to a bag of nullable pointer fields on a single class, destroying compile-time exclusivity guarantees and requiring tedious runtime assertions8.
+PolyXML models choices and substitution groups in its IR as tagged sums and maps them directly to native Algebraic Data Types (ADTs).
+Rust: Tagged Enums with Associated Data
+
+
+
+
+
+
+Rust
+#[derive(Debug, Clone, PartialEq)]
+pub enum PaymentInstrumentChoice {
+   CreditCard(CreditCardDetails),
+   DirectDebit(DirectDebitDetails),
+   SepaTransfer(SepaTransferDetails),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TransactionInstruction {
+   pub tx_id: String,
+   pub instrument: PaymentInstrumentChoice,
+}
+
+C++20/23: std::variant and Pattern Matching
+
+
+
+
+
+
+C++
+#include <variant>
+#include <string>
+
+struct CreditCardDetails { /* ... */ };
+struct DirectDebitDetails { /* ... */ };
+struct SepaTransferDetails { /* ... */ };
+
+using PaymentInstrumentChoice = std::variant<
+   CreditCardDetails,
+   DirectDebitDetails,
+   SepaTransferDetails
+>;
+
+struct TransactionInstruction {
+   std::string tx_id;
+   PaymentInstrumentChoice instrument;
+};
+
+// Consumption via std::visit and overloaded pattern matching
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+void process_instruction(const TransactionInstruction& tx) {
+   std::visit(overloaded {
+       [](const CreditCardDetails& cc) { /* handle CC */ },
+       [](const DirectDebitDetails& dd) { /* handle Direct Debit */ },
+       [](const SepaTransferDetails& sepa) { /* handle SEPA */ }
+   }, tx.instrument);
+}
+
+Java 21+: Sealed Interfaces and Pattern Matching Records
+
+
+
+
+
+
+Java
+package org.iso20022.payments;
+
+public record TransactionInstruction(
+   String txId,
+   PaymentInstrument instrument
+) {
+   public sealed interface PaymentInstrument 
+       permits CreditCard, DirectDebit, SepaTransfer {}
+
+   public record CreditCard(String cardNumber, String expiry) implements PaymentInstrument {}
+   public record DirectDebit(String iban, String bic) implements PaymentInstrument {}
+   public record SepaTransfer(String sepaMandateId) implements PaymentInstrument {}
+}
+
+// Consumption via switch pattern matching
+public void process(TransactionInstruction tx) {
+   switch (tx.instrument()) {
+       case TransactionInstruction.CreditCard cc -> handleCreditCard(cc);
+       case TransactionInstruction.DirectDebit dd -> handleDirectDebit(dd);
+       case TransactionInstruction.SepaTransfer sepa -> handleSepa(sepa);
+   }
+}
+
+Python 3.12+: Discriminated Unions with Pydantic v2
+
+
+
+
+
+
+Python
+from __future__ import annotations
+from typing import Annotated, Literal, Union
+from pydantic import BaseModel, Field
+
+class CreditCard(BaseModel):
+   kind: Literal["credit_card"] = "credit_card"
+   card_number: str
+
+class DirectDebit(BaseModel):
+   kind: Literal["direct_debit"] = "direct_debit"
+   iban: str
+
+class SepaTransfer(BaseModel):
+   kind: Literal["sepa_transfer"] = "sepa_transfer"
+   sepa_mandate_id: str
+
+PaymentInstrument = Annotated[
+   Union[CreditCard, DirectDebit, SepaTransfer],
+   Field(discriminator="kind")
+]
+
+class TransactionInstruction(BaseModel):
+   tx_id: str
+   instrument: PaymentInstrument
+
+Untyped Open Content: xs:any and Wildcards
+The xs:any definition permits arbitrary XML elements from specified or unconstrained namespaces to appear within an enclosing type5. In legacy tools, the presence of xs:any frequently causes the compiler to fall back to generic DOM nodes (such as org.w3c.dom.Element or xerces::DOMElement), discarding static type guarantees for surrounding fields28.
+PolyXML isolates open content into a bounded container, preserving strong typing across all declared schema fields:
+
+
+
+
+
+
+Rust
+#[derive(Debug, Clone, PartialEq)]
+pub struct RawXmlElement {
+   pub namespace: Option<String>,
+   pub local_name: String,
+   pub attributes: std::collections::BTreeMap<String, String>,
+   pub raw_payload: Vec<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExtensibleHeader {
+   pub message_id: String,
+   pub timestamp: String,
+   pub any_elements: Vec<RawXmlElement>,
+}
+
+During streaming deserialization, the runtime identifies unknown or wildcard tags, records their exact byte offsets from the input buffer without intermediate DOM construction, and encapsulates the slice directly within RawXmlElement5.
+Disambiguating the Tri-State Dilemma: Nillable (xsi:nil) vs Optional (minOccurs="0")
+A subtle challenge in XML Schema data-binding is the semantic divergence between an omitted element and an element explicitly marked as nil:
+* Optional Element (minOccurs="0", nillable="false"): The tag may be absent from the document. If present, it must contain a valid value.
+* Mandatory Nillable Element (minOccurs="1", nillable="true"): The tag must appear in the document, but it may carry xsi:nil="true" to indicate a database-null state.
+* Optional Nillable Element (minOccurs="0", nillable="true"): The element may be omitted entirely, present with a value, or present with xsi:nil="true".
+Collapsing these distinct semantic states into a single standard optional container (such as Rust's Option<T> or Java's Optional<T>) causes data loss: the serializer cannot determine whether None should omit the tag or serialize <element xsi:nil="true"/>.
+PolyXML formalizes this distinction by modeling a first-class tri-state type within the PolyXML-IR:
+
+
+
+
+
+
+Rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Nillable<T> {
+   #[default]
+   Absent,
+   Nil,
+   Present(T),
+}
+
+impl<T> Nillable<T> {
+   pub fn is_absent(&self) -> bool { matches!(self, Self::Absent) }
+   pub fn is_nil(&self) -> bool { matches!(self, Self::Nil) }
+   pub fn value(&self) -> Option<&T> {
+       if let Self::Present(v) = self { Some(v) } else { None }
+   }
+}
+
+In target languages without a native tri-state, PolyXML emits equivalent constructs:
+* Rust: Emits the zero-overhead enum Nillable<T>5.
+* C++: Emits polyxml::nillable<T> or std::optional<std::optional<T>>.
+* Java: Emits a specialized immutable record: public record Nillable<T>(Status status, T value).
+* Python: Emits a type union utilizing a sentinel singleton: Union[T, Literal[XsiNil.NIL], None].
+Resolving Cyclic Graphs, Cross-Namespace Scoping, and Component Shadowing
+Industrial schemas routinely incorporate circular references (e.g., recursive data structures), multi-namespace imports (<xs:import>), transitive inclusions (<xs:include>), and schema component redefinitions (<xs:redefine>, <xs:override>)1.
+PolyXML handles symbol tables and dependency graphs through a two-phase architecture:
+* Phase 1: Ingestion and Decentralized Symbol Graph Construction: Every imported or included XSD is parsed into an unlinked schema module. The parser maintains an absolute URI registry. Recursive <xs:include> chains are deduplicated via canonical URL hashes.
+* Phase 2: Topological Sort and Strongly Connected Component (SCC) Analysis: The compiler constructs a directed graph of all type dependencies. Strongly Connected Components (SCCs) are identified using Tarjan's algorithm to isolate recursive cycles.
+* Cycle Breaking in Target Languages: For target languages that require known compile-time memory layouts (Rust and C++), cycles will cause compilation failures unless an indirection boundary is introduced7. PolyXML analyzes the cycle and automatically injects heap indirection at the optimal cut point7:
+   * In Rust, the back-reference field is boxed: Option<Box<T>>7.
+   * In C++, the compiler injects forward declarations and wraps the recursive edge in std::unique_ptr<T>.
+   * In Java and Python, reference semantics accommodate cycles naturally, requiring only forward type annotations32.
+* Namespace Isolation and Shadowing: Types are internally addressed via fully qualified universal resource identifiers (URIs): QName(URI, LocalName). Code generators project each distinct XML namespace into a corresponding native module, namespace, or package hierarchy, preventing collisions when two schemas declare identical local type names5.
+Translation of Restriction Facets into Static and Runtime Invariants
+XSD specifies extensive restriction facets on simple types: xs:pattern (regular expressions), xs:minInclusive/xs:maxInclusive, xs:minLength/xs:maxLength, and xs:totalDigits5. Naive compilers discard these facets during compilation, forcing developers to implement secondary validation suites manually8.
+PolyXML preserves these facets within the IR and translates them into native validation logic:
+* Python: Generated models incorporate validation parameters directly into Pydantic fields (Field(pattern=r"...", ge=0, le=100))33.
+* Java: Generates Jakarta Bean Validation annotations (@Pattern, @Min, @Max, @Size) directly onto record components15.
+* Rust & C++: Generates checked constructors (e.g., Type::new(...) -> Result<Self, ValidationError>) utilizing compile-time assertions or lazily compiled static regular expressions (std::sync::OnceLock<regex::Regex>) to validate constraints upon instantiation5.
+Target Language Code Generation Requirements (Modern Idioms for 2024–2026)
+To ensure rapid adoption, PolyXML generates output strictly adhering to contemporary language standards, eliminating legacy runtime idioms.
+Python 3.12+ Target Requirements
+Python applications demand memory efficiency and compatibility with modern asynchronous web frameworks30. PolyXML provides two configurable generation profiles:
+* Standard Library Profile: Emits @dataclass(slots=True, kw_only=True). The use of __slots__ reduces memory overhead by preventing the creation of per-instance dynamic __dict__ dictionaries, which is critical when parsing large datasets31. Specifying kw_only=True resolves structural inheritance issues where optional fields with default values precede required fields in subclasses31.
+* Pydantic v2 Profile: Emits BaseModel classes configured with ConfigDict(defer_build=True, frozen=True) to optimize initialization performance and enforce immutability33.
+
+
+
+
+
+
+Python
+# Generated by PolyXML Compiler - Do Not Edit
+from __future__ import annotations
+from dataclasses import dataclass, field
+from decimal import Decimal
+from typing import Optional
+
+@dataclass(slots=True, kw_only=True)
+class PostalAddress:
+   street_name: str = field(
+       metadata={"xml_name": "StrtNm", "namespace": "urn:iso:std:iso:20022:tech:xsd:pain.001.001.09"}
+   )
+   building_number: Optional[str] = field(
+       default=None, 
+       metadata={"xml_name": "BldgNb"}
+   )
+   postal_code: str = field(metadata={"xml_name": "PstCd"})
+   town_name: str = field(metadata={"xml_name": "TwnNm"})
+   country: Optional[str] = field(default=None, metadata={"xml_name": "Ctry"})
+
+Rust (2021 / 2024 Edition) Target Requirements
+Generated Rust code prioritizes zero-copy borrowing, memory safety, and minimal stack frame overhead20:
+* Generates structs utilizing borrowed string slices (std::borrow::Cow<'a, str>), enabling zero-copy deserialization directly from memory-mapped files or network buffers without heap allocation37.
+* Derives standard foundational traits: #[derive(Debug, Clone, PartialEq, Eq, Hash)].
+* Avoids Serde's structural mismatch by implementing direct token-based deserialization traits (polyxml::XmlRead, polyxml::XmlWrite)19.
+
+
+
+
+
+
+Rust
+// Generated by PolyXML Compiler - Do Not Edit
+use polyxml_runtime::{XmlRead, XmlWrite, Deserializer, Serializer, Result};
+use std::borrow::Cow;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PostalAddress<'a> {
+   pub street_name: Cow<'a, str>,
+   pub building_number: Option<Cow<'a, str>>,
+   pub postal_code: Cow<'a, str>,
+   pub town_name: Cow<'a, str>,
+   pub country: Option<Cow<'a, str>>,
+}
+
+impl<'a> XmlRead<'a> for PostalAddress<'a> {
+   fn read_xml(reader: &mut Deserializer<'a>) -> Result<Self> {
+       // Direct non-allocating token matching
+       // ...
+       todo!()
+   }
+}
+
+Java 21+ Target Requirements
+PolyXML targets modern LTS Java platforms, abandoning legacy JavaBeans in favor of immutable data modeling15:
+* Generates shallowly immutable record declarations15.
+* Emits sealed interface hierarchies to model xs:choice and substitution groups, enabling switch pattern matching at the consumption call site25.
+* Emits modern annotations targeting Jackson 3.0 (tools.jackson) or Jakarta XML Binding without requiring legacy runtime dependencies56.
+
+
+
+
+
+
+Java
+// Generated by PolyXML Compiler - Do Not Edit
+package org.iso20022.pain001;
+
+import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+import java.util.Optional;
+
+@JacksonXmlRootElement(localName = "PstlAdr", namespace = "urn:iso:std:iso:20022:tech:xsd:pain.001.001.09")
+public record PostalAddress(
+   @JacksonXmlProperty(localName = "StrtNm")
+   String streetName,
+
+   @JacksonXmlProperty(localName = "BldgNb")
+   Optional<String> buildingNumber,
+
+   @JacksonXmlProperty(localName = "PstCd")
+   String postalCode,
+
+   @JacksonXmlProperty(localName = "TwnNm")
+   String townName,
+
+   @JacksonXmlProperty(localName = "Ctry")
+   Optional<String> country
+) {}
+
+C++20 / C++23 Target Requirements
+PolyXML generates C++ code free from legacy dependencies like Apache Xerces-C++13:
+* Supports dual delivery: Header-Only template libraries or C++20 Named Modules (import polyxml.models;) configured for CMake 3.28+ FILE_SET CXX_MODULES58.
+* Uses std::string_view for non-owning views over input buffers, enabling zero-copy deserialization.
+* Emits std::optional, std::variant, and std::vector for standard memory layout.
+* Enforces static structural constraints via C++20 Concepts.
+
+
+
+
+
+
+C++
+// Generated by PolyXML Compiler - Do Not Edit
+module;
+#include <string_view>
+#include <optional>
+export module iso20022.pain001:postal_address;
+
+export namespace iso20022::pain001 {
+
+struct PostalAddress {
+   std::string_view street_name;
+   std::optional<std::string_view> building_number;
+   std::string_view postal_code;
+   std::string_view town_name;
+   std::optional<std::string_view> country;
+
+   constexpr bool validate() const noexcept {
+       return !street_name.empty() && !postal_code.empty() && !town_name.empty();
+   }
+};
+
+} // namespace iso20022::pain001
+
+Architectural Blueprint and Execution Roadmap for PolyXML
+PolyXML is designed to establish the same performance, ergonomics, and reliability standards for XML that Protocol Buffers and FlatBuffers established for binary interchange formats10.
+Compiler Frontend and PolyXML Intermediate Representation (PolyXML-IR)
+The compiler frontend is implemented entirely in safe Rust, executing through discrete compilation phases:
+* Schema Ingestion: Ingests XSD 1.0/1.1 and WSDL 1.1/2.0 specifications from local file systems or remote network URIs via an asynchronous non-blocking resolver19.
+* IR Construction: Converts concrete syntax nodes into a canonical type graph:
+
+
+
+
+
+
+Rust
+pub struct SchemaIR {
+   pub namespaces: Vec<NamespaceDeclaration>,
+   pub types: Vec<TypeDefinition>,
+   pub elements: Vec<ElementDeclaration>,
+   pub services: Vec<ServiceDefinition>,
+}
+
+pub struct NamespaceDeclaration {
+   pub prefix: String,
+   pub uri: String,
+   pub schema_location: Option<String>,
+}
+
+pub enum TypeDefinition {
+   Simple(SimpleType),
+   Complex(ComplexType),
+   Union(UnionType),
+   Enumeration(EnumType),
+}
+
+pub struct ComplexType {
+   pub id: TypeId,
+   pub name: QName,
+   pub is_abstract: bool,
+   pub content_model: ContentModel,
+   pub attributes: Vec<AttributeDefinition>,
+   pub documentation: Option<String>,
+}
+
+pub enum ContentModel {
+   Empty,
+   Simple(SimpleContentExtension),
+   Sequence(Vec<ModelGroupItem>),
+   Choice(Vec<ModelGroupItem>),
+   All(Vec<ModelGroupItem>),
+   OpenContent(Box<ContentModel>),
+}
+
+pub struct ModelGroupItem {
+   pub min_occurs: usize,
+   pub max_occurs: OccursLimit,
+   pub item: ModelItemKind,
+}
+
+pub enum ModelItemKind {
+   Element(ElementReference),
+   Group(GroupId),
+   Choice(Vec<ModelGroupItem>),
+}
+
+* Graph Optimization Pass: Resolves strongly connected components (SCCs) via Tarjan's algorithm, detects recursive type loops, and injects pointer boxing (Box<T>, std::unique_ptr<T>) at cycle boundaries7.
+Runtime Streaming Architecture and SIMD Hardware Acceleration
+PolyXML pairs its code generator with a native streaming engine (polyxml-runtime) that incorporates SIMD structural indexing principles, inspired by simdjson and simdxml21. Traditional parsers spend the majority of CPU cycles evaluating character-at-a-time branches. PolyXML eliminates these bottlenecks via a two-pass vectorized architecture21.
+Pass 1: SIMD Structural Indexing
+The runtime evaluates 64-byte chunks of raw XML in parallel using SIMD vector registers:
+* ARM Architectures (AArch64): Employs ARM NEON VCEQ comparisons across four 16-byte vectors per iteration21.
+* x86_64 Architectures: Uses AVX2 PCMPEQB instructions across two 32-byte vectors21.
+These instructions classify structural characters in bulk, generating bitmasks for <, >, /, =, ", and '21.
+Hardware-Accelerated Quote Masking via Carry-Less Multiplication (PCLMULQDQ)
+A recurring challenge in XML parsing is that attribute values enclosed in quotes can contain angle brackets (< and >), which must not be parsed as tag delimiters21. PolyXML identifies quoted regions across 64-byte chunks using a prefix-XOR transformation implemented via hardware carry-less multiplication21:
+Let    be the 64-bit integer mask representing the positions of double-quote characters within a 64-byte chunk. Computing the carry-less product:
+  
+
+generates a bitmask where all bit positions located strictly between matching pairs of quotes are asserted to 121.
+On x86 architectures, this transformation executes via a single PCLMULQDQ instruction; on ARM NEON, it executes via the PMULL instruction21.
+Once the quote mask is computed, the engine takes its bitwise complement and computes:
+  
+
+This operation strips out all non-structural angle brackets inside attribute strings in a single hardware instruction cycle, without requiring sequential string escaping21.
+Pass 2: Direct Deserialization
+Using the structural bitmask indices, the sequential stage steps through tag boundaries via trailing-zero count instructions (TZCNT / CTZ). The generated code directly matches qualified tag hashes against an integer-keyed jump table or perfect hash map. Fields are populated directly into their final memory locations, eliminating intermediate DOM allocations and maximizing throughput13.
+CLI Ergonomics, Workspace Specification (polyxml.toml), and Build Toolchain Integrations
+PolyXML provides a unified CLI and declarative configuration model:
+
+
+
+
+
+
+Bash
+# Compile schema to target models
+polyxml generate --schema ./schemas/pain.001.001.09.xsd --target rust --output ./src/generated/
+
+# Orchestrate multi-language project generation
+polyxml build --config polyxml.toml
+
+# Validate payload against schema without generating code
+polyxml validate --schema ./schemas/camt.053.xsd --input payload.xml
+
+The workspace configuration file (polyxml.toml) unifies schema definitions and multi-language compilation targets:
+
+
+
+
+
+
+Ini, TOML
+[workspace]
+schemas = [
+   "schemas/iso20022/pain.001.001.09.xsd",
+   "schemas/iso20022/pacs.008.001.08.xsd"
+]
+include_dirs = ["schemas/common/"]
+output_base_dir = "./generated"
+
+[codegen.rust]
+enabled = true
+output = "src/models/iso20022"
+edition = "2024"
+allocations = "zero-copy"
+derive_traits = ["Debug", "Clone", "PartialEq", "serde::Serialize"]
+box_cycles = true
+
+[codegen.cpp]
+enabled = true
+output = "cpp/include/iso20022"
+standard = "c++20"
+modules = true
+namespace = "corp::iso20022"
+use_string_view = true
+
+[codegen.java]
+enabled = true
+output = "java/src/main/java"
+package = "com.corp.iso20022"
+target_version = "21"
+generate_records = true
+serializer = "jackson-xml"
+
+[codegen.python]
+enabled = true
+output = "python/iso20022"
+backend = "pydantic-v2"
+slots = true
+kw_only = true
+
+PolyXML integrates directly into standard package managers and build toolchains:
+* Cargo (Rust): Distributed via the polyxml-build crate, enabling execution within build.rs to generate types before compilation.
+* CMake (C++20/23): Provides polyxml_generate macros to configure FILE_SET CXX_MODULES targets in modern CMake pipelines58.
+* Maven / Gradle (Java): Integrates via polyxml-maven-plugin, binding to the generate-sources lifecycle phase.
+* Poetry / uv (Python): Configured as a build hook in pyproject.toml, executing schema compilation ahead of package distribution.
+Phased Implementation Roadmap
+The development of PolyXML is structured across four phases to validate parsing accuracy, stabilize intermediate representations, and deliver production-ready runtime components:
+
+
+Phase
+	Core Objectives
+	Key Deliverables & Architectural Milestones
+	Success Criteria & Metrics
+	Phase 1: Core Engine & IR Foundation
+	Build the pure-Rust XSD parser and establish the unified PolyXML-IR19.
+	Ingestion of XSD 1.0/1.1; Tarjan's SCC cycle detection; automatic pointer boxing; canonical type graph construction7.
+	100% pass rate on structural modules of the W3C XML Schema test suite30.
+	Phase 2: Tier-1 Native Codegen
+	Implement in-process code generators for Rust, C++20/23, and Python 3.12+16.
+	Emits Rust zero-copy structs, C++20 modules with std::variant, and Python dataclasses/Pydantic v2 models33.
+	Clean compilation across massive industrial schemas (ISO 20022, FpML, ACORD)1.
+	Phase 3: SIMD Streaming Runtime
+	Build the SIMD-vectorized parsing engine (polyxml-runtime)21.
+	AVX2/NEON structural indexer; carry-less multiplication (PCLMULQDQ) quote masking; zero-allocation direct deserializers21.
+	Multi-gigabyte/sec throughput; 5x speedup over CodeSynthesis XSD and JAXB12.
+	Phase 4: Ecosystem & GA Launch
+	Expand language targets and enterprise integrations10.
+	Java 21+ records, TypeScript backends; WSDL/SOAP async client generation; WASI plugin runtime; Cargo/CMake/Maven build plugins10.
+	Full public GA release, documentation, and automated migration tooling from legacy xjc12.
+	Phase 1: Core Engine and IR Foundation
+The initial phase focuses on establishing a robust schema parsing frontend in pure Rust. The parser resolves XML Schema 1.0 and 1.1 definitions across complex file hierarchies and remote network endpoints19. The primary deliverable is the PolyXML-IR, which maps complex types, simple types, substitution groups, and restriction facets into a normalized type graph5. Cycle detection via Tarjan's Strongly Connected Components (SCC) algorithm identifies recursive loops and determines optimal cut points for pointer indirection7. The milestone concludes when the compiler passes 100% of the structural validation suites in the W3C XML Schema test suite30.
+Phase 2: Tier-1 Native Codegen (Rust, C++, Python)
+Phase 2 establishes programmatic code generators for Rust 2021/2024, C++20/23, and Python 3.12+14. Generators implement type-safe mappings for xs:choice, substitution groups, bounded wildcards (xs:any), and tri-state nillable fields5. The PolyXML CLI and polyxml.toml workspace parser are finalized during this phase. Validation is conducted by compiling enterprise schema testbeds, including ISO 20022 (payments), FpML (derivatives), and FIXM (aviation)1.
+Phase 3: SIMD Streaming Runtime Engine and Java/TypeScript Expansion
+Phase 3 delivers the high-performance polyxml-runtime streaming engine. The two-pass SIMD structural indexer is implemented using AVX2 and ARM NEON intrinsics, incorporating carry-less multiplication (PCLMULQDQ/PMULL) for quote masking21. Code generators are updated to emit direct-to-struct deserializers targeting the SIMD stream, avoiding intermediate DOM allocations13. Concurrently, generation support is expanded to Java 21+ (records and sealed interfaces) and TypeScript (discriminated unions and Zod validators)1.
+Phase 4: Pluggable Ecosystem, Enterprise WSDL/SOAP, and GA Launch
+The final phase stabilizes the external plugin architecture, supporting third-party generators via standard IPC (stdin/stdout) and sandboxed WebAssembly (WASI) modules10. Frontend capabilities are extended to WSDL 1.1/2.0 specifications to synthesize asynchronous SOAP RPC clients targeting modern async runtimes (Tokio, CompletableFuture, httpx)9. Build-system integrations—including polyxml-build for Cargo, CMake 3.28+ module integration, and polyxml-maven-plugin—are finalized, alongside automated migration scripts to convert existing JAXB (xjc) and CodeSynthesis projects to PolyXML12.
+Strategic Conclusions and Architectural Recommendations
+The investigation into the XML data-binding landscape reveals a clear architectural and market opportunity for PolyXML:
+* The Enterprise Modernization Imperative: Enterprise software is migrating rapidly to modern languages and paradigms (Rust, modern C++, Java records, Pydantic v2), but the data interchange backbone of regulated global industry remains XML2. The absence of modern, maintained tooling creates substantial technical debt and operational risk7.
+* Decoupled Intermediate Representations: PolyXML eliminates the design flaws of historical tools by decoupling schema ingestion from code generation through an optimizing, strongly typed intermediate representation (PolyXML-IR)10. This isolates target code generators from schema complexity and ensures consistent mapping behavior across all target languages10.
+* Hardware-Accelerated Streaming Runtime: Incorporating SIMD vectorization and carry-less multiplication (PCLMULQDQ/PMULL) enables PolyXML to deliver zero-allocation streaming deserialization, outperforming legacy C++ engines like Xerces-C++ while maintaining memory safety17.
+* Permissive Licensing: Releasing PolyXML and its generated runtimes under permissive open-source licenses (Apache 2.0 / MIT) removes the commercial dual-licensing barriers and legal liabilities that have historically hindered CodeSynthesis XSD and gSOAP in corporate cloud environments13.
+By combining unified schema compilation, modern language idioms, hardware-accelerated deserialization, and modern build system integration, PolyXML provides a high-performance foundation for enterprise XML data-binding.
+Works cited
+1. ISO 20022 XML to TypeScript Schema - Global Standard Guide, https://typemorph.dev/converters/iso-20022-to-typescript/
+2. camt.054 Messages, Pagination & MsgId - Demivolt, https://www.demivolt.com/blog/camt054-pranesimai
+3. The Ultimate Guide to XML Mapping in 2026 - Sonra, https://sonra.io/ultimate-guide-to-xml-mapping/
+4. CodeSynthesis XSD User Quotes, https://www.codesynthesis.com/products/xsd/quotes.xhtml
+5. Xsd-parser - Code generator for XML schemas - Rust Users Forum, https://users.rust-lang.org/t/xsd-parser-code-generator-for-xml-schemas/124304
+6. xsdata.models.elements module - Read the Docs, https://xsdata.readthedocs.io/en/v20.1/reference/xsdata.models.elements.html
+7. Issues · lumeohq/xsd-parser-rs - GitHub, https://github.com/lumeohq/xsd-parser-rs/issues
+8. generate Go structs from XSD - xml - Stack Overflow, https://stackoverflow.com/questions/20734450/generate-go-structs-from-xsd
+9. Calling SOAP APIs from Rust - Creative Articulation | 127.io, https://127.io/2024/08/10/calling-soap-apis-from-rust/
+10. Writing a protoc plugin in Java - Farid Zakaria, https://fzakaria.com/2025/09/05/writing-a-protoc-plugin-in-java
+11. 23.2.0 • npm-quicktype-core • tessl • Registry, https://tessl.io/registry/tessl/npm-quicktype-core/23.2.0/files/docs/target-languages.md
+12. Jakarta XML Binding - Wikipedia, https://en.wikipedia.org/wiki/Jakarta_XML_Binding
+13. XML Data Binding for C++ - CodeSynthesis XSD, https://www.codesynthesis.com/products/xsd/
+14. XSD — data structures in Rust // Lib.rs, https://lib.rs/crates/xsd
+15. Spring Boot 3 + Record-Based DTOs: Cleaner APIs with Better Type, https://www.javacodegeeks.com/2025/05/spring-boot-3-record-based-dtos-cleaner-apis-with-better-type-safety.html
+16. C++20 Modules: Practical Insights, Status and TODOs, https://chuanqixu9.github.io/c++/2025/08/14/C++20-Modules.en.html
+17. CodeSynthesis XSD 4.0 Download, https://codesynthesis.com/products/xsd/download-4.0.xhtml
+18. What is the best open XML parser for C++? [duplicate] - Stack Overflow, https://stackoverflow.com/questions/170686/what-is-the-best-open-xml-parser-for-c
+19. xsd-parser - crates.io: Rust Package Registry, https://crates.io/crates/xsd-parser/1.1.0
+20. Bergmann89/xsd-parser: Rust code generator for XML schemas, https://github.com/Bergmann89/xsd-parser
+21. simdxml: structural indexing for XML - Christopher Grainger, https://cigrainger.com/blog/simdxml/
+22. xgen package - github.com/xuri/xgen - Go Packages, https://pkg.go.dev/github.com/xuri/xgen
+23. Java: XML into a Database, whats the simplest way? - Stack Overflow, https://stackoverflow.com/questions/4248378/java-xml-into-a-database-whats-the-simplest-way
+24. changelog.md - jdereg/java-util - GitHub, https://github.com/jdereg/java-util/blob/master/changelog.md
+25. Jackson Release 2.13 · FasterXML/jackson Wiki - GitHub, https://github.com/FasterXML/jackson/wiki/Jackson-Release-2.13/32719cc951a6203c088e6888f70a1dbd3b82bcb5
+26. What is best practice in converting XML to Java object?, https://stackoverflow.com/questions/2822106/what-is-best-practice-in-converting-xml-to-java-object
+27. Modern alternative to Java XStream library? - Stack Overflow, https://stackoverflow.com/questions/6159047/modern-alternative-to-java-xstream-library
+28. Integration of CodeSynthesis and QIF, https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=919141
+29. Code Synthesis News Archive, https://www.codesynthesis.com/news.xhtml
+30. xsData - Release 20.5.4 Christodoulos Tsoulloftas, https://xsdata.readthedocs.io/_/downloads/en/v20.5.4/pdf/
+31. xsData - Release 23.6 Christodoulos Tsoulloftas, https://xsdata.readthedocs.io/_/downloads/en/v23.6/pdf/?utm_source=xsdata&utm_content=flyout
+32. Features — xsData 20.1 documentation, https://xsdata.readthedocs.io/en/v20.1/
+33. Code Generation - xsdata-pydantic - Read the Docs, https://xsdata-pydantic.readthedocs.io/en/latest/codegen/
+34. Announcing XMLity - the most feature-rich XML parser in Rust! - Reddit, https://www.reddit.com/r/rust/comments/1md2pz8/announcing_xmlity_the_most_featurerich_xml_parser/
+35. Generating Rust Structs From XSD, https://users.rust-lang.org/t/generating-rust-structs-from-xsd/107159
+36. instigate-xml free download - SourceForge, https://sourceforge.net/directory/?q=instigate-xml
+37. simdxml — Rust parser // Lib.rs, https://lib.rs/crates/simdxml
+38. mibes404/zeep: XSD/WSDL client code generator for Rust - GitHub, https://github.com/mibes404/zeep
+39. GitHub - xuri/xgen: XSD (XML Schema Definition) parser and Go/C, https://github.com/xuri/xgen
+40. xgen package - github.com/zoh/xgen-plus - Go Packages, https://pkg.go.dev/github.com/zoh/xgen-plus
+41. Generate xast TypeScript types from an XSD schema · GitHub, https://github.com/tefkah/xsd-to-xast
+42. How to deserialize XML to JavaScript/TypeScript? - Stack Overflow, https://stackoverflow.com/questions/24678534/how-to-deserialize-xml-to-javascript-typescript
+43. Software:Jakarta XML Binding - HandWiki, https://handwiki.org/wiki/Software:Jakarta_XML_Binding
+44. GitHub - lumeohq/xsd-parser-rs: A xsd/wsdl => rust code generator, https://github.com/lumeohq/xsd-parser-rs
+45. GitHub - lyft/protoc-gen-star: protoc plugin library for efficient proto, https://github.com/lyft/protoc-gen-star
+46. Descriptors - Buf Docs, https://buf.build/docs/reference/descriptors/
+47. Dead Reckoning for Databases - Venil Noronha, https://venilnoronha.io/dead-reckoning-for-databases
+48. Protoc Plugins with Go - ITNEXT, https://itnext.io/protoc-plugins-with-go-52a178dbc27a
+49. Generating the Flipt Go SDK, https://blog.flipt.io/generating-the-flipt-go-sdk
+50. more info about original file in protoc plugin · Issue #2764 - GitHub, https://github.com/protocolbuffers/protobuf/issues/2764
+51. xsdata.generators module - Read the Docs, https://xsdata.readthedocs.io/en/v20.1/reference/xsdata.generators.html
+52. W3C WSDL 2.0 Candidate Recommendation Issues List, https://www.w3.org/2002/ws/desc/5/cr-issues/
+53. Releases - Apache Xerces, https://xerces.apache.org/xerces2-j/releases.html
+54. Exploring cool new features of XSD 1.1 - Info Support, https://www.infosupport.com/exploring-cool-new-features-of-xsd-1-1/
+55. Building an ISO 20022 Payment Microgateway on AWS, https://builder.aws.com/content/3EtyIw8PgCnWMyKyFqwH9zXSpYf/building-an-iso-20022-payment-microgateway-on-aws
+56. How to Migrate from Java 8 to Java 21: The Enterprise Guide - Katyella, https://katyella.com/blog/java-8-to-21-migration-guide/
+57. Jackson Release 3.0 · FasterXML/jackson Wiki - GitHub, https://github.com/FasterXML/jackson/wiki/Jackson-Release-3.0
+58. How to use c++20 modules with CMake? - Stack Overflow, https://stackoverflow.com/questions/57300495/how-to-use-c20-modules-with-cmake
+59. What's new in CMake, https://cliutils.gitlab.io/modern-cmake/newcmake/
+60. simdxml - crates.io: Rust Package Registry, https://crates.io/crates/simdxml
