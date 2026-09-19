@@ -425,4 +425,3 @@ fn test_language_context_adapter() {
     let list_ref = TypeRef::List(Box::new(TypeRef::Primitive(PrimitiveType::Int)));
     assert_eq!(ctx.map_type_ref(&list_ref), "Vec<i32>");
 }
-

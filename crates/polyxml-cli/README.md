@@ -42,3 +42,4 @@ target = "java"
 output = "src/generated/java"
 package = "com.enterprise.banking.iso20022"
 ```
+

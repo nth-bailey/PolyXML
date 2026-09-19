@@ -199,4 +199,3 @@ pub fn resolve_cycles(ir: &mut SchemaIR) {
         }
     }
 }
-

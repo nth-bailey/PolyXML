@@ -195,3 +195,84 @@ zero_copy = true
     assert!(dir.path().join("dist/py_models/contract.py").exists());
     assert!(dir.path().join("dist/rs_models/contract.rs").exists());
 }
+
+#[test]
+fn test_cli_generate_python_backends() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("invoice.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.com/invoice">
+            <xs:simpleType name="InvoiceCode">
+                <xs:restriction base="xs:string">
+                    <xs:minLength value="5"/>
+                    <xs:maxLength value="10"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Invoice">
+                <xs:sequence>
+                    <xs:element name="Code" type="InvoiceCode"/>
+                    <xs:element name="Total" type="xs:decimal"/>
+                    <xs:element name="Note" type="xs:string" minOccurs="0" nillable="true"/>
+                </xs:sequence>
+                <xs:attribute name="id" type="xs:int" use="required"/>
+            </xs:complexType>
+            <xs:element name="InvoiceDoc" type="Invoice"/>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    // 1. Generate with dataclass backend
+    let dc_out = dir.path().join("out_dataclass");
+    let output_dc = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            "--lang",
+            "python",
+            "--backend",
+            "dataclass",
+            "--out",
+            dc_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute dataclass generate");
+
+    assert!(output_dc.status.success());
+    let dc_py = fs::read_to_string(dc_out.join("invoice.py")).unwrap();
+    assert!(dc_py.contains("@dataclass(slots=True, kw_only=True)"));
+    assert!(dc_py.contains("class Invoice:"));
+    assert!(dc_py.contains("code: InvoiceCode = field("));
+    assert!(dc_py.contains("total: Decimal = field("));
+    assert!(dc_py.contains("note: str | None = field(default=None"));
+    assert!(dc_py.contains("id: int = field("));
+    assert!(dc_py.contains("type InvoiceDoc = Invoice"));
+
+    // 2. Generate with pydantic backend
+    let pydantic_out = dir.path().join("out_pydantic");
+    let output_pydantic = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            "--lang",
+            "python",
+            "--backend",
+            "pydantic",
+            "--out",
+            pydantic_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute pydantic generate");
+
+    assert!(output_pydantic.status.success());
+    let pyd_py = fs::read_to_string(pydantic_out.join("invoice.py")).unwrap();
+    assert!(pyd_py.contains("class Invoice(BaseModel):"));
+    assert!(pyd_py.contains("model_config = ConfigDict(defer_build=True, populate_by_name=True)"));
+    assert!(
+        pyd_py.contains("type InvoiceCode = Annotated[str, Field(min_length=5, max_length=10)]")
+    );
+    assert!(pyd_py.contains("code: InvoiceCode = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"Code\", \"namespace\": \"https://example.com/invoice\"})"));
+    assert!(pyd_py.contains("total: Decimal = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"Total\", \"namespace\": \"https://example.com/invoice\"})"));
+    assert!(pyd_py.contains("note: str | None = Field(default=None, json_schema_extra={\"type\": \"Element\", \"name\": \"Note\", \"namespace\": \"https://example.com/invoice\", \"nillable\": True})"));
+}
