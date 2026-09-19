@@ -556,3 +556,145 @@ fn test_cli_java_generation() {
         );
     }
 }
+
+#[test]
+fn test_cli_cpp_generation() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("crm.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:enterprise:crm">
+            <xs:simpleType name="Status">
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="active"/>
+                    <xs:enumeration value="suspended"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Customer">
+                <xs:sequence>
+                    <xs:element name="name" type="xs:string"/>
+                    <xs:element name="email" type="xs:string" minOccurs="0"/>
+                    <xs:element name="status" type="Status"/>
+                    <xs:element name="tag" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="id" type="xs:int" use="required"/>
+            </xs:complexType>
+            <xs:element name="CustomerRecord" type="Customer"/>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    let cpp_out = dir.path().join("out_cpp");
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            "--lang",
+            "cpp",
+            "--namespace",
+            "enterprise::crm",
+            "--out",
+            cpp_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+            "--format",
+        ])
+        .output()
+        .expect("Failed to execute cpp generate");
+
+    assert!(
+        output.status.success(),
+        "polyxml generate failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let header_file = cpp_out.join("crm.hpp");
+    assert!(header_file.exists(), "crm.hpp was not generated");
+
+    let cpp_code = fs::read_to_string(&header_file).unwrap();
+    assert!(cpp_code.contains("namespace enterprise::crm {"));
+    assert!(cpp_code.contains("struct Customer {"));
+    assert!(cpp_code.contains("std::string name"));
+    assert!(cpp_code.contains("std::optional<std::string> email"));
+    assert!(cpp_code.contains("Status status"));
+    assert!(cpp_code.contains("std::vector<std::string> tag"));
+    assert!(cpp_code.contains("std::int32_t id"));
+    assert!(cpp_code.contains("enum class Status {"));
+    assert!(cpp_code.contains("Active,"));
+    assert!(cpp_code.contains("Suspended,"));
+    assert!(cpp_code.contains("using CustomerRecord = Customer;"));
+    assert!(cpp_code.contains("operator==") && cpp_code.contains("default"));
+
+    // Verify C++20 compilation and execution with g++
+    let driver_cpp = dir.path().join("driver.cpp");
+    fs::write(
+        &driver_cpp,
+        r#"
+#include "crm.hpp"
+#include <cassert>
+#include <iostream>
+
+int main() {
+    using namespace enterprise::crm;
+
+    Customer c1{
+        .name = "Acme Corp",
+        .email = "info@acme.com",
+        .status = Status::Active,
+        .tag = {"enterprise", "partner"},
+        .id = 100
+    };
+
+    Customer c2{
+        .name = "Acme Corp",
+        .email = "info@acme.com",
+        .status = Status::Active,
+        .tag = {"enterprise", "partner"},
+        .id = 100
+    };
+
+    Customer c3{
+        .name = "Beta LLC",
+        .email = std::nullopt,
+        .status = Status::Suspended,
+        .tag = {},
+        .id = 101
+    };
+
+    assert(c1 == c2);
+    assert(!(c1 == c3));
+    assert(to_string(Status::Active) == "active");
+    assert(to_string(Status::Suspended) == "suspended");
+
+    std::cout << "E2E C++20 driver passed!" << std::endl;
+    return 0;
+}
+"#,
+    )
+    .unwrap();
+
+    let out_bin = dir.path().join("driver_bin");
+    let compile_status = Command::new("g++")
+        .args([
+            "-std=c++20",
+            "-Wall",
+            "-Wextra",
+            "-Wpedantic",
+            "-Werror",
+            "-I",
+            cpp_out.to_str().unwrap(),
+            driver_cpp.to_str().unwrap(),
+            "-o",
+            out_bin.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute g++");
+
+    assert!(
+        compile_status.success(),
+        "g++ compilation of generated crm.hpp failed"
+    );
+
+    let run_status = Command::new(&out_bin)
+        .status()
+        .expect("Failed to run compiled C++ binary");
+    assert!(run_status.success(), "C++ test driver failed execution");
+}

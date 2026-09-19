@@ -6,6 +6,7 @@ use std::process::{self, Command};
 
 use clap::{Args, Parser, Subcommand};
 use config::WorkspaceManifest;
+use polyxml::codegen::cpp::{CppCodegen, CppMode, CppOptions};
 use polyxml::codegen::java::{JavaCodegen, JavaOptions};
 use polyxml::codegen::python::{PythonBackend, PythonCodegen, PythonOptions};
 use polyxml::codegen::rust::{RustCodegen, RustOptions};
@@ -51,8 +52,8 @@ pub struct GenerateArgs {
     #[arg(short = 'b', long = "backend", value_name = "BACKEND")]
     pub backend: Option<String>,
 
-    /// Package or namespace for generated code (e.g. 'com.example.models' for Java)
-    #[arg(short = 'p', long = "package", value_name = "PKG")]
+    /// Package or namespace for generated code (e.g. 'com.example.models' for Java, 'polyxml::models' for C++)
+    #[arg(short = 'p', long = "package", alias = "namespace", value_name = "PKG")]
     pub package: Option<String>,
 
     /// Zero-copy mode for Rust models (borrow Cow<'a, str> instead of owned String)
@@ -267,7 +268,7 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
 
         let emit_opts = TargetEmitOptions {
             backend: target.backend.as_deref(),
-            package: target.package.as_deref(),
+            package: target.package.as_deref().or(target.namespace.as_deref()),
             zero_copy: target.zero_copy,
             codecs: target.codecs,
             zod: target.zod,
@@ -481,6 +482,34 @@ fn emit_target_code(
             }
             Ok(())
         }
+        "cpp" | "c++" => {
+            let ns = opts.package.unwrap_or("polyxml::generated");
+            let file_stem = schema_path
+                .file_stem()
+                .map(|s| s.to_string_lossy())
+                .unwrap_or_else(|| "models".into());
+
+            let options = CppOptions {
+                namespace: ns.to_string(),
+                mode: CppMode::HeaderOnly,
+                standard: "c++20".to_string(),
+                emit_equality_operators: true,
+                emit_enum_converters: true,
+                validate_facets: true,
+                emit_root_aliases: true,
+                emit_cmake: false,
+                emit_meson: false,
+            };
+
+            let codegen = CppCodegen::new(options);
+            let files = codegen.generate_files(ir, &file_stem);
+
+            for (filename, code) in files {
+                let file_path = out_dir.join(filename);
+                fs::write(file_path, code)?;
+            }
+            Ok(())
+        }
         _ => emit_target_placeholder(lang, out_dir, schema_path, ir),
     }
 }
@@ -564,7 +593,25 @@ fn run_language_formatter(lang: &str, dir: &Path) {
             let _ = Command::new("gofmt").args(["-w", dir_str]).status();
         }
         "cpp" | "c++" => {
-            let _ = Command::new("clang-format").args(["-i"]).status();
+            if let Ok(entries) = fs::read_dir(dir) {
+                let cpp_files: Vec<_> = entries
+                    .filter_map(|e| e.ok())
+                    .map(|e| e.path())
+                    .filter(|p| {
+                        p.extension()
+                            .map(|ext| ext == "hpp" || ext == "h" || ext == "cpp" || ext == "cppm")
+                            .unwrap_or(false)
+                    })
+                    .collect();
+                if !cpp_files.is_empty() {
+                    let mut cmd = Command::new("clang-format");
+                    cmd.arg("-i");
+                    for f in cpp_files {
+                        cmd.arg(f);
+                    }
+                    let _ = cmd.status();
+                }
+            }
         }
         "ts" | "typescript" => {
             let _ = Command::new("npx")

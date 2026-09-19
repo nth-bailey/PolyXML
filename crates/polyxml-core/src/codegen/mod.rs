@@ -5,11 +5,13 @@ use heck::{AsKebabCase, AsLowerCamelCase, AsPascalCase, AsShoutySnakeCase, AsSna
 use minijinja::{Environment, Error as JinjaError, Value};
 use thiserror::Error;
 
+pub mod cpp;
 pub mod java;
 pub mod python;
 pub mod rust;
 pub mod typescript;
 
+pub use cpp::{CppCodegen, CppMode, CppOptions};
 pub use java::{JavaCodegen, JavaOptions};
 pub use python::{PythonBackend, PythonCodegen, PythonOptions};
 pub use rust::{RustCodegen, RustOptions};
