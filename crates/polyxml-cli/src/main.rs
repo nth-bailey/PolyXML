@@ -6,6 +6,7 @@ use std::process::{self, Command};
 
 use clap::{Args, Parser, Subcommand};
 use config::WorkspaceManifest;
+use polyxml::codegen::java::{JavaCodegen, JavaOptions};
 use polyxml::codegen::python::{PythonBackend, PythonCodegen, PythonOptions};
 use polyxml::codegen::rust::{RustCodegen, RustOptions};
 use polyxml::codegen::typescript::{TypeScriptCodegen, TypeScriptOptions};
@@ -49,6 +50,10 @@ pub struct GenerateArgs {
     /// Target language backend (e.g. 'dataclass' or 'pydantic' for python)
     #[arg(short = 'b', long = "backend", value_name = "BACKEND")]
     pub backend: Option<String>,
+
+    /// Package or namespace for generated code (e.g. 'com.example.models' for Java)
+    #[arg(short = 'p', long = "package", value_name = "PKG")]
+    pub package: Option<String>,
 
     /// Zero-copy mode for Rust models (borrow Cow<'a, str> instead of owned String)
     #[arg(long = "zero-copy", default_missing_value = "true", num_args = 0..=1)]
@@ -179,6 +184,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         fs::create_dir_all(&lang_out)?;
         let emit_opts = TargetEmitOptions {
             backend: args.backend.as_deref(),
+            package: args.package.as_deref(),
             zero_copy: args.zero_copy,
             codecs: args.codecs,
             zod: args.zod,
@@ -261,6 +267,7 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
 
         let emit_opts = TargetEmitOptions {
             backend: target.backend.as_deref(),
+            package: target.package.as_deref(),
             zero_copy: target.zero_copy,
             codecs: target.codecs,
             zod: target.zod,
@@ -354,6 +361,7 @@ fn report_schema_ir(ir: &SchemaIR) {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct TargetEmitOptions<'a> {
     pub backend: Option<&'a str>,
+    pub package: Option<&'a str>,
     pub zero_copy: Option<bool>,
     pub codecs: Option<bool>,
     pub zod: Option<bool>,
@@ -455,6 +463,24 @@ fn emit_target_code(
             }
             Ok(())
         }
+        "java" => {
+            let pkg = opts.package.unwrap_or("generated.models").to_string();
+            let options = JavaOptions {
+                package_name: pkg,
+                use_records: true,
+                validate_facets: true,
+                emit_root_aliases: true,
+            };
+
+            let codegen = JavaCodegen::new(options);
+            let files = codegen.generate_files(ir);
+
+            for (filename, code) in files {
+                let file_path = out_dir.join(filename);
+                fs::write(file_path, code)?;
+            }
+            Ok(())
+        }
         _ => emit_target_placeholder(lang, out_dir, schema_path, ir),
     }
 }
@@ -543,6 +569,11 @@ fn run_language_formatter(lang: &str, dir: &Path) {
         "ts" | "typescript" => {
             let _ = Command::new("npx")
                 .args(["prettier", "--write", dir_str])
+                .status();
+        }
+        "java" => {
+            let _ = Command::new("google-java-format")
+                .args(["-i", dir_str])
                 .status();
         }
         _ => {}

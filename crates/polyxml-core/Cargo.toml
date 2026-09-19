@@ -23,6 +23,7 @@ heck = "0.5"
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
 pretty_assertions = "1.4"
+tempfile = "3"
 
 [[bench]]
 name = "core_benchmarks"

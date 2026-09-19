@@ -477,3 +477,82 @@ fn test_cli_typescript_generation() {
         );
     }
 }
+
+#[test]
+fn test_cli_java_generation() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("customer.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:crm">
+            <xs:simpleType name="Status">
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="active"/>
+                    <xs:enumeration value="suspended"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Customer">
+                <xs:sequence>
+                    <xs:element name="name" type="xs:string"/>
+                    <xs:element name="status" type="Status"/>
+                    <xs:element name="tag" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="id" type="xs:int" use="required"/>
+            </xs:complexType>
+            <xs:element name="CustomerRecord" type="Customer"/>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    let java_out = dir.path().join("out_java");
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            "--lang",
+            "java",
+            "--package",
+            "com.enterprise.crm",
+            "--out",
+            java_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute java generate");
+
+    assert!(output.status.success());
+    assert!(java_out.join("Customer.java").exists());
+    assert!(java_out.join("Status.java").exists());
+
+    let customer_code = fs::read_to_string(java_out.join("Customer.java")).unwrap();
+    assert!(customer_code.contains("package com.enterprise.crm;"));
+    assert!(customer_code.contains("public record Customer("));
+    assert!(customer_code.contains("int id"));
+    assert!(customer_code.contains("String name,"));
+    assert!(customer_code.contains("Status status,"));
+    assert!(customer_code.contains("java.util.List<String> tag"));
+
+    let status_code = fs::read_to_string(java_out.join("Status.java")).unwrap();
+    assert!(status_code.contains("package com.enterprise.crm;"));
+    assert!(status_code.contains("public enum Status {"));
+    assert!(status_code.contains("ACTIVE(\"active\"),"));
+    assert!(status_code.contains("SUSPENDED(\"suspended\");"));
+
+    // Verify Java compilation with javac -Werror
+    let javac_check = Command::new("javac")
+        .args([
+            "-Werror",
+            java_out.join("Status.java").to_str().unwrap(),
+            java_out.join("Customer.java").to_str().unwrap(),
+        ])
+        .output();
+
+    if let Ok(javac_out) = javac_check {
+        assert!(
+            javac_out.status.success(),
+            "javac failed on generated Java 21 files: {}\nstdout: {}",
+            String::from_utf8_lossy(&javac_out.stderr),
+            String::from_utf8_lossy(&javac_out.stdout)
+        );
+    }
+}

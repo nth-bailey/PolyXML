@@ -560,6 +560,7 @@ dependencies = [
  "quick-xml",
  "serde",
  "smallvec",
+ "tempfile",
  "thiserror",
 ]
 
