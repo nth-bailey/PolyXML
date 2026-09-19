@@ -305,7 +305,12 @@ impl CSharpCodegen {
         writeln!(out, "{}}}\n", indent).unwrap();
 
         // Emit helper extension methods
-        writeln!(out, "{}public static class {}Extensions", indent, enum_name).unwrap();
+        writeln!(
+            out,
+            "{}public static class {}Extensions",
+            indent, enum_name
+        )
+        .unwrap();
         writeln!(out, "{}{{", indent).unwrap();
 
         // IsValid extension
@@ -506,7 +511,12 @@ impl CSharpCodegen {
             return;
         }
 
-        writeln!(out, "{}public {} {}(", indent, record_keyword, struct_name).unwrap();
+        writeln!(
+            out,
+            "{}public {} {}(",
+            indent, record_keyword, struct_name
+        )
+        .unwrap();
 
         for (i, f) in s.fields.iter().enumerate() {
             let prop_name = to_csharp_property_name(&f.name, Some(&struct_name));
@@ -605,7 +615,12 @@ impl CSharpCodegen {
                     );
                     writeln!(out, "{}        }}", indent).unwrap();
                 } else {
-                    self.emit_facet_checks(out, facets, &prop_name, &format!("{}        ", indent));
+                    self.emit_facet_checks(
+                        out,
+                        facets,
+                        &prop_name,
+                        &format!("{}        ", indent),
+                    );
                 }
                 has_checks = true;
             }
@@ -765,7 +780,12 @@ impl CSharpCodegen {
                     indent, elem_name, target_type, indent
                 )
                 .unwrap();
-                writeln!(out, "{}    public {}() : base() {{ }}", indent, elem_name).unwrap();
+                writeln!(
+                    out,
+                    "{}    public {}() : base() {{ }}",
+                    indent, elem_name
+                )
+                .unwrap();
                 writeln!(out, "{}}}\n", indent).unwrap();
             }
         }
