@@ -1,3 +1,12 @@
+## [0.19.1](https://github.com/nth-bailey/PolyXML/compare/v0.19.0...v0.19.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **clippy:** use char push in python custom_header ([dd15487](https://github.com/nth-bailey/PolyXML/commit/dd1548743e0dc7554a758a40d77ac740d2b63119))
+* **csharp:** use generic JsonStringEnumConverter and typed default for single-property constructors ([aea99e6](https://github.com/nth-bailey/PolyXML/commit/aea99e6fca429884ae651281cc08e7a89f9a88c9))
+* **python:** automatically adapt C-style comments (//) to (#) in custom_header ([6eada7a](https://github.com/nth-bailey/PolyXML/commit/6eada7ab730f811688b158de0dc7138b3db1ebd7))
+
 # [0.19.0](https://github.com/nth-bailey/PolyXML/compare/v0.18.0...v0.19.0) (2026-09-20)
 
 
