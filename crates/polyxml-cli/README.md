@@ -146,3 +146,13 @@ namespace = "Enterprise.Banking.Iso20022"
 source_gen = true
 record_kind = "struct"
 ```
+
+---
+
+## 🌐 Production Reference Repositories
+
+Explore full-scale repositories using PolyXML CLI manifests across all 7 languages:
+- **[🛸 Defense & Aerospace](https://github.com/nth-bailey/polyxml-defense-examples)**: Anduril Lattice SDK ↔ USAF UCI v2.5 XML
+- **[💳 FinTech & Banking](https://github.com/nth-bailey/polyxml-finance-examples)**: Instant Payments ↔ ISO 20022 pacs.008 XML
+- **[🚍 Smart Cities & Transit](https://github.com/nth-bailey/polyxml-transit-examples)**: Google GTFS-Realtime ↔ CEN SIRI v2.0 & NeTEx XML
+

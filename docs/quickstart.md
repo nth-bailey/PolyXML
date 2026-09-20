@@ -263,3 +263,16 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     polyxml validate schemas/*.xsd
     ```
 
+---
+
+## 🌐 Real-World Polyglot Project Templates
+
+Looking for production-grade project repositories with complete build setups across all 7 languages? Explore our open-source reference implementations:
+
+| Domain | Repository | Standards & Integration |
+|---|---|---|
+| **Defense & Avionics** | [polyxml-defense-examples](https://github.com/nth-bailey/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (XML) |
+| **Banking & FinTech** | [polyxml-finance-examples](https://github.com/nth-bailey/polyxml-finance-examples) | **FinTech Payments** (FedNow, Stripe, Plaid) ↔ **ISO 20022 `pacs.008`** (XML) |
+| **Public Transit & Mobility** | [polyxml-transit-examples](https://github.com/nth-bailey/polyxml-transit-examples) | **Google GTFS-Realtime** (Protobuf/JSON) ↔ **European CEN SIRI & NeTEx** (XML) |
+
+

@@ -383,6 +383,23 @@ namespace = "Enterprise.Banking.Iso20022"
 
 ---
 
+## 🌐 Real-World Industry Showcases & Polyglot Bridges
+
+Explore complete, production-ready example repositories showcasing PolyXML in mission-critical industries across **all 7 supported languages** (Rust, Python, Go, C++20, Java 21+, TypeScript, and C#):
+
+| Domain / Industry | Showcase Repository | Real-World Standard & Integration Bridge | Modern Capabilities Highlighted |
+| :--- | :--- | :--- | :--- |
+| **🛸 Defense & Aerospace** | [![GitHub](https://img.shields.io/badge/GitHub-polyxml--defense--examples-blue?logo=github)](https://github.com/nth-bailey/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (C2 XML) | Sub-10μs edge telemetry transcoding, mission C2 routing, zero-copy Rust & C++20 flight software |
+| **💳 Global Finance** | [![GitHub](https://img.shields.io/badge/GitHub-polyxml--finance--examples-blue?logo=github)](https://github.com/nth-bailey/polyxml-finance-examples) | **FinTech Payments** (FedNow, Stripe, Plaid JSON) ↔ **ISO 20022 `pacs.008`** (XML) | High-throughput interbank settlement, dual JSON/XML models, Java 21 Jackson, C# source-gen |
+| **🚍 Smart Cities & Transit** | [![GitHub](https://img.shields.io/badge/GitHub-polyxml--transit--examples-blue?logo=github)](https://github.com/nth-bailey/polyxml-transit-examples) | **Google GTFS-Realtime** (Protobuf/JSON) ↔ **European CEN SIRI v2.0 & NeTEx** (XML) | Real-time passenger transit tracking, vehicle position streaming, TypeScript Zod & TypeBox |
+
+Each repository features:
+- Declarative `polyxml.toml` workspace manifests compiling production-grade industry schemas.
+- Idiomatic, working examples across **all 7 target languages**.
+- Automated CI workflows validating multi-language builds and bidirectional XML ↔ JSON transcoding.
+
+---
+
 ## Language Ecosystem & Packages
 
 | Ecosystem / Language | Package / Registry | Installation | Interop Tech | Status |
@@ -407,6 +424,7 @@ namespace = "Enterprise.Banking.Iso20022"
 - **[Why PolyXML? Architectural Breakdown](https://nth-bailey.github.io/PolyXML/why-polyxml/)**: Deep comparison against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
 - **[Architecture & Streaming Pipeline](https://nth-bailey.github.io/PolyXML/architecture/)**: Detailed breakdown of our zero-copy reader, frame stack, and Tarjan cycle-cutting.
 - **[Performance Benchmarks](https://nth-bailey.github.io/PolyXML/benchmarks/)**: Reproducible benchmarks and throughput charts.
+- **[Real-World Industry Showcases](#-real-world-industry-showcases--polyglot-bridges)**: Production repositories for Defense (USAF UCI), Finance (ISO 20022), and Transit (CEN SIRI/NeTEx).
 
 ---
 

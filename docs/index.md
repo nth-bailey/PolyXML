@@ -107,6 +107,19 @@ flowchart TD
 
 ---
 
+## 🌐 Real-World Industry Showcases
+
+Explore complete, production-ready example repositories showcasing PolyXML in mission-critical industries across **all 7 supported languages**:
+
+- **[🛸 Defense & Aerospace (polyxml-defense-examples)](https://github.com/nth-bailey/polyxml-defense-examples)**:
+  Bridges autonomous edge telemetry from the **Anduril Lattice SDK** (Protobuf/JSON) with the **USAF Universal Command and Control Interface (UCI v2.5)** XML standard. Demonstrates sub-10μs telemetry transcoding and C2 mission routing in flight software.
+- **[💳 Global Finance & Banking (polyxml-finance-examples)](https://github.com/nth-bailey/polyxml-finance-examples)**:
+  Bridges real-time **FinTech payment webhooks (FedNow, Stripe, Plaid JSON)** with the global banking standard **ISO 20022 `pacs.008` (Customer Credit Transfer XML)**. Demonstrates high-throughput interbank settlement, Java 21 Jackson models, and C# source-gen.
+- **[🚍 Smart Cities & Public Transit (polyxml-transit-examples)](https://github.com/nth-bailey/polyxml-transit-examples)**:
+  Bridges live **Google GTFS-Realtime** (Protobuf/JSON) feeds with European **CEN SIRI v2.0 (EN 15531)** & **NeTEx (CEN/TS 16614)** XML standards. Demonstrates live passenger vehicle positioning and TypeScript schema validation.
+
+---
+
 ## Next Steps
 
 - Check out the [5-Minute Multi-Language Quickstart](quickstart.md) to see PolyXML in action.

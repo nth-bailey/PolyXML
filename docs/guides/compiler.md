@@ -218,3 +218,17 @@ PolyXML's schema compiler and runtime codecs are continuously tested against the
 
 For full conformance benchmark metrics across Sun Microsystems, Microsoft, and NIST test sets, visit the [polyxml-w3c-tests repository](https://github.com/nth-bailey/polyxml-w3c-tests).
 
+---
+
+## 🌐 Real-World Enterprise Repositories
+
+Explore full-scale enterprise examples demonstrating `polyxml.toml` manifests and multi-target compilation in real-world production settings:
+
+- **[🛸 Defense & Aerospace Showcase (polyxml-defense-examples)](https://github.com/nth-bailey/polyxml-defense-examples)**:
+  Compiles the **USAF UCI v2.5** schema standard and bridges edge sensor telemetry from **Anduril Lattice** across all 7 languages.
+- **[💳 FinTech & Banking Showcase (polyxml-finance-examples)](https://github.com/nth-bailey/polyxml-finance-examples)**:
+  Compiles the **ISO 20022 `pacs.008`** schema standard and bridges instant payment webhooks (FedNow, Stripe, Plaid) across all 7 languages.
+- **[🚍 Smart Cities & Transit Showcase (polyxml-transit-examples)](https://github.com/nth-bailey/polyxml-transit-examples)**:
+  Compiles the European **CEN SIRI v2.0** and **NeTEx** schemas and bridges live Google GTFS-Realtime feeds across all 7 languages.
+
+
