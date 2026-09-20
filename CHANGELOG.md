@@ -1,3 +1,10 @@
+# [0.15.0](https://github.com/nth-bailey/PolyXML/compare/v0.14.3...v0.15.0) (2026-09-20)
+
+
+### Features
+
+* **codegen/java:** add Jackson backend support for Spring Boot / enterprise serialization ([78fe976](https://github.com/nth-bailey/PolyXML/commit/78fe9767aef864e39d34b7003aef0be8dcc97fae)), closes [#41](https://github.com/nth-bailey/PolyXML/issues/41)
+
 ## [0.14.3](https://github.com/nth-bailey/PolyXML/compare/v0.14.2...v0.14.3) (2026-09-20)
 
 
