@@ -1,11 +1,11 @@
 ---
-title: Schema Compiler & CLI Toolchain
-description: Compile W3C XML Schema 1.0 and 1.1 into type-safe models and codecs across 7 programming languages using polyxml.
+title: XSD-to-Code Generator & CLI Toolchain
+description: Generate type-safe data models and codecs across 7 programming languages from W3C XML Schemas using polyxml.
 ---
 
-# Schema Compiler & CLI Toolchain (`polyxml`)
+# XSD-to-Code Generator & CLI Toolchain (`polyxml`)
 
-PolyXML includes a high-performance, polyglot schema compiler and CLI toolchain (`polyxml`) that parses W3C XSD 1.0 and 1.1 schemas, builds a language-agnostic Intermediate Representation (PolyXML-IR), resolves complex type cycles via Tarjan's Strongly Connected Components (SCC) algorithm, and emits idiomatic, production-ready data contracts and codecs across **7 modern programming languages**.
+PolyXML includes a high-performance, polyglot XSD-to-code generator and CLI toolchain (`polyxml`) that parses W3C XSD 1.0 and 1.1 schemas, builds a language-agnostic Intermediate Representation (PolyXML-IR), resolves complex type cycles via Tarjan's Strongly Connected Components (SCC) algorithm, and emits idiomatic, production-ready data contracts and codecs across **7 modern programming languages**.
 
 ---
 

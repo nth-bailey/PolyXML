@@ -68,9 +68,9 @@ The PolyXML Way
 
 ---
 
-## 🛠️ Schema Compiler & Polyglot Code Generation
+## 🛠️ Universal XSD-to-Code Generation
 
-PolyXML includes a full-fledged schema compiler CLI (`polyxml`) that transforms W3C XSD 1.0 and 1.1 schemas into strongly-typed data contracts and high-performance codecs across all **7 target ecosystems**:
+PolyXML includes a full-fledged CLI toolchain (`polyxml`) that transforms W3C XSD 1.0 and 1.1 schemas into strongly-typed data contracts and high-performance codecs across all **7 target ecosystems**:
 
 ```mermaid
 flowchart LR
@@ -126,6 +126,6 @@ Explore complete, production-ready example repositories showcasing PolyXML in mi
 ## Next Steps
 
 - Check out the [5-Minute Multi-Language Quickstart](quickstart.md) to see PolyXML in action.
-- Read about our [Schema Compiler & CLI Toolchain](guides/compiler.md).
+- Read about our [XSD-to-Code Generator & CLI Toolchain](guides/compiler.md).
 - Read about our [Architecture & Streaming Design](architecture.md).
 - Explore [Performance & Benchmarks](benchmarks.md).

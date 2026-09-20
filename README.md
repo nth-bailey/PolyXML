@@ -238,7 +238,7 @@ PolyXML strictly generates code adhering to modern programming paradigms (2024�
 | **Go 1.22+** | `go` | Structs with `encoding/xml` & `encoding/json` | Dual struct tags, reflectionless ByteDance Sonic & EasyJSON backends (`--backend`), choice exclusivity |
 | **C# 12 / .NET 8+** | `csharp` | Records (`class` or `struct`) | Compile-time source generation (`--source-gen`), record structs (`--record-kind struct`), `IValidatableObject` |
 
-👉 **[Read the Full Schema Compiler & CLI Guide →](docs/guides/compiler.md)**
+👉 **[Read the Full XSD-to-Code & CLI Guide →](docs/guides/compiler.md)**
 
 ---
 
@@ -434,7 +434,7 @@ Each repository features:
 ## Documentation & Learning
 
 - **[Multi-Language Quickstart](https://nth-bailey.github.io/PolyXML/quickstart/)**: 5-minute setup across all 7 target ecosystems.
-- **[Schema Compiler & CLI Guide](https://nth-bailey.github.io/PolyXML/guides/compiler/)**: Full reference for `polyxml generate`, `build`, `validate`, and `polyxml.toml`.
+- **[XSD-to-Code & CLI Guide](https://nth-bailey.github.io/PolyXML/guides/compiler/)**: Full reference for `polyxml generate`, `build`, `validate`, and `polyxml.toml`.
 - **[Why PolyXML? Architectural Breakdown](https://nth-bailey.github.io/PolyXML/why-polyxml/)**: Deep comparison against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
 - **[Architecture & Streaming Pipeline](https://nth-bailey.github.io/PolyXML/architecture/)**: Detailed breakdown of our zero-copy reader, frame stack, and Tarjan cycle-cutting.
 - **[Performance Benchmarks](https://nth-bailey.github.io/PolyXML/benchmarks/)**: Reproducible benchmarks and throughput charts.

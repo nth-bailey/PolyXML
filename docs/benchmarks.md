@@ -22,18 +22,18 @@ Benchmarks conducted using Python 3.12 (`abi3-py312`) across 10,000-element stre
 
 | Engine | Paradigm / Category | Implementation | Deserialization Latency | Deserialization Throughput | Serialization Latency | Serialization Throughput | Peak RAM |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **PolyXML** | **Typed Dataclass** | **Rust + PyO3** | **13.9 ms** | **51.0 MB/s** | **7.30 ms** | **96.2 MB/s** | **2.0 MB** |
-| `lxml.objectify` | Dynamic C Object | C / Cython (`libxml2`) | 9.9 ms | 71.4 MB/s | 3.9 ms | 178.2 MB/s | 0.2 MB |
-| `lxml.etree` | Untyped DOM | C / Cython (`libxml2`) | 10.0 ms | 70.5 MB/s | — | — | <0.1 MB |
-| `ElementTree` | Untyped DOM | Python Stdlib C/Python | 12.3 ms | 57.5 MB/s | — | — | 7.1 MB |
-| `defusedxml` | Secure DOM | Python Defused | 27.2 ms | 26.0 MB/s | — | — | 7.1 MB |
-| `xmltodict` | Untyped Dict | C (`pyexpat`) | 56.6 ms | 12.5 MB/s | 79.0 ms | 8.9 MB/s | 4.8 MB |
-| `xsdata` | Typed Dataclass | Pure Python | 222.5 ms | 3.2 MB/s | 282.6 ms | 2.5 MB/s | 3.3 MB |
+| **PolyXML** | **Typed Dataclass** | **Rust + PyO3** | **24.0 ms** | **29.8 MB/s** | **12.2 ms** | **58.1 MB/s** | **2.0 MB** |
+| `lxml.objectify` | Dynamic C Object | C / Cython (`libxml2`) | 10.2 ms | 70.8 MB/s | 4.1 ms | 173.5 MB/s | 0.2 MB |
+| `lxml.etree` | Untyped DOM | C / Cython (`libxml2`) | 11.8 ms | 61.1 MB/s | — | — | <0.1 MB |
+| `ElementTree` | Untyped DOM | Python Stdlib C/Python | 13.6 ms | 53.0 MB/s | — | — | 7.1 MB |
+| `defusedxml` | Secure DOM | Python Defused | 29.5 ms | 24.2 MB/s | — | — | 7.1 MB |
+| `xmltodict` | Untyped Dict | C (`pyexpat`) | 57.5 ms | 12.5 MB/s | 80.0 ms | 8.9 MB/s | 4.8 MB |
+| `xsdata` | Typed Dataclass | Pure Python | 241.9 ms | 3.0 MB/s | 298.8 ms | 2.5 MB/s | 3.3 MB |
 
 > **Key Takeaway**: 
-> - **Vs Typed Dataclasses (`xsdata`)**: PolyXML is **16.0x faster** at deserialization and **38.7x faster** at serialization, while saving over 1.2 MB of memory.
-> - **Vs Dict Parsers (`xmltodict`)**: PolyXML is **4.1x faster** on deserialization and **10.8x faster** on serialization, while instantiating strongly-typed dataclasses instead of unstructured string dictionaries.
-> - **Vs C Proxies (`lxml.objectify`)**: PolyXML executes within 1.39x of raw C dynamic proxy trees, while returning genuine Python dataclasses with IDE autocomplete and type safety.
+> - **Vs Typed Dataclasses (`xsdata`)**: PolyXML is **10.0x faster** at deserialization and **23.5x faster** at serialization, while saving over 1.3 MB of memory.
+> - **Vs Dict Parsers (`xmltodict`)**: PolyXML is **4.2x faster** on deserialization and **6.5x faster** on serialization, while instantiating strongly-typed dataclasses instead of unstructured string dictionaries.
+> - **Vs C Proxies (`lxml.objectify`)**: PolyXML executes within ~2x of raw C dynamic proxy trees, while returning genuine, fully typed Python dataclasses with IDE autocomplete and type safety.
 
 ---
 
@@ -41,19 +41,19 @@ Benchmarks conducted using Python 3.12 (`abi3-py312`) across 10,000-element stre
 
 | Engine | Category | Deserialization Latency | Serialization Latency | Speedup vs Pure Python |
 | :--- | :--- | :---: | :---: | :---: |
-| **PolyXML** | **Typed Dataclass** | **2.5 μs** | **1.4 μs** | **17.1x** |
-| **PolyXML (Pydantic)** | **Typed Pydantic v2** | **3.1 μs** | **1.5 μs** | **13.7x** |
-| `lxml.etree` | Untyped DOM | 3.1 μs | — | 13.7x |
-| `lxml.objectify` | C Dynamic Object | 3.3 μs | 1.3 μs | 13.1x |
-| `ElementTree` | Untyped DOM | 4.9 μs | — | 8.7x |
-| `defusedxml` | Secure DOM | 8.6 μs | — | 5.0x |
+| **PolyXML** | **Typed Dataclass** | **3.2 μs** | **1.8 μs** | **13.9x** |
+| **PolyXML (Pydantic)** | **Typed Pydantic v2** | **3.8 μs** | **1.9 μs** | **11.8x** |
+| `lxml.etree` | Untyped DOM | 3.3 μs | — | 13.4x |
+| `lxml.objectify` | C Dynamic Object | 3.3 μs | 1.4 μs | 13.1x |
+| `ElementTree` | Untyped DOM | 5.3 μs | — | 8.4x |
+| `defusedxml` | Secure DOM | 9.1 μs | — | 4.9x |
 | `declxml` | Declarative Dict | 10.2 μs | 23.9 μs | 4.2x |
-| `xmltodict` | Untyped Dict | 10.3 μs | 14.9 μs | 4.2x |
-| `pydantic-xml` | Typed Pydantic v2 | 16.4 μs | 15.6 μs | 2.6x |
-| `untangle` | Dynamic Object | 19.1 μs | — | 2.3x |
-| `xsdata` | Typed Dataclass | 43.0 μs | 45.0 μs | 1.0x (Ref) |
+| `xmltodict` | Untyped Dict | 10.6 μs | 15.4 μs | 4.2x |
+| `pydantic-xml` | Typed Pydantic v2 | 17.1 μs | 15.5 μs | 2.6x |
+| `untangle` | Dynamic Object | 19.5 μs | — | 2.3x |
+| `xsdata` | Typed Dataclass | 44.5 μs | 45.5 μs | 1.0x (Ref) |
 
-Critical telemetry commands and sensor packets deserialize in **2.5 microseconds**, beating even C-based DOM parsers (`lxml` at 3.1 μs, `lxml.objectify` at 3.3 μs).
+Critical telemetry commands and sensor packets deserialize in **3.2 microseconds**, neck-and-neck with C-based DOM parsers (`lxml` at 3.3 μs).
 
 ---
 

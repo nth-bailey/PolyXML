@@ -238,7 +238,7 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     Console.WriteLine(writer.ToString());
     ```
 
-=== "Schema Compiler CLI"
+=== "XSD-to-Code CLI"
 
     ### 0. Install the CLI
     ```bash

@@ -68,9 +68,9 @@ graph TD
 
 ---
 
-## 3. Schema Compiler & Intermediate Representation (IR)
+## 3. XSD-to-Code Generation & Intermediate Representation (IR)
 
-In addition to runtime streaming data-binding, PolyXML includes a polyglot schema compiler and code generation engine inside `polyxml-core`:
+In addition to runtime streaming data-binding, PolyXML includes a polyglot XSD-to-code generation engine inside `polyxml-core`:
 
 ```mermaid
 flowchart TD

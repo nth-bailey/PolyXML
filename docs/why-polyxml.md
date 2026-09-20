@@ -170,7 +170,7 @@ Across more than 600 official test groups from Sun Microsystems, Microsoft, and 
 | :--- | :--- |
 | **JAXB / `xjc` in Java** | Immutable Java 21+ records, sealed interface choices, zero reflection overhead, and Project Panama FFI. |
 | **CodeSynthesis in C++** | Modern C++20 value types, `std::variant`, zero Apache Xerces dependency, zero UTF-16 transcoding overhead, and a permissive MIT license. |
-| **`xsdata` in Python** | **16x faster** XML parsing, **38x faster** XML serialization, **9.5x faster** native JSON, 100% drop-in replacement (`JsonSerializer`, `JsonParser`), and direct C/Rust transcoding (`xml_to_json`, `json_to_xml`). |
+| **`xsdata` in Python** | **10x faster** XML parsing, **23.5x faster** XML serialization, **9.5x faster** native JSON, 100% drop-in replacement (`JsonSerializer`, `JsonParser`), and direct C/Rust transcoding (`xml_to_json`, `json_to_xml`). |
 | **`xsd-parser` in Rust** | A battle-tested compiler that doesn't panic on complex schemas, with automatic Tarjan `Box<T>` cycle breaks, inherent streaming XML codecs, and native `.to_json_string()` codecs. |
 | **`xgen` in Go** | Dual `xml:"..."` and `json:"..."` struct tags on every model, true `xs:choice` mutual exclusivity validation, pointer cycle breaks, and canonical Go initialism normalization. |
 | **`xsd.exe` in .NET** | Modern C# 12 records with primary constructors, dual `XmlSerializer` and `System.Text.Json` attributes (`[JsonPropertyName]`, `[JsonConverter]`), and standard `IValidatableObject` integration. |
@@ -178,5 +178,5 @@ Across more than 600 official test groups from Sun Microsystems, Microsoft, and 
 
 **Ready to modernize your XML infrastructure?**
 👉 **[Get Started with the 5-Minute Quickstart →](quickstart.md)**
-👉 **[Read the Schema Compiler & CLI Guide →](guides/compiler.md)**
+👉 **[Read the XSD-to-Code Generator & CLI Guide →](guides/compiler.md)**
 
