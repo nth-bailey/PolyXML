@@ -304,3 +304,56 @@ To achieve the maximum throughput from `polyxml-core`:
 3. **Use `XmlItemStream` for Files > 5 MB**: For large XML feeds, streaming ensures your process memory remains constant regardless of file size.
 4. **Thread Safety**: Both `ModelSchema` and `PolyValue` are fully `Send + Sync`, making them ideal for parallel processing with `rayon` or multi-threaded Tokio runtimes.
 
+---
+
+## 8. Native JSON Codecs & Streaming Transcoder
+
+### Inherent JSON Methods on Generated Models
+
+Rust models compiled with `polyxml generate --lang rust --codecs` automatically implement inherent, zero-copy JSON codecs backed by `serde_json`:
+
+```rust
+// Generated model from schemas/order.xsd
+use generated::rust::Order;
+
+// 1. Serialize to JSON string or Vec<u8>
+let json_str: String = order.to_json_string()?;
+let json_vec: Vec<u8> = order.to_json_vec()?;
+
+// 2. Deserialize from JSON string slice or byte slice
+let restored = Order::from_json_str(&json_str)?;
+let from_bytes = Order::from_json_slice(&json_vec)?;
+```
+
+### Direct Streaming Transcoder (`polyxml::transcoder`)
+
+For high-speed transcoding without compiling Rust structs, use `polyxml::transcoder`:
+
+```rust
+use polyxml::transcoder::{xml_to_json, json_to_xml, TranscodeOptions};
+
+let xml_input = br#"<Product id="42"><name>Sensor</name><price>19.99</price></Product>"#;
+
+// Transcode XML to JSON with pretty formatting
+let json_bytes = xml_to_json(
+    xml_input,
+    None, // Optional Arc<ModelSchema> or SchemaIR
+    TranscodeOptions {
+        pretty: true,
+        ..Default::default()
+    },
+)?;
+
+// Transcode JSON back to XML with specified root element
+let restored_xml = json_to_xml(
+    &json_bytes,
+    None,
+    TranscodeOptions {
+        root_tag: Some("Product".to_string()),
+        pretty: true,
+        ..Default::default()
+    },
+)?;
+```
+
+

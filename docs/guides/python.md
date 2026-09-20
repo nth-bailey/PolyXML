@@ -453,4 +453,87 @@ user = parser.parse("data.json", User)
 | **JSON Deserialization** | 198.4 μs | **20.8 μs** | **9.5x faster** |
 | **JSON Serialization** | 76.8 μs | **16.6 μs** | **4.6x faster** |
 
+---
+
+## 8. High-Performance XML ↔ JSON Transcoding (`polyxml.xml_to_json` & `polyxml.json_to_xml`)
+
+PolyXML provides zero-copy streaming functions to transcode between XML and JSON directly in Rust/C without building intermediate DOM trees or incurring Python loop overhead.
+
+### Schema-Directed Transcoding
+
+Passing an XSD schema guarantees that scalar types (integers, floats, booleans) and list elements in JSON conform precisely to your XML schema definition:
+
+```python
+import polyxml
+
+xml_payload = b"""<Order id="101"><customer>Alice</customer><total>49.99</total></Order>"""
+
+# 1. XML to JSON using XSD schema guidance
+json_bytes = polyxml.xml_to_json(
+    xml_payload,
+    schema_path="schemas/order.xsd",
+    indent=2
+)
+print(json_bytes.decode("utf-8"))
+# Output:
+# {
+#   "@id": 101,
+#   "customer": "Alice",
+#   "total": 49.99
+# }
+
+# 2. JSON to XML with schema guidance and root element
+restored_xml = polyxml.json_to_xml(
+    json_bytes,
+    schema_path="schemas/order.xsd",
+    root="Order",
+    indent=2
+)
+print(restored_xml.decode("utf-8"))
+```
+
+### Model-Directed Transcoding
+
+You can also pass any generated dataclass or Pydantic model class to guide transcoding:
+
+```python
+from generated.models import Order
+import polyxml
+
+# Transcode using model metadata
+json_output = polyxml.xml_to_json(xml_payload, model=Order, indent=2)
+xml_output = polyxml.json_to_xml(json_output, model=Order, indent=2)
+```
+
+### Dynamic Schema-Less Transcoding
+
+When no schema or model is available, PolyXML dynamically converts arbitrary XML to JSON while faithfully preserving attributes with the `@` prefix and mixed/text content with `#text`:
+
+```python
+arbitrary_xml = b'<Response status="200"><message>OK</message></Response>'
+
+# Schema-less transcoding
+dynamic_json = polyxml.xml_to_json(arbitrary_xml, indent=2)
+# Output: {"@status": "200", "message": "OK"}
+
+# Convert back to XML
+restored_xml = polyxml.json_to_xml(dynamic_json, root="Response")
+```
+
+### Universal Input Support
+
+Both functions accept raw `bytes`, `str`, `pathlib.Path`, and open file/stream objects (`IO[bytes]`, `IO[str]`):
+
+```python
+from pathlib import Path
+
+# From Path to bytes:
+json_bytes = polyxml.xml_to_json(Path("order.xml"), schema_path=Path("order.xsd"))
+
+# Directly with open file streams:
+with open("order.xml", "rb") as f:
+    json_bytes = polyxml.xml_to_json(f, indent=2)
+```
+
+
 

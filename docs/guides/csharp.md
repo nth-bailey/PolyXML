@@ -55,16 +55,17 @@ namespace Enterprise.Banking.Iso20022;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Xml.Serialization;
 
 [XmlRoot("Customer", Namespace = "https://example.com/crm")]
 public record Customer(
-    [property: XmlAttribute("id")] int Id,
-    [property: XmlElement("name")] string Name,
-    [property: XmlElement("email")] string? Email = null,
-    [property: XmlElement("tag")] List<string>? Tag = null,
-    [property: XmlElement("status")] OrderStatus Status = OrderStatus.Pending
+    [property: XmlAttribute("id"), JsonPropertyName("id")] int Id,
+    [property: XmlElement("name"), JsonPropertyName("name")] string Name,
+    [property: XmlElement("email"), JsonPropertyName("email")] string? Email = null,
+    [property: XmlElement("tag"), JsonPropertyName("tag")] List<string>? Tag = null,
+    [property: XmlElement("status"), JsonPropertyName("status")] OrderStatus Status = OrderStatus.Pending
 ) : IValidatableObject
 {
     // Parameterless constructor ensures compatibility with XmlSerializer
@@ -134,7 +135,9 @@ string recipient = contactInfo.Contact switch
 
 ## 3. Serialization & Deserialization
 
-PolyXML models work directly with .NET's built-in `XmlSerializer`:
+PolyXML models feature dual-format annotations, working seamlessly with both .NET's built-in `XmlSerializer` and `System.Text.Json`.
+
+### XML Serialization (`System.Xml.Serialization`)
 
 ```csharp
 using System.IO;
@@ -152,6 +155,23 @@ Console.WriteLine($"Customer {customer.Name} (ID: {customer.Id}) loaded.");
 using var writer = new StringWriter();
 serializer.Serialize(writer, customer);
 string outputXml = writer.ToString();
+```
+
+### JSON Serialization (`System.Text.Json`)
+
+Because PolyXML emits `[property: JsonPropertyName("...")]` on record properties and `[JsonConverter(typeof(JsonStringEnumConverter))]` on enums, models serialize and deserialize natively to JSON without mapping code:
+
+```csharp
+using System.Text.Json;
+using Enterprise.Banking.Iso20022;
+
+// Direct JSON serialization
+string jsonString = JsonSerializer.Serialize(customer, new JsonSerializerOptions { WriteIndented = true });
+Console.WriteLine(jsonString);
+
+// Direct JSON deserialization back into immutable record
+Customer restored = JsonSerializer.Deserialize<Customer>(jsonString)!;
+assert(restored.Name == customer.Name);
 ```
 
 ---
@@ -190,8 +210,9 @@ if (!isValid)
 | Feature | PolyXML C# Output | Advantage |
 |---|---|---|
 | **Class Model** | `public record Type(...)` | Immutability, value equality, concise syntax |
-| **Serialization** | `System.Xml.Serialization` | Zero third-party runtime package dependencies |
+| **XML Serialization** | `System.Xml.Serialization` | Zero third-party runtime package dependencies |
+| **JSON Serialization**| `System.Text.Json` | Native `[JsonPropertyName]` & `[JsonConverter]` attributes |
 | **`xs:choice`** | `abstract record` + nested sealed records | Type-safe pattern matching with switch expressions |
 | **Facets** | `IValidatableObject.Validate()` | Built-in .NET `DataAnnotations` standard integration |
-| **Enums** | `public enum EnumName` with `[XmlEnum]` | Autocomplete, strongly typed string mappings |
+| **Enums** | `public enum EnumName` with `[XmlEnum]` | Autocomplete, strongly typed string & JSON mappings |
 

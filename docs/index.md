@@ -56,6 +56,7 @@ Legacy XML Toolchains (JAXB, CodeSynthesis, xsdata, xgen)
 The PolyXML Way
 ✅ Unified Rust Compiler: A single, battle-tested schema compiler (like protoc) for 7 languages.
 ✅ Zero-Allocation Streaming: Direct-to-struct parsing with quick-xml & lexical-core (16x-38x faster).
+✅ Dual-Format XML ↔ JSON: Zero-copy streaming transcoder (polyxml transcode) & dual-annotated models.
 ✅ Modern Language Idioms: Immutable Java 21+ records, C++20 value types, Python 3.12 PEP 695 dataclasses.
 ✅ 100% Permissive MIT: Zero commercial licensing fees, zero GPL infection risk.
 ```
@@ -79,8 +80,8 @@ flowchart LR
     CLI --> CPP2[C++20 / C++23<br/>Value Types & Concepts]
     CLI --> JV[Java 21+<br/>Records & Sealed Interfaces]
     CLI --> TS2[TypeScript 5+<br/>Interfaces & Zod Schemas]
-    CLI --> GO2[Go 1.22+<br/>Structs & xml tags]
-    CLI --> CS[C# 12 / .NET 8+<br/>Records & XmlSerializer]
+    CLI --> GO2[Go 1.22+<br/>Structs, xml & json tags]
+    CLI --> CS[C# 12 / .NET 8+<br/>Records, XmlSerializer & System.Text.Json]
 ```
 
 Tested against the official **W3C XML Schema Test Suite (XSTS)** with **>99.8% schema compilation pass rate** and **>96% round-trip validation pass rate** via [polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests).

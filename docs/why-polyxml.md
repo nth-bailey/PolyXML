@@ -30,7 +30,7 @@ Yet, for over twenty years, the developer tooling landscape for XML has suffered
 
 ---
 
-## ⚡ The 4 Pillars of PolyXML
+## ⚡ The 5 Pillars of PolyXML
 
 ### 1. The `protoc` of XML: Unified Intermediate Representation (`SchemaIR`)
 Legacy XML tools treated code generation as a local script within each programming language. When an enterprise schema failed in Python, teams had to write bespoke monkey-patches; when it failed in C++, teams bought expensive commercial licenses.
@@ -59,6 +59,23 @@ Most legacy compilers were architected during the Java 5 / C++98 era. They gener
 Historical C++ tools like CodeSynthesis XSD and gSOAP enforce strict **GPL v2 / commercial dual-licensing**. Incorporating them into proprietary cloud microservices, aerospace avionics, or banking applications forces enterprises to pay thousands of dollars in per-seat or per-server licensing fees, or risk GPL license contamination.
 
 PolyXML is **100% permissively licensed under the MIT License**, with zero runtime licensing fees, zero commercial paywalls, and zero legal restrictions on proprietary distribution.
+
+### 5. Dual-Format Polyglot Architecture & Zero-Copy Streaming Transcoder (`polyxml transcode`)
+Enterprise engineering rarely lives in an XML-only silo. Interbank rails (ISO 20022), aviation telemetry (FIXM), and healthcare networks (HL7) mandate strict XML Schema contracts, but modern cloud services, microservices, and frontends operate on JSON.
+
+Historically, bridging this divide forced engineering teams into painful trade-offs:
+- **Fragile Untyped Parsers**: Running `xmltodict` or ad-hoc scripts drops XML attribute metadata (`@attr`), mangles repeated elements, and runs up to 38x slower.
+- **Duplicate Schema Maintenance**: Manually writing and synchronizing separate XSD and OpenAPI/JSON schemas across teams inevitably leads to silent drift and catastrophic production outages.
+
+PolyXML breaks this dichotomy through a **natively dual-format architecture**:
+- **Zero-Copy Streaming Transcoder (`polyxml transcode`)**: A Rust-powered CLI and runtime transcoder that converts XML ↔ JSON bidirectionally via streaming events without building DOM trees.
+- **Schema-Directed Precision**: Use `--schema schema.xsd` to ensure numeric types, booleans, and arrays in JSON match the exact XSD type definitions rather than ambiguous strings.
+- **Dynamic Schema-Less Fallback**: Automatically preserves XML attributes (`@attr`) and text content (`#text`) in pure JSON when no schema is present.
+- **Natively Dual-Annotated Generated Models**:
+  - **Go**: Generated structs include both `xml:"..."` and `json:"..."` tags, with `json:"-"` on `XMLName`, allowing identical structs to marshal to both formats with Go's standard libraries.
+  - **C#**: Emits `[property: JsonPropertyName("...")]` on primary constructor records and `[JsonConverter(typeof(JsonStringEnumConverter))]` on enums for native .NET `System.Text.Json` serialization.
+  - **Rust**: Inherent zero-copy `.to_json_string()`, `.to_json_vec()`, `.from_json_str()`, and `.from_json_slice()` methods alongside XML codecs, with Serde rename support.
+  - **Python**: Inherent `.to_json()` and `@classmethod from_json()` on every model, drop-in `JsonSerializer` / `JsonParser` (9.5x faster than xsdata), and direct `polyxml.xml_to_json()` / `polyxml.json_to_xml()`.
 
 ---
 
@@ -150,10 +167,11 @@ Across more than 600 official test groups from Sun Microsystems, Microsoft, and 
 | :--- | :--- |
 | **JAXB / `xjc` in Java** | Immutable Java 21+ records, sealed interface choices, zero reflection overhead, and Project Panama FFI. |
 | **CodeSynthesis in C++** | Modern C++20 value types, `std::variant`, zero Apache Xerces dependency, zero UTF-16 transcoding overhead, and a permissive MIT license. |
-| **`xsdata` in Python** | **16x faster** XML parsing, **38x faster** XML serialization, **9.5x faster** native JSON, and a 100% drop-in replacement (`JsonSerializer`, `JsonParser`). |
-| **`xsd-parser` in Rust** | A battle-tested compiler that doesn't panic on complex schemas, with automatic Tarjan `Box<T>` cycle breaks and inherent streaming codecs. |
-| **`xgen` in Go** | True `xs:choice` mutual exclusivity validation, pointer cycle breaks, and canonical Go initialism normalization. |
-| **`xsd.exe` in .NET** | Modern C# 12 records with primary constructors, `init`-only properties, and standard `IValidatableObject` integration. |
+| **`xsdata` in Python** | **16x faster** XML parsing, **38x faster** XML serialization, **9.5x faster** native JSON, 100% drop-in replacement (`JsonSerializer`, `JsonParser`), and direct C/Rust transcoding (`xml_to_json`, `json_to_xml`). |
+| **`xsd-parser` in Rust** | A battle-tested compiler that doesn't panic on complex schemas, with automatic Tarjan `Box<T>` cycle breaks, inherent streaming XML codecs, and native `.to_json_string()` codecs. |
+| **`xgen` in Go** | Dual `xml:"..."` and `json:"..."` struct tags on every model, true `xs:choice` mutual exclusivity validation, pointer cycle breaks, and canonical Go initialism normalization. |
+| **`xsd.exe` in .NET** | Modern C# 12 records with primary constructors, dual `XmlSerializer` and `System.Text.Json` attributes (`[JsonPropertyName]`, `[JsonConverter]`), and standard `IValidatableObject` integration. |
+| **Ad-hoc XML ↔ JSON Scripts** | Zero-copy streaming CLI (`polyxml transcode`) with schema-directed precision or dynamic `@attr` preservation, executing in microseconds. |
 
 **Ready to modernize your XML infrastructure?**
 👉 **[Get Started with the 5-Minute Quickstart →](quickstart.md)**

@@ -297,3 +297,43 @@ PolyXML Go bindings bind Go's GC to native Rust resources through `runtime.SetFi
 - When a `*polyxml.Schema` or `*polyxml.Value` object becomes unreachable in Go, the Go garbage collector invokes the finalizer which calls `C.polyxml_schema_free` or `C.polyxml_value_free`.
 - **Best Practice**: In high-throughput batch loops, avoid creating new `Schema` objects repeatedly. Construct global or long-lived schemas to eliminate allocation cycles.
 
+---
+
+## 7. Dual-Format Go Models (XML + JSON Code Generation)
+
+When generating Go code using the PolyXML compiler CLI (`polyxml generate --lang go`), the compiler emits structs equipped with both `xml:"..."` and `json:"..."` struct tags:
+
+```go
+package banking
+
+import (
+	"encoding/json"
+	"encoding/xml"
+)
+
+// Customer is generated from customer.xsd with dual serialization tags:
+type Customer struct {
+	XMLName xml.Name `xml:"Customer" json:"-"`
+	ID      int      `xml:"id,attr" json:"id"`
+	Name    string   `xml:"name" json:"name"`
+	Email   *string  `xml:"email,omitempty" json:"email,omitempty"`
+}
+```
+
+### Zero-Translation XML ↔ JSON Pipeline
+
+Because `XMLName` is tagged with `json:"-"` and all fields have corresponding JSON keys, you can ingest XML and immediately emit JSON in microservices without any intermediate mapping structs:
+
+```go
+func handleCustomer(xmlData []byte) ([]byte, error) {
+	var customer banking.Customer
+	if err := xml.Unmarshal(xmlData, &customer); err != nil {
+		return nil, err
+	}
+
+	// Direct-to-JSON serialization using Go's standard library:
+	return json.MarshalIndent(customer, "", "  ")
+}
+```
+
+
