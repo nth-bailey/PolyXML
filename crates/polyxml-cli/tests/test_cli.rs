@@ -1052,6 +1052,9 @@ public class Program
     .unwrap();
 
     let build_status = Command::new("dotnet")
+        .env("DOTNET_NOLOGO", "1")
+        .env("DOTNET_CLI_TELEMETRY_OPTOUT", "1")
+        .env("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "1")
         .args(["build", "--warnaserror"])
         .current_dir(&app_dir)
         .status()
@@ -1062,6 +1065,9 @@ public class Program
     );
 
     let run_status = Command::new("dotnet")
+        .env("DOTNET_NOLOGO", "1")
+        .env("DOTNET_CLI_TELEMETRY_OPTOUT", "1")
+        .env("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "1")
         .args(["run"])
         .current_dir(&app_dir)
         .status()

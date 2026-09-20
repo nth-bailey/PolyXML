@@ -11,6 +11,14 @@ use polyxml::ir::{
 };
 use tempfile::tempdir;
 
+fn dotnet_command() -> Command {
+    let mut cmd = Command::new("dotnet");
+    cmd.env("DOTNET_NOLOGO", "1");
+    cmd.env("DOTNET_CLI_TELEMETRY_OPTOUT", "1");
+    cmd.env("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "1");
+    cmd
+}
+
 #[test]
 fn test_csharp_sanitization() {
     assert_eq!(to_csharp_type_name("event"), "Event");
@@ -308,7 +316,7 @@ public class Program
     )
     .unwrap();
 
-    let build_status = Command::new("dotnet")
+    let build_status = dotnet_command()
         .args(["build", "--warnaserror"])
         .current_dir(temp.path())
         .status()
@@ -318,7 +326,7 @@ public class Program
         "dotnet build failed on generated records"
     );
 
-    let run_status = Command::new("dotnet")
+    let run_status = dotnet_command()
         .args(["run"])
         .current_dir(temp.path())
         .status()
@@ -487,7 +495,7 @@ public class Program
     )
     .unwrap();
 
-    let build_status = Command::new("dotnet")
+    let build_status = dotnet_command()
         .args(["build", "--warnaserror"])
         .current_dir(temp.path())
         .status()
@@ -497,7 +505,7 @@ public class Program
         "dotnet build failed on choice models"
     );
 
-    let run_status = Command::new("dotnet")
+    let run_status = dotnet_command()
         .args(["run"])
         .current_dir(temp.path())
         .status()
@@ -628,7 +636,7 @@ public class Program
     )
     .unwrap();
 
-    let build_status = Command::new("dotnet")
+    let build_status = dotnet_command()
         .args(["build", "--warnaserror"])
         .current_dir(temp.path())
         .status()
@@ -638,7 +646,7 @@ public class Program
         "dotnet build failed on recursive tree models"
     );
 
-    let run_status = Command::new("dotnet")
+    let run_status = dotnet_command()
         .args(["run"])
         .current_dir(temp.path())
         .status()

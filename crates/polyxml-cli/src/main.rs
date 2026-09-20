@@ -716,6 +716,9 @@ fn run_language_formatter(lang: &str, dir: &Path) {
             let status = Command::new("csharpier").args([dir_str]).status();
             if status.is_err() || !status.as_ref().map(|s| s.success()).unwrap_or(false) {
                 let _ = Command::new("dotnet")
+                    .env("DOTNET_NOLOGO", "1")
+                    .env("DOTNET_CLI_TELEMETRY_OPTOUT", "1")
+                    .env("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "1")
                     .args(["format", "whitespace", dir_str])
                     .status();
             }
