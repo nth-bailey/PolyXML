@@ -1,3 +1,10 @@
+# [0.14.0](https://github.com/nth-bailey/PolyXML/compare/v0.13.0...v0.14.0) (2026-09-20)
+
+
+### Features
+
+* **transcoder:** dual-format XML ↔ JSON engine, annotations, codecs, and transcoder ([#39](https://github.com/nth-bailey/PolyXML/issues/39)) ([97f9fd0](https://github.com/nth-bailey/PolyXML/commit/97f9fd01fc6684ea889cb4f4d9cdf72d3a658422)), closes [#35](https://github.com/nth-bailey/PolyXML/issues/35) [#35](https://github.com/nth-bailey/PolyXML/issues/35) [#35](https://github.com/nth-bailey/PolyXML/issues/35) [#36](https://github.com/nth-bailey/PolyXML/issues/36) [#35](https://github.com/nth-bailey/PolyXML/issues/35) [#36](https://github.com/nth-bailey/PolyXML/issues/36) [#37](https://github.com/nth-bailey/PolyXML/issues/37) [#37](https://github.com/nth-bailey/PolyXML/issues/37) [#37](https://github.com/nth-bailey/PolyXML/issues/37) [#34](https://github.com/nth-bailey/PolyXML/issues/34) [#35](https://github.com/nth-bailey/PolyXML/issues/35) [#36](https://github.com/nth-bailey/PolyXML/issues/36) [#37](https://github.com/nth-bailey/PolyXML/issues/37)
+
 # [0.13.0](https://github.com/nth-bailey/PolyXML/compare/v0.12.0...v0.13.0) (2026-09-20)
 
 
