@@ -165,6 +165,18 @@ def set_versions(new_ver: str) -> None:
         c_cargo_path.write_text(c_text_new, encoding="utf-8")
         print(f"  Updated {c_cargo_path.relative_to(REPO_ROOT)}")
 
+    # 7. crates/polyxml-cli/Cargo.toml (dependency version requirement)
+    cli_cargo_path = REPO_ROOT / "crates" / "polyxml-cli" / "Cargo.toml"
+    if cli_cargo_path.exists():
+        cli_text = cli_cargo_path.read_text(encoding="utf-8")
+        cli_text_new = re.sub(
+            r'(polyxml\s*=\s*\{[^}]*version\s*=\s*)"[^"]+"',
+            rf'\g<1>"{v}"',
+            cli_text,
+        )
+        cli_cargo_path.write_text(cli_text_new, encoding="utf-8")
+        print(f"  Updated {cli_cargo_path.relative_to(REPO_ROOT)}")
+
     print("All manifests successfully synchronized.")
 
 
