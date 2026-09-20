@@ -1,7 +1,8 @@
 # PolyXML
 
 <p align="center">
-  <strong>The "protoc for XML" — Modern Polyglot Schema Compiler & Ultra-Fast Streaming Runtime</strong>
+  <strong>The "protoc for XML" — Modern XSD-to-Code Generator & High-Performance Streaming Runtime</strong><br>
+  <em>Python • Rust • C++20 • Java 21+ • TypeScript • Go • C# 12</em>
 </p>
 
 <p align="center">
@@ -38,11 +39,13 @@
 
 ## Overview
 
-**PolyXML** is the next-generation polyglot XML schema compiler and ultra-fast streaming data-binding runtime built in safe Rust.
+**PolyXML turns W3C XML Schemas (`.xsd`) into production-ready, type-safe data models with built-in streaming parsers and serializers.**
+
+If you have ever used `xjc` (JAXB), `CodeSynthesis XSD`, or `xsdata`, PolyXML is their modern, safe-Rust replacement. It compiles your schema once and generates idiomatic, zero-overhead code across **7 languages simultaneously**—with direct `.from_xml()` and `.to_xml()` methods running **10x–24x faster** than traditional Python and C DOM parsers.
 
 Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary serialization, **PolyXML brings modern software engineering to XML**:
 
-1. **🛠️ Polyglot Schema Compiler (`polyxml`)**: Ingests W3C XSD 1.0 and 1.1 schemas, resolves cyclic types with Tarjan's SCC algorithm, and compiles production-ready, strongly-typed data contracts across **7 modern ecosystems** simultaneously (**Python**, **Rust**, **C++**, **Java**, **TypeScript**, **Go**, and **C#**).
+1. **🛠️ Universal XSD-to-Code Generator (`polyxml`)**: Ingests W3C XSD 1.0 and 1.1 schemas, resolves cyclic types with Tarjan's SCC algorithm, and compiles production-ready, strongly-typed data contracts across **7 modern ecosystems** simultaneously (**Python**, **Rust**, **C++**, **Java**, **TypeScript**, **Go**, and **C#**).
 2. **⚡ Ultra-Fast Streaming Runtime**: Direct-to-struct deserialization and serialization powered by `quick-xml` and `lexical-core`, executing **10x–24x faster than traditional tools** with **zero intermediate DOM allocations**.
 3. **🏛️ Official W3C XSTS Conformance Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests).
 4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
@@ -50,7 +53,7 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 
 ---
 
-## ⚡ Schema Compilation at a Glance
+## ⚡ Quick Start: From XSD to Code in Seconds
 
 Install the PolyXML compiler in seconds on Linux and macOS:
 

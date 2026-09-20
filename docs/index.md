@@ -6,14 +6,15 @@ description: Ultra-fast streaming XML data-binding engine in Rust with native bi
 # PolyXML
 
 <p align="center">
-  <strong>The Universal Native XML Data-Binding Engine</strong>
+  <strong>The "protoc for XML" — Modern XSD-to-Code Generator & High-Performance Streaming Runtime</strong><br>
+  <em>Python • Rust • C++20 • Java 21+ • TypeScript • Go • C# 12</em>
 </p>
 
 ---
 
 ## Welcome to PolyXML
 
-**PolyXML** is a high-performance native XML engine written in Rust for ultra-fast, streaming XML serialization and deserialization. It bridges raw XML directly to strongly-typed data structures across modern language runtimes with **zero unnecessary allocations**.
+**PolyXML turns W3C XML Schemas (`.xsd`) into production-ready, type-safe data models with built-in streaming parsers and serializers.** Written in safe Rust, it compiles schemas once and generates idiomatic, strongly-typed code across 7 modern language runtimes with **zero intermediate DOM allocations**.
 
 While web ecosystems shifted toward JSON and Protocol Buffers, mission-critical infrastructure in **defense & aerospace (UCI)**, **finance (ISO 20022, FIXML)**, and **healthcare (HL7)** remains deeply reliant on XML. PolyXML breaks down language barriers and eliminates legacy performance penalties by providing **one unified, native Rust engine for all tech stacks**.
 
@@ -25,7 +26,7 @@ While web ecosystems shifted toward JSON and Protocol Buffers, mission-critical 
     Native zero-copy core engine via `polyxml` on [crates.io](https://crates.io/crates/polyxml). Monomorphized, fast streaming parser.
 
 === "Python"
-    Accelerates Python `dataclasses` and **Pydantic v2** models via PyO3 (`abi3-py312`). 10x–30x faster than pure Python XML parsers.
+    Accelerates Python `dataclasses` and **Pydantic v2** models via PyO3 (`abi3-py312`). 10x–24x faster than pure Python XML parsers.
 
 === "Modern C++20"
     Zero-overhead modern C++20 header-only wrapper (`polyxml.hpp`) with RAII memory management, designed for avionics, robotics, and defense.
@@ -52,12 +53,14 @@ Legacy XML Toolchains (JAXB, CodeSynthesis, xsdata, xgen)
 ❌ Memory Bloat: Intermediate DOM allocations cause 10x-20x memory churn & GC spikes.
 ❌ Antiquated Code: Sprawling pre-C++11 raw pointers and mutable JavaBeans with getters/setters.
 ❌ Licensing Traps: GPL v2 dual-licensing or per-seat commercial paywalls (CodeSynthesis, gSOAP).
+❌ Security Exposure: Vulnerable by default to XXE file exfiltration (e.g. lxml/xsdata CWE-611).
 
 The PolyXML Way
-✅ Unified Rust Compiler: A single, battle-tested schema compiler (like protoc) for 7 languages.
-✅ Zero-Allocation Streaming: Direct-to-struct parsing with quick-xml & lexical-core (16x-38x faster).
+✅ Unified Rust Tool: Generates idiomatic, type-safe code (like protoc) across 7 languages.
+✅ Zero-Allocation Streaming: Direct-to-struct parsing with quick-xml & lexical-core (10x–24x faster).
 ✅ Dual-Format XML ↔ JSON: Zero-copy streaming transcoder (polyxml transcode) & dual-annotated models.
 ✅ Modern Language Idioms: Immutable Java 21+ records, C++20 value types, Python 3.12 PEP 695 dataclasses.
+✅ Secure by Design: Pure-Rust streaming parser structurally immune to XXE (CWE-611) & SSRF.
 ✅ 100% Permissive MIT: Zero commercial licensing fees, zero GPL infection risk.
 ```
 
