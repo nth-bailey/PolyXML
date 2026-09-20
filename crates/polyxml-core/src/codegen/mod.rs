@@ -16,7 +16,7 @@ pub mod typescript;
 pub use cpp::{CppCodegen, CppMode, CppOptions};
 pub use csharp::{CSharpCodegen, CSharpOptions, CSharpRecordKind};
 pub use go::{GoCodegen, GoOptions};
-pub use java::{JavaCodegen, JavaOptions};
+pub use java::{JavaBackend, JavaCodegen, JavaOptions};
 pub use python::{PythonBackend, PythonCodegen, PythonOptions};
 pub use rust::{RustCodegen, RustOptions};
 pub use typescript::{TypeScriptCodegen, TypeScriptOptions};

@@ -193,3 +193,90 @@ In high-throughput enterprise architectures (e.g. processing millions of ISO 200
 2. **Eliminate Garbage Collection Pauses**: By streaming raw socket or file bytes into off-heap `MemorySegment` buffers, you prevent millions of short-lived XML DOM strings from exhausting the JVM Young Generation heap.
 3. **Thread Safety**: PolyXML's native schema handles are immutable and read-only after construction, making them safe to share concurrently across all JVM virtual threads (Project Loom).
 
+---
+
+## 6. Enterprise Jackson Backend (`--backend jackson`)
+
+PolyXML's code generator supports an opt-in **Jackson backend** that annotates generated Java 21+ `record`s with [Jackson](https://github.com/FasterXML/jackson) annotations for seamless integration with **Spring Boot 3**, **Quarkus**, **Micronaut**, and any framework using `ObjectMapper` or `XmlMapper`.
+
+### Quick Start
+
+**CLI:**
+
+```bash
+polyxml generate \
+  --lang java \
+  --backend jackson \
+  --package com.enterprise.banking \
+  --out src/main/java/com/enterprise/banking \
+  schemas/pacs_008_core.xsd
+```
+
+**`polyxml.toml`:**
+
+```toml
+[[generate]]
+target = "java"
+output = "src/main/java/com/enterprise/banking"
+package = "com.enterprise.banking"
+backend = "jackson"
+```
+
+### What Gets Generated
+
+When `--backend jackson` is active, PolyXML emits the following annotations:
+
+| Annotation | Applied To | Purpose |
+|---|---|---|
+| `@JsonIgnoreProperties(ignoreUnknown = true)` | Record class | Forward-compatible deserialization |
+| `@JsonInclude(NON_EMPTY)` | Record class + optional/list fields | Skip empty values during serialization |
+| `@JacksonXmlRootElement(localName, namespace)` | Record class | XML root element binding |
+| `@JsonProperty("...")` | Record components | JSON field name mapping |
+| `@JacksonXmlProperty(localName, isAttribute, namespace)` | Record components | XML attribute vs. element discrimination |
+| `@JacksonXmlElementWrapper(useWrapping = false)` | List components | Unboxed XML sequences |
+| `@JsonValue` / `@JsonCreator` | Enum `getValue()` / `fromValue()` | Enum string serialization |
+| `@JsonTypeInfo` / `@JsonSubTypes` / `@JsonTypeName` | Sealed interfaces (choice types) | Polymorphic type discrimination |
+| `@JsonValue` / `@JacksonXmlText` / `@JsonCreator` | Simple type wrappers | Transparent value serialization |
+
+### Maven Dependencies
+
+Add Jackson XML to your project:
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-xml</artifactId>
+        <version>2.18.3</version>
+    </dependency>
+    <dependency>
+        <groupId>com.fasterxml.jackson.datatype</groupId>
+        <artifactId>jackson-datatype-jdk8</artifactId>
+        <version>2.18.3</version>
+    </dependency>
+</dependencies>
+```
+
+### Spring Boot 3 Usage Example
+
+```java
+package com.enterprise.banking;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+
+public class PaymentProcessor {
+    private static final XmlMapper XML = new XmlMapper();
+    private static final ObjectMapper JSON = new ObjectMapper();
+
+    public CreditTransfer parseXml(String xml) throws Exception {
+        return XML.readValue(xml, CreditTransfer.class);
+    }
+
+    public String toJson(CreditTransfer transfer) throws Exception {
+        return JSON.writeValueAsString(transfer);
+    }
+}
+```
+
+> **Note:** The default `--backend standard` (or no `--backend`) continues to emit pure, zero-dependency Java 21+ records with no Jackson imports.

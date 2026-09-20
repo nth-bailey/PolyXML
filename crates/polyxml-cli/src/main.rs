@@ -9,7 +9,7 @@ use config::WorkspaceManifest;
 use polyxml::codegen::cpp::{CppCodegen, CppMode, CppOptions};
 use polyxml::codegen::csharp::{CSharpCodegen, CSharpOptions, CSharpRecordKind};
 use polyxml::codegen::go::{GoCodegen, GoOptions};
-use polyxml::codegen::java::{JavaCodegen, JavaOptions};
+use polyxml::codegen::java::{JavaBackend, JavaCodegen, JavaOptions};
 use polyxml::codegen::python::{PythonBackend, PythonCodegen, PythonOptions};
 use polyxml::codegen::rust::{RustCodegen, RustOptions};
 use polyxml::codegen::typescript::{TypeScriptCodegen, TypeScriptOptions};
@@ -504,8 +504,14 @@ fn emit_target_code(
         }
         "java" => {
             let pkg = opts.package.unwrap_or("generated.models").to_string();
+            let java_backend = opts
+                .backend
+                .and_then(JavaBackend::from_str_loose)
+                .unwrap_or(JavaBackend::Standard);
+
             let options = JavaOptions {
                 package_name: pkg,
+                backend: java_backend,
                 use_records: true,
                 validate_facets: true,
                 emit_root_aliases: true,

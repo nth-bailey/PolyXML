@@ -3,7 +3,8 @@ use std::process::Command;
 use tempfile::tempdir;
 
 use polyxml::codegen::java::{
-    to_java_enum_constant, to_java_field_identifier, to_java_type_name, JavaCodegen, JavaOptions,
+    to_java_enum_constant, to_java_field_identifier, to_java_type_name, JavaBackend, JavaCodegen,
+    JavaOptions,
 };
 use polyxml::ir::{
     Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets,
@@ -153,6 +154,7 @@ fn test_java_records_and_enums_generation() {
 
     let options = JavaOptions {
         package_name: "com.example.shop".to_string(),
+        backend: JavaBackend::Standard,
         use_records: true,
         validate_facets: true,
         emit_root_aliases: true,
@@ -239,6 +241,7 @@ fn test_java_sealed_interface_choice() {
 
     let options = JavaOptions {
         package_name: "com.example.payment".to_string(),
+        backend: JavaBackend::Standard,
         use_records: true,
         validate_facets: true,
         emit_root_aliases: true,
@@ -291,6 +294,7 @@ fn test_java_module_container_class() {
 
     let options = JavaOptions {
         package_name: "com.example.banking".to_string(),
+        backend: JavaBackend::Standard,
         use_records: true,
         validate_facets: true,
         emit_root_aliases: true,
@@ -326,4 +330,279 @@ fn test_java_module_container_class() {
             String::from_utf8_lossy(&out.stdout)
         );
     }
+}
+
+#[test]
+fn test_java_jackson_backend_struct_annotations() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/crm");
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/crm"), "Contact"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "id".into(),
+                xml_name: "id".into(),
+                namespace: None,
+                kind: FieldKind::Attribute,
+                type_ref: TypeRef::Primitive(PrimitiveType::Int),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "email".into(),
+                xml_name: "email".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "phone".into(),
+                xml_name: "phone".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::optional_one(),
+                nillable: true,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "tags".into(),
+                xml_name: "tag".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::unbounded(0),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: Some("CRM contact record".into()),
+    }));
+
+    let options = JavaOptions {
+        package_name: "com.example.crm".to_string(),
+        backend: JavaBackend::Jackson,
+        use_records: true,
+        validate_facets: true,
+        emit_root_aliases: true,
+    };
+    let codegen = JavaCodegen::new(options);
+    let files = codegen.generate_files(&ir);
+
+    assert_eq!(files.len(), 1);
+    let (filename, code) = &files[0];
+    assert_eq!(filename, "Contact.java");
+
+    // Jackson imports
+    assert!(code.contains("import com.fasterxml.jackson.annotation.*;"));
+    assert!(code.contains("import com.fasterxml.jackson.dataformat.xml.annotation.*;"));
+
+    // Class-level annotations
+    assert!(code.contains("@JsonIgnoreProperties(ignoreUnknown = true)"));
+    assert!(code.contains("@JsonInclude(JsonInclude.Include.NON_EMPTY)"));
+    assert!(code.contains("@JacksonXmlRootElement(localName = \"Contact\""));
+
+    // Field annotations — attribute
+    assert!(code.contains("@JsonProperty(\"id\")"));
+    assert!(code.contains("@JacksonXmlProperty(localName = \"id\", isAttribute = true)"));
+
+    // Field annotations — element
+    assert!(code.contains("@JsonProperty(\"email\")"));
+    assert!(code.contains("@JacksonXmlProperty(localName = \"email\", isAttribute = false)"));
+
+    // Optional field gets NON_EMPTY
+    assert!(code.contains("@JsonProperty(\"phone\")"));
+
+    // List field gets wrapper suppression
+    assert!(code.contains("@JacksonXmlElementWrapper(useWrapping = false)"));
+}
+
+#[test]
+fn test_java_jackson_backend_enum_annotations() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/orders");
+
+    ir.add_type(TypeDef::Enum(EnumDef {
+        qname: QName::new(Some("https://example.com/orders"), "Priority"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        variants: vec![
+            EnumValue {
+                name: "low".into(),
+                value: "low".into(),
+                documentation: None,
+            },
+            EnumValue {
+                name: "high".into(),
+                value: "high".into(),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+
+    let options = JavaOptions {
+        package_name: "com.example.orders".to_string(),
+        backend: JavaBackend::Jackson,
+        use_records: true,
+        validate_facets: true,
+        emit_root_aliases: true,
+    };
+    let codegen = JavaCodegen::new(options);
+    let files = codegen.generate_files(&ir);
+
+    assert_eq!(files.len(), 1);
+    let (_, code) = &files[0];
+
+    // @JsonValue on getValue()
+    assert!(code.contains("@JsonValue"));
+    assert!(code.contains("public String getValue()"));
+
+    // @JsonCreator on fromValue()
+    assert!(code.contains("@JsonCreator"));
+    assert!(code.contains("public static Priority fromValue(String value)"));
+}
+
+#[test]
+fn test_java_jackson_backend_union_annotations() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/messaging");
+
+    ir.add_type(TypeDef::Union(UnionDef {
+        qname: QName::new(Some("https://example.com/messaging"), "MessageChannel"),
+        branches: vec![
+            UnionBranch {
+                variant_name: "sms".into(),
+                xml_name: "sms".into(),
+                namespace: None,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                documentation: None,
+            },
+            UnionBranch {
+                variant_name: "email".into(),
+                xml_name: "email".into(),
+                namespace: None,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+
+    let options = JavaOptions {
+        package_name: "com.example.messaging".to_string(),
+        backend: JavaBackend::Jackson,
+        use_records: true,
+        validate_facets: true,
+        emit_root_aliases: true,
+    };
+    let codegen = JavaCodegen::new(options);
+    let files = codegen.generate_files(&ir);
+
+    assert_eq!(files.len(), 1);
+    let (_, code) = &files[0];
+
+    // Polymorphic type info
+    assert!(code.contains("@JsonTypeInfo(use = JsonTypeInfo.Id.NAME"));
+    assert!(code.contains("@JsonSubTypes({"));
+    assert!(code.contains("@JsonSubTypes.Type(value = MessageChannel.Sms.class, name = \"sms\")"));
+    assert!(
+        code.contains("@JsonSubTypes.Type(value = MessageChannel.Email.class, name = \"email\")")
+    );
+
+    // Variant type names
+    assert!(code.contains("@JsonTypeName(\"sms\")"));
+    assert!(code.contains("@JsonTypeName(\"email\")"));
+}
+
+#[test]
+fn test_java_jackson_backend_simple_type_annotations() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/types");
+
+    ir.add_type(TypeDef::Simple(Box::new(SimpleTypeDef {
+        qname: QName::new(Some("https://example.com/types"), "CurrencyCode"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        facets: RestrictionFacets {
+            length: Some(3),
+            patterns: vec!["^[A-Z]{3}$".into()],
+            ..Default::default()
+        },
+        documentation: Some("ISO 4217 currency code".into()),
+    })));
+
+    let options = JavaOptions {
+        package_name: "com.example.types".to_string(),
+        backend: JavaBackend::Jackson,
+        use_records: true,
+        validate_facets: true,
+        emit_root_aliases: true,
+    };
+    let codegen = JavaCodegen::new(options);
+    let files = codegen.generate_files(&ir);
+
+    assert_eq!(files.len(), 1);
+    let (_, code) = &files[0];
+
+    // @JsonValue @JacksonXmlText on value component
+    assert!(code.contains("@JsonValue @JacksonXmlText String value"));
+
+    // @JsonCreator factory method
+    assert!(code.contains("@JsonCreator"));
+    assert!(code.contains("public static CurrencyCode of(String value)"));
+    assert!(code.contains("return new CurrencyCode(value);"));
+
+    // Validation still present
+    assert!(code.contains("if (value.length() != 3)"));
+}
+
+#[test]
+fn test_java_jackson_backend_from_str_loose() {
+    assert_eq!(
+        JavaBackend::from_str_loose("jackson"),
+        Some(JavaBackend::Jackson)
+    );
+    assert_eq!(
+        JavaBackend::from_str_loose("Jackson"),
+        Some(JavaBackend::Jackson)
+    );
+    assert_eq!(
+        JavaBackend::from_str_loose("spring"),
+        Some(JavaBackend::Jackson)
+    );
+    assert_eq!(
+        JavaBackend::from_str_loose("spring-boot"),
+        Some(JavaBackend::Jackson)
+    );
+    assert_eq!(
+        JavaBackend::from_str_loose("enterprise"),
+        Some(JavaBackend::Jackson)
+    );
+    assert_eq!(
+        JavaBackend::from_str_loose("standard"),
+        Some(JavaBackend::Standard)
+    );
+    assert_eq!(
+        JavaBackend::from_str_loose("std"),
+        Some(JavaBackend::Standard)
+    );
+    assert_eq!(JavaBackend::from_str_loose("unknown"), None);
 }
