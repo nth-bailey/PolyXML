@@ -251,7 +251,9 @@ impl TypeScriptCodegen {
                     match &f.type_ref {
                         TypeRef::Named(target_qname) => {
                             if target_qname != &s.qname {
-                                if let Some(TypeDef::Struct(dep_struct)) = ir.types.get(target_qname) {
+                                if let Some(TypeDef::Struct(dep_struct)) =
+                                    ir.types.get(target_qname)
+                                {
                                     visit(dep_struct, ir, visiting, visited, ordered);
                                 }
                             }
@@ -259,7 +261,9 @@ impl TypeScriptCodegen {
                         TypeRef::List(inner) | TypeRef::Boxed(inner) => {
                             if let TypeRef::Named(target_qname) = inner.as_ref() {
                                 if target_qname != &s.qname {
-                                    if let Some(TypeDef::Struct(dep_struct)) = ir.types.get(target_qname) {
+                                    if let Some(TypeDef::Struct(dep_struct)) =
+                                        ir.types.get(target_qname)
+                                    {
                                         visit(dep_struct, ir, visiting, visited, ordered);
                                     }
                                 }

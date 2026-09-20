@@ -498,4 +498,3 @@ fn test_rust_attribute_codec_loop_syntax() {
     assert!(code.contains("match attr.key.local_name().as_ref() {"));
     assert!(code.contains("\"version\" => {"));
 }
-
