@@ -159,6 +159,7 @@ fn test_csharp_records_and_enums_generation() {
     let options = CSharpOptions {
         namespace: "Crm.Models".to_string(),
         emit_xml_attributes: true,
+        emit_json_attributes: true,
         emit_validation: true,
         record_kind: CSharpRecordKind::Class,
         use_file_scoped_namespaces: true,
@@ -168,18 +169,25 @@ fn test_csharp_records_and_enums_generation() {
     let codegen = CSharpCodegen::new(options);
     let cs_code = codegen.generate_module(&ir);
 
+    assert!(cs_code.contains("using System.Text.Json.Serialization;"));
     assert!(cs_code.contains("namespace Crm.Models;"));
+    assert!(cs_code.contains("[JsonConverter(typeof(JsonStringEnumConverter))]"));
     assert!(cs_code.contains("public enum OrderStatus"));
     assert!(cs_code.contains("[XmlEnum(\"pending\")]"));
     assert!(cs_code.contains("Pending,"));
     assert!(cs_code.contains("public static bool IsValid(this OrderStatus value)"));
     assert!(cs_code.contains("public static string ToXmlValue(this OrderStatus value)"));
     assert!(cs_code.contains("public record Customer("));
-    assert!(cs_code.contains("[property: XmlAttribute(\"id\")] int Id,"));
-    assert!(cs_code.contains("[property: XmlElement(\"name\")] string Name,"));
-    assert!(cs_code.contains("[property: XmlElement(\"email\")] string? Email,"));
-    assert!(cs_code.contains("[property: XmlElement(\"tag\")] List<string>? Tag,"));
-    assert!(cs_code.contains("[property: XmlElement(\"status\")] OrderStatus Status"));
+    assert!(cs_code.contains("[property: XmlAttribute(\"id\"), JsonPropertyName(\"id\")] int Id,"));
+    assert!(cs_code
+        .contains("[property: XmlElement(\"name\"), JsonPropertyName(\"name\")] string Name,"));
+    assert!(cs_code
+        .contains("[property: XmlElement(\"email\"), JsonPropertyName(\"email\")] string? Email,"));
+    assert!(cs_code
+        .contains("[property: XmlElement(\"tag\"), JsonPropertyName(\"tag\")] List<string>? Tag,"));
+    assert!(cs_code.contains(
+        "[property: XmlElement(\"status\"), JsonPropertyName(\"status\")] OrderStatus Status"
+    ));
     assert!(cs_code.contains("public Customer() : this("));
     assert!(cs_code.contains("IValidatableObject"));
 
@@ -205,6 +213,7 @@ fn test_csharp_records_and_enums_generation() {
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
+using System.Text.Json;
 using System.Xml.Serialization;
 using Crm.Models;
 
@@ -255,6 +264,21 @@ public class Program
         if (decoded.Tag == null || decoded.Tag.Count != 2 || decoded.Tag[0] != "vip")
         {
             Console.WriteLine("Tag list mismatch");
+            return 1;
+        }
+
+        // Test System.Text.Json roundtrip
+        var json = JsonSerializer.Serialize(cust);
+        if (!json.Contains("\"id\":42") || !json.Contains("\"name\":\"Alice\"") || !json.Contains("\"Pending\""))
+        {
+            Console.WriteLine("JSON serialization missing fields: " + json);
+            return 1;
+        }
+
+        var jsonDecoded = JsonSerializer.Deserialize<Customer>(json);
+        if (jsonDecoded == null || jsonDecoded.Id != 42 || jsonDecoded.Name != "Alice" || jsonDecoded.Email != "alice@example.com" || jsonDecoded.Status != OrderStatus.Pending)
+        {
+            Console.WriteLine("JSON deserialization mismatch");
             return 1;
         }
 
@@ -374,6 +398,7 @@ fn test_csharp_choice_polymorphic_hierarchy() {
     let options = CSharpOptions {
         namespace: "Payments".to_string(),
         emit_xml_attributes: true,
+        emit_json_attributes: true,
         emit_validation: true,
         record_kind: CSharpRecordKind::Class,
         use_file_scoped_namespaces: true,
@@ -388,8 +413,9 @@ fn test_csharp_choice_polymorphic_hierarchy() {
     assert!(cs_code.contains("[XmlInclude(typeof(ContactChoice.Phone))]"));
     assert!(cs_code.contains("public sealed record Email("));
     assert!(cs_code.contains("public sealed record Phone("));
-    assert!(cs_code.contains("[property: XmlElement(\"email\", typeof(ContactChoice.Email))]"));
-    assert!(cs_code.contains("[property: XmlElement(\"phone\", typeof(ContactChoice.Phone))]"));
+    assert!(cs_code.contains("XmlElement(\"email\", typeof(ContactChoice.Email))"));
+    assert!(cs_code.contains("XmlElement(\"phone\", typeof(ContactChoice.Phone))"));
+    assert!(cs_code.contains("JsonPropertyName(\"contact\")"));
 
     let temp = tempdir().unwrap();
     let csproj = r#"<Project Sdk="Microsoft.NET.Sdk">
@@ -524,6 +550,7 @@ fn test_csharp_recursive_cycle() {
     let options = CSharpOptions {
         namespace: "Tree".to_string(),
         emit_xml_attributes: true,
+        emit_json_attributes: true,
         emit_validation: true,
         record_kind: CSharpRecordKind::Class,
         use_file_scoped_namespaces: true,
@@ -534,8 +561,11 @@ fn test_csharp_recursive_cycle() {
     let cs_code = codegen.generate_module(&ir);
 
     assert!(cs_code.contains("public record TreeNode("));
-    assert!(cs_code.contains("[property: XmlElement(\"label\")] string Label,"));
-    assert!(cs_code.contains("[property: XmlElement(\"next\")] TreeNode? Next = null"));
+    assert!(cs_code
+        .contains("[property: XmlElement(\"label\"), JsonPropertyName(\"label\")] string Label,"));
+    assert!(cs_code.contains(
+        "[property: XmlElement(\"next\"), JsonPropertyName(\"next\")] TreeNode? Next = null"
+    ));
 
     let temp = tempdir().unwrap();
     let csproj = r#"<Project Sdk="Microsoft.NET.Sdk">

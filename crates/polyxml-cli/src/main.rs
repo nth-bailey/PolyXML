@@ -38,6 +38,9 @@ pub enum Commands {
 
     /// Validate XML schema syntax and structural invariants without generating code
     Validate(ValidateArgs),
+
+    /// Bidirectionally transcode XML ↔ JSON with zero-copy streaming
+    Transcode(TranscodeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -118,6 +121,37 @@ pub struct ValidateArgs {
     pub schemas: Vec<PathBuf>,
 }
 
+#[derive(Debug, Args)]
+pub struct TranscodeArgs {
+    /// Input file path (or '-' / omitted for stdin)
+    #[arg(value_name = "INPUT")]
+    pub input: Option<PathBuf>,
+
+    /// Output file path (or '-' / omitted for stdout)
+    #[arg(short = 'o', long = "out", value_name = "OUTPUT")]
+    pub output: Option<PathBuf>,
+
+    /// Input format ('xml' or 'json', auto-detected if omitted)
+    #[arg(long = "from", value_name = "FORMAT")]
+    pub from: Option<String>,
+
+    /// Output format ('xml' or 'json', auto-detected if omitted)
+    #[arg(long = "to", value_name = "FORMAT")]
+    pub to: Option<String>,
+
+    /// Optional XSD schema file for typed schema-directed transcoding
+    #[arg(short = 's', long = "schema", value_name = "SCHEMA")]
+    pub schema: Option<PathBuf>,
+
+    /// Root element name (used when transcoding JSON to XML)
+    #[arg(short = 'r', long = "root", value_name = "ROOT")]
+    pub root: Option<String>,
+
+    /// Format output with indentation and newlines
+    #[arg(long = "pretty")]
+    pub pretty: bool,
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -125,6 +159,7 @@ fn main() {
         Commands::Generate(args) => run_generate(args),
         Commands::Build(args) => run_build(args),
         Commands::Validate(args) => run_validate(args),
+        Commands::Transcode(args) => run_transcode(args),
     };
 
     if let Err(err) = result {
@@ -392,6 +427,7 @@ fn emit_target_code(
                 emit_meta: true,
                 emit_root_aliases: true,
                 emit_codecs: opts.codecs.unwrap_or(true),
+                emit_json_metadata: true,
             };
 
             let codegen = PythonCodegen::new(options);
@@ -522,6 +558,7 @@ fn emit_target_code(
             let options = GoOptions {
                 package_name: pkg.to_string(),
                 emit_xml_tags: true,
+                emit_json_tags: true,
                 validate_choice_exclusivity: true,
                 validate_facets: true,
                 emit_root_aliases: true,
@@ -546,6 +583,7 @@ fn emit_target_code(
             let options = CSharpOptions {
                 namespace: ns.to_string(),
                 emit_xml_attributes: true,
+                emit_json_attributes: true,
                 emit_validation: true,
                 record_kind: CSharpRecordKind::Class,
                 use_file_scoped_namespaces: true,
@@ -684,4 +722,108 @@ fn run_language_formatter(lang: &str, dir: &Path) {
         }
         _ => {}
     }
+}
+
+fn run_transcode(args: TranscodeArgs) -> Result<(), Box<dyn std::error::Error>> {
+    use std::io::{Read, Write};
+
+    // 1. Read input bytes
+    let input_bytes = if let Some(ref path) = args.input {
+        if path.as_os_str() == "-" {
+            let mut buf = Vec::new();
+            std::io::stdin().read_to_end(&mut buf)?;
+            buf
+        } else {
+            fs::read(path)?
+        }
+    } else {
+        let mut buf = Vec::new();
+        std::io::stdin().read_to_end(&mut buf)?;
+        buf
+    };
+
+    // 2. Determine from and to formats
+    let from_format = if let Some(ref f) = args.from {
+        f.to_lowercase()
+    } else if let Some(ref path) = args.input {
+        match path.extension().and_then(|e| e.to_str()).unwrap_or("") {
+            "xml" => "xml".to_string(),
+            "json" => "json".to_string(),
+            _ => {
+                if input_bytes.iter().find(|&&b| !b.is_ascii_whitespace()) == Some(&b'<') {
+                    "xml".to_string()
+                } else {
+                    "json".to_string()
+                }
+            }
+        }
+    } else if input_bytes.iter().find(|&&b| !b.is_ascii_whitespace()) == Some(&b'<') {
+        "xml".to_string()
+    } else {
+        "json".to_string()
+    };
+
+    let to_format = if let Some(ref t) = args.to {
+        t.to_lowercase()
+    } else if let Some(ref path) = args.output {
+        match path.extension().and_then(|e| e.to_str()).unwrap_or("") {
+            "xml" => "xml".to_string(),
+            "json" => "json".to_string(),
+            _ => {
+                if from_format == "xml" {
+                    "json".to_string()
+                } else {
+                    "xml".to_string()
+                }
+            }
+        }
+    } else if from_format == "xml" {
+        "json".to_string()
+    } else {
+        "xml".to_string()
+    };
+
+    // 3. Load optional ModelSchema
+    let model_schema = if let Some(ref schema_path) = args.schema {
+        let mut parser = XsdParser::new();
+        let ir = parser.parse_file(schema_path)?;
+        Some(polyxml::ModelSchema::from_ir(&ir, args.root.as_deref())?)
+    } else {
+        None
+    };
+
+    let indent = if args.pretty { Some(2) } else { None };
+
+    // 4. Perform transcoding
+    let output_bytes = match (from_format.as_str(), to_format.as_str()) {
+        ("xml", "json") => polyxml::xml_to_json(&input_bytes, model_schema, indent, true)?,
+        ("json", "xml") => polyxml::json_to_xml(
+            &input_bytes,
+            model_schema,
+            args.root.as_deref(),
+            indent,
+            None,
+            None,
+        )?,
+        _ => {
+            return Err(format!(
+                "Unsupported transcoding direction from '{}' to '{}'",
+                from_format, to_format
+            )
+            .into())
+        }
+    };
+
+    // 5. Write output bytes
+    if let Some(ref path) = args.output {
+        if path.as_os_str() == "-" {
+            std::io::stdout().write_all(&output_bytes)?;
+        } else {
+            fs::write(path, output_bytes)?;
+        }
+    } else {
+        std::io::stdout().write_all(&output_bytes)?;
+    }
+
+    Ok(())
 }

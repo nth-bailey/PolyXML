@@ -273,3 +273,115 @@ def test_to_bytes_error_handling():
 def test_invalid_json_raises():
     with pytest.raises(ValueError):
         polyxml.deserialize_json(b"{not valid json}", Customer)
+
+
+def test_transcoder_dynamic_bidirectional(tmp_path: pathlib.Path):
+    xml_str = '<service id="99" enabled="true"><name>API Gateway</name><port>8080</port><port>8443</port></service>'
+
+    # 1. XML to JSON (dynamic)
+    json_bytes = polyxml.xml_to_json(xml_str, indent=2)
+    assert b'"@id": 99' in json_bytes
+    assert b'"@enabled": true' in json_bytes
+    assert b'"name": "API Gateway"' in json_bytes
+    assert b"8080" in json_bytes
+    assert b"8443" in json_bytes
+
+    # 2. JSON to XML (dynamic)
+    roundtrip_xml = polyxml.json_to_xml(json_bytes, indent=2)
+    assert b"<service" in roundtrip_xml
+    assert b'id="99"' in roundtrip_xml
+    assert b'enabled="true"' in roundtrip_xml
+    assert b"<name>API Gateway</name>" in roundtrip_xml
+    assert b"<port>8080</port>" in roundtrip_xml
+
+    # Test with pathlib.Path and IO stream
+    xml_file = tmp_path / "service.xml"
+    xml_file.write_bytes(xml_str.encode("utf-8"))
+    json_from_file = polyxml.xml_to_json(xml_file)
+    assert b'"@id":99' in json_from_file
+
+    stream = io.BytesIO(json_from_file)
+    xml_from_stream = polyxml.json_to_xml(stream)
+    assert b'id="99"' in xml_from_stream
+
+
+def test_transcoder_model_guided():
+    xml_data = (
+        b'<Customer customerId="456">'
+        b"<companyName>Cyberdyne Systems</companyName>"
+        b"<accountBalance>1250000.50</accountBalance>"
+        b"<isActive>true</isActive>"
+        b"<accountStatus>active</accountStatus>"
+        b'<Item skuCode="T-800"><unitPrice>99999.99</unitPrice></Item>'
+        b"</Customer>"
+    )
+
+    # 1. XML -> JSON guided by Model (dataclass)
+    json_bytes = polyxml.xml_to_json(xml_data, Customer, indent=2)
+    assert b'"customerId": 456' in json_bytes
+    assert b'"companyName": "Cyberdyne Systems"' in json_bytes
+    assert b'"accountBalance": "1250000.50"' in json_bytes
+    assert b'"skuCode": "T-800"' in json_bytes
+
+    # Using model= kwarg alias
+    json_bytes_kwarg = polyxml.xml_to_json(xml_data, model=Customer, by_alias=True)
+    assert b'"customerId":456' in json_bytes_kwarg
+
+    # 2. JSON -> XML guided by Model
+    xml_roundtrip = polyxml.json_to_xml(json_bytes, model=Customer, root="Customer", indent=2)
+    assert b'<Customer customerId="456">' in xml_roundtrip
+    assert b"<companyName>Cyberdyne Systems</companyName>" in xml_roundtrip
+    assert b'<skuCode="T-800"' in xml_roundtrip or b'skuCode="T-800"' in xml_roundtrip
+
+
+def test_transcoder_schema_path_guided(tmp_path: pathlib.Path):
+    xsd_content = """<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="Product" type="ProductType"/>
+    <xs:complexType name="ProductType">
+        <xs:sequence>
+            <xs:element name="title" type="xs:string"/>
+            <xs:element name="price" type="xs:decimal"/>
+        </xs:sequence>
+        <xs:attribute name="code" type="xs:string" use="required"/>
+    </xs:complexType>
+</xs:schema>"""
+
+    xsd_file = tmp_path / "product.xsd"
+    xsd_file.write_text(xsd_content, encoding="utf-8")
+
+    xml_content = (
+        '<Product code="PROD-77"><title>Mechanical Keyboard</title><price>129.99</price></Product>'
+    )
+
+    # 1. XML -> JSON with schema_path
+    json_bytes = polyxml.xml_to_json(xml_content, schema_path=xsd_file, root="Product", indent=2)
+    assert b'"code": "PROD-77"' in json_bytes
+    assert b'"title": "Mechanical Keyboard"' in json_bytes
+    assert b'"price": "129.99"' in json_bytes
+
+    # 2. JSON -> XML with schema_path and str path
+    xml_bytes = polyxml.json_to_xml(json_bytes, schema_path=str(xsd_file), root="Product", indent=2)
+    assert b'code="PROD-77"' in xml_bytes
+    assert b"<title>Mechanical Keyboard</title>" in xml_bytes
+    assert b"<price>129.99</price>" in xml_bytes
+
+
+def test_transcoder_error_handling(tmp_path: pathlib.Path):
+    # Non-existent schema file
+    with pytest.raises(ValueError, match="Failed to read schema file"):
+        polyxml.xml_to_json(b"<foo/>", schema_path="non_existent_schema.xsd")
+
+    # Invalid schema XML
+    bad_xsd = tmp_path / "bad.xsd"
+    bad_xsd.write_text("not xml", encoding="utf-8")
+    with pytest.raises(ValueError, match="Failed to (parse schema|build schema)"):
+        polyxml.xml_to_json(b"<foo/>", schema_path=bad_xsd)
+
+    # Empty XML
+    with pytest.raises(ValueError):
+        polyxml.xml_to_json(b"", indent=2)
+
+    # Invalid JSON
+    with pytest.raises(ValueError):
+        polyxml.json_to_xml(b"not json", indent=2)

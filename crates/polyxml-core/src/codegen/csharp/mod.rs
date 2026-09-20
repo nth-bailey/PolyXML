@@ -31,6 +31,8 @@ pub struct CSharpOptions {
     pub namespace: String,
     /// Emit System.Xml.Serialization attributes ([XmlElement], [XmlAttribute], etc.)
     pub emit_xml_attributes: bool,
+    /// Emit System.Text.Json.Serialization attributes ([JsonPropertyName], etc.)
+    pub emit_json_attributes: bool,
     /// Emit IValidatableObject and restriction facet validation logic
     pub emit_validation: bool,
     /// Record emission kind (record class vs record struct)
@@ -46,6 +48,7 @@ impl Default for CSharpOptions {
         Self {
             namespace: "Generated".to_string(),
             emit_xml_attributes: true,
+            emit_json_attributes: true,
             emit_validation: true,
             record_kind: CSharpRecordKind::Class,
             use_file_scoped_namespaces: true,
@@ -225,6 +228,9 @@ impl CSharpCodegen {
         if self.options.emit_xml_attributes {
             writeln!(out, "using System.Xml.Serialization;").unwrap();
         }
+        if self.options.emit_json_attributes {
+            writeln!(out, "using System.Text.Json.Serialization;").unwrap();
+        }
         writeln!(out).unwrap();
 
         let ns = to_csharp_namespace(&self.options.namespace);
@@ -288,6 +294,14 @@ impl CSharpCodegen {
             self.emit_docstring(out, doc, indent);
         }
 
+        if self.options.emit_json_attributes {
+            writeln!(
+                out,
+                "{}[JsonConverter(typeof(JsonStringEnumConverter))]",
+                indent
+            )
+            .unwrap();
+        }
         writeln!(out, "{}public enum {}", indent, enum_name).unwrap();
         writeln!(out, "{}{{", indent).unwrap();
 
@@ -425,10 +439,17 @@ impl CSharpCodegen {
                 self.emit_docstring(out, doc, &format!("{}    ", indent));
             }
 
-            let xml_attr = if self.options.emit_xml_attributes {
-                format!("[property: XmlElement(\"{}\")] ", branch.xml_name)
-            } else {
+            let mut branch_attrs = Vec::new();
+            if self.options.emit_xml_attributes {
+                branch_attrs.push(format!("XmlElement(\"{}\")", branch.xml_name));
+            }
+            if self.options.emit_json_attributes {
+                branch_attrs.push(format!("JsonPropertyName(\"{}\")", branch.xml_name));
+            }
+            let xml_attr = if branch_attrs.is_empty() {
                 String::new()
+            } else {
+                format!("[property: {}] ", branch_attrs.join(", "))
             };
 
             writeln!(
@@ -529,11 +550,7 @@ impl CSharpCodegen {
 
             let default_val = if can_have_default { " = null" } else { "" };
 
-            let xml_attr = if self.options.emit_xml_attributes {
-                self.build_field_xml_attribute(f, ir)
-            } else {
-                String::new()
-            };
+            let field_attrs = self.build_field_attributes(f, ir);
 
             if let Some(ref doc) = f.documentation {
                 self.emit_docstring(out, doc, &format!("{}    ", indent));
@@ -542,7 +559,7 @@ impl CSharpCodegen {
             writeln!(
                 out,
                 "{}    {}{} {}{}{}",
-                indent, xml_attr, field_type, prop_name, default_val, comma
+                indent, field_attrs, field_type, prop_name, default_val, comma
             )
             .unwrap();
         }
@@ -709,31 +726,48 @@ impl CSharpCodegen {
         }
     }
 
-    fn build_field_xml_attribute(&self, f: &FieldDef, ir: &SchemaIR) -> String {
-        // If the field is a choice (UnionDef), emit [property: XmlElement("branchXml", typeof(BranchType))]
-        if let TypeRef::Named(ref qname) = f.type_ref {
-            if let Some(TypeDef::Union(u)) = ir.types.get(qname) {
-                let choice_name = to_csharp_type_name(&u.qname.local);
-                let mut attrs = Vec::new();
-                for branch in &u.branches {
-                    let variant_name = to_csharp_type_name(&branch.variant_name);
-                    attrs.push(format!(
-                        "[property: XmlElement(\"{}\", typeof({}.{}))]",
-                        branch.xml_name, choice_name, variant_name
-                    ));
+    fn build_field_attributes(&self, f: &FieldDef, ir: &SchemaIR) -> String {
+        let mut parts = Vec::new();
+
+        if self.options.emit_xml_attributes {
+            // If the field is a choice (UnionDef), emit XmlElement("branchXml", typeof(BranchType))
+            if let TypeRef::Named(ref qname) = f.type_ref {
+                if let Some(TypeDef::Union(u)) = ir.types.get(qname) {
+                    let choice_name = to_csharp_type_name(&u.qname.local);
+                    for branch in &u.branches {
+                        let variant_name = to_csharp_type_name(&branch.variant_name);
+                        parts.push(format!(
+                            "XmlElement(\"{}\", typeof({}.{}))",
+                            branch.xml_name, choice_name, variant_name
+                        ));
+                    }
                 }
-                if !attrs.is_empty() {
-                    return format!("{} ", attrs.join(" "));
+            }
+            if parts.is_empty() {
+                match f.kind {
+                    FieldKind::Attribute => parts.push(format!("XmlAttribute(\"{}\")", f.xml_name)),
+                    FieldKind::Text => parts.push("XmlText".to_string()),
+                    FieldKind::Any => parts.push("XmlAnyElement".to_string()),
+                    FieldKind::AnyAttribute => parts.push("XmlAnyAttribute".to_string()),
+                    FieldKind::Element => parts.push(format!("XmlElement(\"{}\")", f.xml_name)),
                 }
             }
         }
 
-        match f.kind {
-            FieldKind::Attribute => format!("[property: XmlAttribute(\"{}\")] ", f.xml_name),
-            FieldKind::Text => "[property: XmlText] ".to_string(),
-            FieldKind::Any => "[property: XmlAnyElement] ".to_string(),
-            FieldKind::AnyAttribute => "[property: XmlAnyAttribute] ".to_string(),
-            FieldKind::Element => format!("[property: XmlElement(\"{}\")] ", f.xml_name),
+        if self.options.emit_json_attributes {
+            let json_name = match f.kind {
+                FieldKind::Text => "value",
+                _ => &f.xml_name,
+            };
+            if f.kind != FieldKind::Any && f.kind != FieldKind::AnyAttribute {
+                parts.push(format!("JsonPropertyName(\"{}\")", json_name));
+            }
+        }
+
+        if parts.is_empty() {
+            String::new()
+        } else {
+            format!("[property: {}] ", parts.join(", "))
         }
     }
 

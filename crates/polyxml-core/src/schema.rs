@@ -86,6 +86,197 @@ impl ModelSchema {
     pub fn builder(name: impl Into<String>) -> ModelSchemaBuilder {
         ModelSchemaBuilder::new(name)
     }
+
+    /// Construct a runtime `ModelSchema` from a compiled `SchemaIR`.
+    pub fn from_ir(
+        ir: &crate::ir::SchemaIR,
+        root_name: Option<&str>,
+    ) -> crate::error::Result<Arc<ModelSchema>> {
+        use crate::ir::{PrimitiveType, TypeDef, TypeRef};
+        use std::collections::HashSet;
+
+        let (name, qname_opt, type_ref) = if let Some(target) = root_name {
+            if let Some((qname, elem)) = ir.elements.iter().find(|(q, _)| q.local == target) {
+                (
+                    elem.qname.local.clone(),
+                    Some(qname.clone()),
+                    elem.type_ref.clone(),
+                )
+            } else if let Some((qname, _)) = ir.types.iter().find(|(q, _)| q.local == target) {
+                (
+                    qname.local.clone(),
+                    Some(qname.clone()),
+                    TypeRef::Named(qname.clone()),
+                )
+            } else {
+                return Err(crate::error::PolyXmlError::SchemaError(format!(
+                    "Root element or type '{}' not found in schema",
+                    target
+                )));
+            }
+        } else if let Some((_, elem)) = ir.elements.iter().next() {
+            (
+                elem.qname.local.clone(),
+                Some(elem.qname.clone()),
+                elem.type_ref.clone(),
+            )
+        } else if let Some((qname, _)) = ir.types.iter().next() {
+            (
+                qname.local.clone(),
+                Some(qname.clone()),
+                TypeRef::Named(qname.clone()),
+            )
+        } else {
+            return Err(crate::error::PolyXmlError::SchemaError(
+                "SchemaIR contains no elements or types".into(),
+            ));
+        };
+
+        fn map_primitive(prim: PrimitiveType) -> ScalarType {
+            match prim {
+                PrimitiveType::String
+                | PrimitiveType::NormalizedString
+                | PrimitiveType::Token
+                | PrimitiveType::Language
+                | PrimitiveType::Name
+                | PrimitiveType::NCName
+                | PrimitiveType::Id
+                | PrimitiveType::IdRef
+                | PrimitiveType::IdRefs
+                | PrimitiveType::Entity
+                | PrimitiveType::Entities
+                | PrimitiveType::NMTOKEN
+                | PrimitiveType::NMTOKENS
+                | PrimitiveType::AnyUri
+                | PrimitiveType::QName => ScalarType::String,
+                PrimitiveType::Boolean => ScalarType::Bool,
+                PrimitiveType::Decimal => ScalarType::Decimal,
+                PrimitiveType::Float | PrimitiveType::Double => ScalarType::Float,
+                PrimitiveType::Duration => ScalarType::XmlDuration,
+                PrimitiveType::DateTime => ScalarType::XmlDateTime,
+                PrimitiveType::Time => ScalarType::XmlTime,
+                PrimitiveType::Date => ScalarType::XmlDate,
+                PrimitiveType::Int
+                | PrimitiveType::Integer
+                | PrimitiveType::NonPositiveInteger
+                | PrimitiveType::NegativeInteger
+                | PrimitiveType::Long
+                | PrimitiveType::Short
+                | PrimitiveType::Byte
+                | PrimitiveType::NonNegativeInteger
+                | PrimitiveType::UnsignedLong
+                | PrimitiveType::UnsignedInt
+                | PrimitiveType::UnsignedShort
+                | PrimitiveType::UnsignedByte
+                | PrimitiveType::PositiveInteger => ScalarType::Int,
+                PrimitiveType::Base64Binary | PrimitiveType::HexBinary => ScalarType::String,
+                _ => ScalarType::String,
+            }
+        }
+
+        fn build_type(
+            tr: &TypeRef,
+            ir: &crate::ir::SchemaIR,
+            visited: &mut HashSet<crate::ir::QName>,
+        ) -> ValueType {
+            match tr {
+                TypeRef::Primitive(prim) => ValueType::Scalar(map_primitive(*prim)),
+                TypeRef::List(inner) => ValueType::List(Box::new(build_type(inner, ir, visited))),
+                TypeRef::Boxed(inner) => build_type(inner, ir, visited),
+                TypeRef::Named(qname) => {
+                    if let Some(type_def) = ir.types.get(qname) {
+                        match type_def {
+                            TypeDef::Struct(s) => {
+                                if visited.contains(&s.qname) {
+                                    ValueType::Nested(ModelSchema::builder(&s.qname.local).build())
+                                } else {
+                                    visited.insert(s.qname.clone());
+                                    let child_schema = build_struct(s, ir, visited);
+                                    visited.remove(&s.qname);
+                                    ValueType::Nested(child_schema)
+                                }
+                            }
+                            TypeDef::Simple(sim) => build_type(&sim.base_type, ir, visited),
+                            TypeDef::Enum(_) => ValueType::Scalar(ScalarType::String),
+                            TypeDef::Union(_) => ValueType::Scalar(ScalarType::String),
+                        }
+                    } else {
+                        ValueType::Scalar(ScalarType::String)
+                    }
+                }
+            }
+        }
+
+        fn build_struct(
+            s: &crate::ir::StructDef,
+            ir: &crate::ir::SchemaIR,
+            visited: &mut HashSet<crate::ir::QName>,
+        ) -> Arc<ModelSchema> {
+            let mut builder = ModelSchema::builder(&s.qname.local);
+            if let Some(ref ns) = s.qname.namespace {
+                builder = builder.namespace(ns);
+            }
+
+            for f in &s.fields {
+                let kind = match f.kind {
+                    crate::ir::FieldKind::Attribute => FieldKind::Attribute,
+                    crate::ir::FieldKind::Element => FieldKind::Element,
+                    crate::ir::FieldKind::Text => FieldKind::Text,
+                    _ => FieldKind::Element,
+                };
+
+                let mut val_type = build_type(&f.type_ref, ir, visited);
+                if f.cardinality.is_list() && !matches!(val_type, ValueType::List(_)) {
+                    val_type = ValueType::List(Box::new(val_type));
+                }
+
+                let mut field_schema =
+                    FieldSchema::new(&f.name, f.xml_name.as_bytes(), kind, val_type);
+                if let Some(ref ns) = f.namespace {
+                    field_schema = field_schema.namespace(ns);
+                }
+                if f.cardinality.min_occurs > 0 && !f.cardinality.is_optional() {
+                    field_schema = field_schema.required();
+                }
+
+                builder = builder.field(field_schema);
+            }
+
+            builder.build()
+        }
+
+        let mut visited = HashSet::new();
+        if let Some(qn) = qname_opt.as_ref() {
+            visited.insert(qn.clone());
+        }
+
+        match type_ref {
+            TypeRef::Named(ref qname) if ir.types.contains_key(qname) => {
+                if let Some(TypeDef::Struct(s)) = ir.types.get(qname) {
+                    Ok(build_struct(s, ir, &mut visited))
+                } else {
+                    let mut b = ModelSchema::builder(name);
+                    b = b.field(FieldSchema::new(
+                        "value",
+                        b"value",
+                        FieldKind::Text,
+                        build_type(&type_ref, ir, &mut visited),
+                    ));
+                    Ok(b.build())
+                }
+            }
+            _ => {
+                let mut b = ModelSchema::builder(name);
+                b = b.field(FieldSchema::new(
+                    "value",
+                    b"value",
+                    FieldKind::Text,
+                    build_type(&type_ref, ir, &mut visited),
+                ));
+                Ok(b.build())
+            }
+        }
+    }
 }
 
 pub struct ModelSchemaBuilder {

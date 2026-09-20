@@ -126,6 +126,7 @@ fn test_python_dataclass_codegen() {
         emit_meta: true,
         emit_root_aliases: true,
         emit_codecs: true,
+        emit_json_metadata: true,
     });
 
     let code = codegen.generate_module(&ir);
@@ -145,10 +146,10 @@ fn test_python_dataclass_codegen() {
     assert!(code.contains("namespace = \"https://example.com/shop\""));
 
     // Check fields
-    assert!(code.contains("id: int = field(metadata={\"type\": \"Attribute\", \"name\": \"id\"})"));
-    assert!(code.contains("type_: str | None = field(default=None, metadata={\"type\": \"Element\", \"name\": \"type\", \"namespace\": \"https://example.com/shop\", \"nillable\": True})"));
-    assert!(code.contains("status: OrderStatus = field(default=\"pending\", metadata={\"type\": \"Element\", \"name\": \"status\"})"));
-    assert!(code.contains("tags: list[str] = field(default_factory=list, metadata={\"type\": \"Element\", \"name\": \"tag\"})"));
+    assert!(code.contains("id: int = field(metadata={\"type\": \"Attribute\", \"name\": \"id\", \"json_name\": \"id\"})"));
+    assert!(code.contains("type_: str | None = field(default=None, metadata={\"type\": \"Element\", \"name\": \"type\", \"json_name\": \"type\", \"namespace\": \"https://example.com/shop\", \"nillable\": True})"));
+    assert!(code.contains("status: OrderStatus = field(default=\"pending\", metadata={\"type\": \"Element\", \"name\": \"status\", \"json_name\": \"status\"})"));
+    assert!(code.contains("tags: list[str] = field(default_factory=list, metadata={\"type\": \"Element\", \"name\": \"tag\", \"json_name\": \"tag\"})"));
 }
 
 #[test]
@@ -220,6 +221,7 @@ fn test_python_pydantic_codegen_with_facets() {
         emit_meta: true,
         emit_root_aliases: true,
         emit_codecs: true,
+        emit_json_metadata: true,
     });
 
     let code = codegen.generate_module(&ir);
@@ -229,9 +231,9 @@ fn test_python_pydantic_codegen_with_facets() {
     assert!(code.contains("type Age = Annotated[int, Field(ge=0, le=120)]"));
     assert!(code.contains("class User(BaseModel):"));
     assert!(code.contains("model_config = ConfigDict(defer_build=True, populate_by_name=True)"));
-    assert!(code.contains("username: str = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"username\"}, min_length=3, max_length=20, pattern=r\"^[a-zA-Z0-9_]+$\")"));
+    assert!(code.contains("username: str = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"username\", \"json_name\": \"username\"}, min_length=3, max_length=20, pattern=r\"^[a-zA-Z0-9_]+$\")"));
     assert!(code.contains(
-        "user_age: Age = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"age\"})"
+        "user_age: Age = Field(..., alias=\"age\", serialization_alias=\"age\", json_schema_extra={\"type\": \"Element\", \"name\": \"age\", \"json_name\": \"age\"})"
     ));
 }
 

@@ -421,10 +421,21 @@ fn test_rust_codecs_codegen() {
     assert!(code_enabled.contains("pub fn from_xml(xml: &'a str) -> Result<Self>"));
     assert!(code_enabled.contains("pub fn from_xml_bytes(xml_bytes: &'a [u8]) -> Result<Self>"));
     assert!(code_enabled.contains(
+        "pub fn from_json_str(json_str: &'a str) -> std::result::Result<Self, serde_json::Error>"
+    ));
+    assert!(code_enabled.contains(
+        "pub fn from_json_slice(bytes: &'a [u8]) -> std::result::Result<Self, serde_json::Error>"
+    ));
+    assert!(code_enabled.contains(
         "pub fn decode_xml(reader: &mut Reader<&'a [u8]>, start: &BytesStart<'_>) -> Result<Self>"
     ));
     assert!(code_enabled.contains("pub fn to_xml(&self) -> Result<Vec<u8>>"));
     assert!(code_enabled.contains("pub fn to_xml_string(&self) -> Result<String>"));
+    assert!(code_enabled.contains(
+        "pub fn to_json_string(&self) -> std::result::Result<String, serde_json::Error>"
+    ));
+    assert!(code_enabled
+        .contains("pub fn to_json_vec(&self) -> std::result::Result<Vec<u8>, serde_json::Error>"));
     assert!(code_enabled.contains("pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()>"));
 
     let codegen_disabled = RustCodegen::new(RustOptions {
@@ -434,4 +445,6 @@ fn test_rust_codecs_codegen() {
     let code_disabled = codegen_disabled.generate_module(&ir);
     assert!(!code_disabled.contains("pub fn from_xml("));
     assert!(!code_disabled.contains("pub fn to_xml(&self)"));
+    assert!(!code_disabled.contains("pub fn from_json_str("));
+    assert!(!code_disabled.contains("pub fn to_json_string("));
 }

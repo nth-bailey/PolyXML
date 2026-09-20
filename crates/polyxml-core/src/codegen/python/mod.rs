@@ -38,6 +38,7 @@ pub struct PythonOptions {
     pub emit_meta: bool,
     pub emit_root_aliases: bool,
     pub emit_codecs: bool,
+    pub emit_json_metadata: bool,
 }
 
 impl Default for PythonOptions {
@@ -50,6 +51,7 @@ impl Default for PythonOptions {
             emit_meta: true,
             emit_root_aliases: true,
             emit_codecs: true,
+            emit_json_metadata: true,
         }
     }
 }
@@ -579,7 +581,7 @@ impl PythonCodegen {
                 self.format_dataclass_field(field, is_list, &inner_type, &meta_dict)
             }
             PythonBackend::Pydantic => {
-                self.format_pydantic_field(field, is_list, &inner_type, &meta_dict)
+                self.format_pydantic_field(field, py_name, is_list, &inner_type, &meta_dict)
             }
         };
 
@@ -632,6 +634,7 @@ impl PythonCodegen {
     fn format_pydantic_field(
         &self,
         field: &FieldDef,
+        py_name: &str,
         is_list: bool,
         base_type: &str,
         meta_dict: &str,
@@ -642,11 +645,16 @@ impl PythonCodegen {
             .map(|f| self.format_pydantic_facets(f))
             .unwrap_or_default();
 
-        let extra_clause = if facet_args.is_empty() {
-            format!("json_schema_extra={}", meta_dict)
-        } else {
-            format!("json_schema_extra={}, {}", meta_dict, facet_args)
-        };
+        let mut clauses = Vec::new();
+        if self.options.emit_json_metadata && py_name != field.xml_name {
+            clauses.push(format!("alias=\"{}\"", field.xml_name));
+            clauses.push(format!("serialization_alias=\"{}\"", field.xml_name));
+        }
+        clauses.push(format!("json_schema_extra={}", meta_dict));
+        if !facet_args.is_empty() {
+            clauses.push(facet_args);
+        }
+        let extra_clause = clauses.join(", ");
 
         if is_list {
             (
@@ -691,6 +699,9 @@ impl PythonCodegen {
         let mut parts = Vec::new();
         parts.push(format!("\"type\": \"{}\"", kind_str));
         parts.push(format!("\"name\": \"{}\"", field.xml_name));
+        if self.options.emit_json_metadata {
+            parts.push(format!("\"json_name\": \"{}\"", field.xml_name));
+        }
 
         if let Some(ref ns) = field.namespace {
             parts.push(format!("\"namespace\": \"{}\"", ns));

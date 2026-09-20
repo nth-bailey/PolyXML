@@ -272,9 +272,9 @@ fn test_cli_generate_python_backends() {
     assert!(
         pyd_py.contains("type InvoiceCode = Annotated[str, Field(min_length=5, max_length=10)]")
     );
-    assert!(pyd_py.contains("code: InvoiceCode = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"Code\", \"namespace\": \"https://example.com/invoice\"})"));
-    assert!(pyd_py.contains("total: Decimal = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"Total\", \"namespace\": \"https://example.com/invoice\"})"));
-    assert!(pyd_py.contains("note: str | None = Field(default=None, json_schema_extra={\"type\": \"Element\", \"name\": \"Note\", \"namespace\": \"https://example.com/invoice\", \"nillable\": True})"));
+    assert!(pyd_py.contains("code: InvoiceCode = Field(..., alias=\"Code\", serialization_alias=\"Code\", json_schema_extra={\"type\": \"Element\", \"name\": \"Code\", \"json_name\": \"Code\", \"namespace\": \"https://example.com/invoice\"})"));
+    assert!(pyd_py.contains("total: Decimal = Field(..., alias=\"Total\", serialization_alias=\"Total\", json_schema_extra={\"type\": \"Element\", \"name\": \"Total\", \"json_name\": \"Total\", \"namespace\": \"https://example.com/invoice\"})"));
+    assert!(pyd_py.contains("note: str | None = Field(default=None, alias=\"Note\", serialization_alias=\"Note\", json_schema_extra={\"type\": \"Element\", \"name\": \"Note\", \"json_name\": \"Note\", \"namespace\": \"https://example.com/invoice\", \"nillable\": True})"));
 }
 
 #[test]
@@ -756,6 +756,7 @@ fn test_cli_go_generation() {
     let generated_file = go_out.join("crm.go");
     assert!(generated_file.exists(), "crm.go was not created");
     let go_code = fs::read_to_string(&generated_file).unwrap();
+    println!("GO_CODE:\n{}", go_code);
 
     assert!(go_code.contains("package crm"));
     assert!(go_code.contains("type AccountTier string"));
@@ -763,32 +764,41 @@ fn test_cli_go_generation() {
     assert!(go_code.contains("\"standard\""));
     assert!(go_code.contains("func (e AccountTier) IsValid() bool"));
     assert!(go_code.contains("type Account struct {"));
-    assert!(go_code.contains("XMLName xml.Name"));
-    assert!(go_code.contains("Name") && go_code.contains("`xml:\"name\"`"));
+    assert!(go_code.contains("XMLName xml.Name") && go_code.contains("`json:\"-\"`"));
+    assert!(
+        go_code.contains("Name")
+            && go_code.contains("xml:\"name\"")
+            && go_code.contains("json:\"name\"")
+    );
     assert!(
         go_code.contains("Tier")
             && go_code.contains("AccountTier")
-            && go_code.contains("`xml:\"tier\"`")
+            && go_code.contains("xml:\"tier\"")
+            && go_code.contains("json:\"tier\"")
     );
     assert!(
         go_code.contains("Balance")
             && go_code.contains("float64")
-            && go_code.contains("`xml:\"balance\"`")
+            && go_code.contains("xml:\"balance\"")
+            && go_code.contains("json:\"balance\"")
     );
     assert!(
         go_code.contains("Alias")
             && go_code.contains("*string")
-            && go_code.contains("`xml:\"alias,omitempty\"`")
+            && go_code.contains("xml:\"alias,omitempty\"")
+            && go_code.contains("json:\"alias,omitempty\"")
     );
     assert!(
         go_code.contains("Tag")
             && go_code.contains("[]string")
-            && go_code.contains("`xml:\"tag\"`")
+            && go_code.contains("xml:\"tag\"")
+            && go_code.contains("json:\"tag\"")
     );
     assert!(
         go_code.contains("ID")
             && go_code.contains("int32")
-            && go_code.contains("`xml:\"id,attr\"`")
+            && go_code.contains("xml:\"id,attr\"")
+            && go_code.contains("json:\"id\"")
     );
     assert!(go_code.contains("func (s Account) Validate() error"));
 
@@ -934,23 +944,34 @@ fn test_cli_csharp_generation() {
     assert!(cs_code.contains("[XmlEnum(\"standard\")]"));
     assert!(cs_code.contains("public static bool IsValid(this AccountTier value)"));
     assert!(cs_code.contains("public record Account("));
-    assert!(cs_code.contains("[property: XmlAttribute(\"id\")]") && cs_code.contains("int Id"));
     assert!(
-        cs_code.contains("[property: XmlElement(\"name\")]") && cs_code.contains("string Name")
+        cs_code.contains("XmlAttribute(\"id\")")
+            && cs_code.contains("JsonPropertyName(\"id\")")
+            && cs_code.contains("int Id")
     );
     assert!(
-        cs_code.contains("[property: XmlElement(\"tier\")]")
+        cs_code.contains("XmlElement(\"name\")")
+            && cs_code.contains("JsonPropertyName(\"name\")")
+            && cs_code.contains("string Name")
+    );
+    assert!(
+        cs_code.contains("XmlElement(\"tier\")")
+            && cs_code.contains("JsonPropertyName(\"tier\")")
             && cs_code.contains("AccountTier Tier")
     );
     assert!(
-        cs_code.contains("[property: XmlElement(\"balance\")]")
+        cs_code.contains("XmlElement(\"balance\")")
+            && cs_code.contains("JsonPropertyName(\"balance\")")
             && cs_code.contains("decimal Balance")
     );
     assert!(
-        cs_code.contains("[property: XmlElement(\"alias\")]") && cs_code.contains("string? Alias")
+        cs_code.contains("XmlElement(\"alias\")")
+            && cs_code.contains("JsonPropertyName(\"alias\")")
+            && cs_code.contains("string? Alias")
     );
     assert!(
-        cs_code.contains("[property: XmlElement(\"tag\")]")
+        cs_code.contains("XmlElement(\"tag\")")
+            && cs_code.contains("JsonPropertyName(\"tag\")")
             && cs_code.contains("List<string>? Tag")
     );
     assert!(cs_code.contains("public Account() : this("));
@@ -1049,4 +1070,62 @@ public class Program
         run_status.success(),
         "dotnet run failed on CLI generated C# files"
     );
+}
+
+#[test]
+fn test_cli_transcode_bidirectional() {
+    let dir = tempdir().unwrap();
+    let xml_file = dir.path().join("input.xml");
+    let json_file = dir.path().join("output.json");
+    let roundtrip_xml_file = dir.path().join("roundtrip.xml");
+
+    fs::write(
+        &xml_file,
+        r#"<service id="99" enabled="true"><name>API Gateway</name><port>8080</port><port>8443</port></service>"#,
+    )
+    .unwrap();
+
+    let exe = env!("CARGO_BIN_EXE_polyxml");
+
+    // 1. XML to JSON with --pretty
+    let status = Command::new(exe)
+        .args([
+            "transcode",
+            xml_file.to_str().unwrap(),
+            "-o",
+            json_file.to_str().unwrap(),
+            "--pretty",
+        ])
+        .status()
+        .expect("failed to execute polyxml transcode");
+    assert!(status.success());
+
+    let json_str = fs::read_to_string(&json_file).unwrap();
+    assert!(json_str.contains("\"@id\": 99"));
+    assert!(json_str.contains("\"@enabled\": true"));
+    assert!(json_str.contains("\"name\": \"API Gateway\""));
+    assert!(json_str.contains("\"port\": [\n      8080,\n      8443\n    ]"));
+
+    // 2. JSON to XML
+    let status2 = Command::new(exe)
+        .args([
+            "transcode",
+            json_file.to_str().unwrap(),
+            "-o",
+            roundtrip_xml_file.to_str().unwrap(),
+            "--pretty",
+        ])
+        .status()
+        .expect("failed to execute polyxml transcode");
+    assert!(status2.success());
+
+    let roundtrip_str = fs::read_to_string(&roundtrip_xml_file).unwrap();
+    assert!(
+        roundtrip_str.contains("<service")
+            && roundtrip_str.contains("id=\"99\"")
+            && roundtrip_str.contains("enabled=\"true\"")
+    );
+    assert!(roundtrip_str.contains("<name>API Gateway</name>"));
+    assert!(roundtrip_str.contains("<port>8080</port>"));
+    assert!(roundtrip_str.contains("<port>8443</port>"));
 }

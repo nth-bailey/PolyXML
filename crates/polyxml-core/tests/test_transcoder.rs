@@ -1,0 +1,153 @@
+use std::sync::Arc;
+
+use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
+use polyxml::schema_parser::XsdParser;
+use polyxml::{json_to_xml, xml_to_json};
+
+#[test]
+fn test_schemaless_xml_to_json_and_back() {
+    let xml = br#"<order id="42" vip="true"><customer>Alice</customer><item>Book</item><item>Pen</item></order>"#;
+
+    let json_bytes = xml_to_json(xml, None, None, true).expect("xml_to_json");
+    let json_str = String::from_utf8(json_bytes.clone()).unwrap();
+
+    assert!(json_str.contains("\"@id\":42"));
+    assert!(json_str.contains("\"@vip\":true"));
+    assert!(json_str.contains("\"customer\":\"Alice\""));
+    assert!(json_str.contains("\"item\":[\"Book\",\"Pen\"]"));
+
+    // Transcode back from JSON to XML
+    let roundtrip_xml =
+        json_to_xml(&json_bytes, None, None, None, None, None).expect("json_to_xml");
+    let roundtrip_str = String::from_utf8(roundtrip_xml).unwrap();
+
+    assert!(
+        roundtrip_str.contains("<order")
+            && roundtrip_str.contains("id=\"42\"")
+            && roundtrip_str.contains("vip=\"true\"")
+    );
+    assert!(roundtrip_str.contains("<customer>Alice</customer>"));
+    assert!(roundtrip_str.contains("<item>Book</item>"));
+    assert!(roundtrip_str.contains("<item>Pen</item>"));
+}
+
+#[test]
+fn test_schemaless_pretty_transcoding() {
+    let xml = br#"<root><greeting>Hello World</greeting></root>"#;
+    let json_bytes = xml_to_json(xml, None, Some(2), true).unwrap();
+    let json_str = String::from_utf8(json_bytes).unwrap();
+
+    assert!(json_str.contains("{\n  \"root\": {\n    \"greeting\": \"Hello World\"\n  }\n}"));
+
+    let xml_roundtrip = json_to_xml(json_str.as_bytes(), None, None, Some(2), None, None).unwrap();
+    let xml_str = String::from_utf8(xml_roundtrip).unwrap();
+    assert!(xml_str.contains("<root>\n  <greeting>Hello World</greeting>\n</root>"));
+}
+
+#[test]
+fn test_schema_directed_transcoding() {
+    let item_schema = ModelSchema::builder("Item")
+        .field(FieldSchema::new(
+            "name",
+            b"name",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::String),
+        ))
+        .field(FieldSchema::new(
+            "sku",
+            b"sku",
+            FieldKind::Attribute,
+            ValueType::Scalar(ScalarType::String),
+        ))
+        .build();
+
+    let order_schema = ModelSchema::builder("Order")
+        .field(FieldSchema::new(
+            "id",
+            b"id",
+            FieldKind::Attribute,
+            ValueType::Scalar(ScalarType::Int),
+        ))
+        .field(FieldSchema::new(
+            "active",
+            b"active",
+            FieldKind::Element,
+            ValueType::Scalar(ScalarType::Bool),
+        ))
+        .field(FieldSchema::new(
+            "item",
+            b"item",
+            FieldKind::Element,
+            ValueType::List(Box::new(ValueType::Nested(item_schema))),
+        ))
+        .build();
+
+    let xml = br#"<Order id="999"><active>true</active><item sku="SKU-1"><name>Keyboard</name></item><item sku="SKU-2"><name>Mouse</name></item></Order>"#;
+
+    let json_bytes = xml_to_json(xml, Some(Arc::clone(&order_schema)), Some(2), true).unwrap();
+    let json_str = String::from_utf8(json_bytes.clone()).unwrap();
+
+    assert!(json_str.contains("\"id\": 999"));
+    assert!(json_str.contains("\"active\": true"));
+    assert!(json_str.contains("\"sku\": \"SKU-1\""));
+    assert!(json_str.contains("\"name\": \"Keyboard\""));
+
+    let roundtrip_xml = json_to_xml(
+        &json_bytes,
+        Some(order_schema),
+        Some("Order"),
+        None,
+        None,
+        None,
+    )
+    .unwrap();
+    let roundtrip_str = String::from_utf8(roundtrip_xml).unwrap();
+
+    assert!(roundtrip_str.contains("id=\"999\""));
+    assert!(roundtrip_str.contains("<active>true</active>"));
+    assert!(roundtrip_str.contains("<name>Keyboard</name>"));
+    assert!(roundtrip_str.contains("<name>Mouse</name>"));
+}
+
+#[test]
+fn test_schema_from_ir_transcoding() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Product" type="ProductType"/>
+  <xs:complexType name="ProductType">
+    <xs:sequence>
+      <xs:element name="title" type="xs:string"/>
+      <xs:element name="price" type="xs:decimal"/>
+    </xs:sequence>
+    <xs:attribute name="code" type="xs:string" use="required"/>
+  </xs:complexType>
+</xs:schema>"#;
+
+    let mut parser = XsdParser::new();
+    let ir = parser.parse_str(xsd).expect("parse xsd");
+    let model_schema =
+        ModelSchema::from_ir(&ir, Some("Product")).expect("build model schema from ir");
+
+    assert_eq!(model_schema.name, "ProductType");
+
+    let xml =
+        br#"<Product code="PROD-101"><title>Rust in Action</title><price>39.99</price></Product>"#;
+    let json_bytes =
+        xml_to_json(xml, Some(model_schema), None, true).expect("transcode with ir schema");
+    let json_str = String::from_utf8(json_bytes).unwrap();
+
+    assert!(json_str.contains("\"code\":\"PROD-101\""));
+    assert!(json_str.contains("\"title\":\"Rust in Action\""));
+    assert!(json_str.contains("\"price\":\"39.99\""));
+}
+
+#[test]
+fn test_transcoder_errors() {
+    // Empty XML
+    let err = xml_to_json(b"", None, None, true).unwrap_err();
+    assert!(err.to_string().contains("Empty XML input"));
+
+    // Malformed JSON
+    let err = json_to_xml(b"{ not json }", None, None, None, None, None).unwrap_err();
+    assert!(err.to_string().contains("Invalid JSON"));
+}

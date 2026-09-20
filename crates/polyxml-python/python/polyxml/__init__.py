@@ -44,6 +44,9 @@ from polyxml._polyxml import (
     iterparse as _iterparse,
 )
 from polyxml._polyxml import (
+    json_to_xml as _json_to_xml,
+)
+from polyxml._polyxml import (
     serialize as _serialize,
 )
 from polyxml._polyxml import (
@@ -51,6 +54,9 @@ from polyxml._polyxml import (
 )
 from polyxml._polyxml import (
     version as _version,
+)
+from polyxml._polyxml import (
+    xml_to_json as _xml_to_json,
 )
 
 __version__: str = _version()
@@ -193,6 +199,81 @@ def dumps_json(
         JSON string representing the model instance.
     """
     return serialize_json(obj, indent=indent, by_alias=by_alias).decode("utf-8")
+
+
+def xml_to_json(
+    source: bytes | str | pathlib.Path | IO[bytes] | IO[str],
+    target_type: type[object] | None = None,
+    *,
+    model: type[object] | None = None,
+    schema_path: str | pathlib.Path | None = None,
+    root: str | None = None,
+    indent: int | None = None,
+    by_alias: bool = True,
+) -> bytes:
+    """Transcode XML into JSON bytes directly in C/Rust.
+
+    Args:
+        source: XML content as raw bytes, string, Path, or file stream.
+        target_type: Optional Python dataclass/model type to guide schema-directed transcoding.
+        model: Alias for target_type.
+        schema_path: Optional path to an XSD schema file.
+        root: Optional root element name when using schema_path.
+        indent: Optional indentation size in spaces for pretty-printed JSON.
+        by_alias: Whether to use XML tag aliases as JSON keys (default True).
+
+    Returns:
+        Transcoded UTF-8 JSON bytes.
+    """
+    effective_type = model if model is not None else target_type
+    path_str = str(schema_path) if schema_path is not None else None
+    return _xml_to_json(
+        _to_bytes(source),
+        target_type=effective_type,
+        schema_path=path_str,
+        root=root,
+        indent=indent,
+        by_alias=by_alias,
+    )
+
+
+def json_to_xml(
+    source: bytes | str | pathlib.Path | IO[bytes] | IO[str],
+    target_type: type[object] | None = None,
+    *,
+    model: type[object] | None = None,
+    schema_path: str | pathlib.Path | None = None,
+    root: str | None = None,
+    indent: int | None = None,
+    namespaces: bool | None = None,
+    ns_map: dict[str, str] | None = None,
+) -> bytes:
+    """Transcode JSON into XML bytes directly in C/Rust.
+
+    Args:
+        source: JSON content as raw bytes, string, Path, or file stream.
+        target_type: Optional Python dataclass/model type to guide schema-directed transcoding.
+        model: Alias for target_type.
+        schema_path: Optional path to an XSD schema file.
+        root: Optional root XML element tag name.
+        indent: Optional indentation size in spaces for pretty-printed XML.
+        namespaces: Optional boolean toggle for XML namespaces.
+        ns_map: Optional prefix-to-URI or URI-to-prefix mapping dictionary.
+
+    Returns:
+        Transcoded UTF-8 XML bytes.
+    """
+    effective_type = model if model is not None else target_type
+    path_str = str(schema_path) if schema_path is not None else None
+    return _json_to_xml(
+        _to_bytes(source),
+        target_type=effective_type,
+        schema_path=path_str,
+        root=root,
+        indent=indent,
+        namespaces=namespaces,
+        ns_map=ns_map,
+    )
 
 
 class JsonSerializer:
@@ -443,8 +524,10 @@ __all__ = [
     "dumps_binary",
     "dumps_json",
     "iterparse",
+    "json_to_xml",
     "loads_binary",
     "loads_json",
     "serialize",
     "serialize_json",
+    "xml_to_json",
 ]

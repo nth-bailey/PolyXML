@@ -1240,6 +1240,36 @@ impl RustCodegen {
         out.push_str("        String::from_utf8(bytes).map_err(|e| PolyXmlError::Utf8Error(e.utf8_error()))\n");
         out.push_str("    }\n\n");
 
+        if self.options.derive_serde {
+            let from_json_sig = if needs_lifetime {
+                "pub fn from_json_str(json_str: &'a str) -> std::result::Result<Self, serde_json::Error>"
+            } else {
+                "pub fn from_json_str(json_str: &str) -> std::result::Result<Self, serde_json::Error>"
+            };
+            let _ = writeln!(out, "    {}", from_json_sig);
+            out.push_str("    {\n");
+            out.push_str("        serde_json::from_str(json_str)\n");
+            out.push_str("    }\n\n");
+
+            let from_json_slice_sig = if needs_lifetime {
+                "pub fn from_json_slice(bytes: &'a [u8]) -> std::result::Result<Self, serde_json::Error>"
+            } else {
+                "pub fn from_json_slice(bytes: &[u8]) -> std::result::Result<Self, serde_json::Error>"
+            };
+            let _ = writeln!(out, "    {}", from_json_slice_sig);
+            out.push_str("    {\n");
+            out.push_str("        serde_json::from_slice(bytes)\n");
+            out.push_str("    }\n\n");
+
+            out.push_str("    pub fn to_json_string(&self) -> std::result::Result<String, serde_json::Error> {\n");
+            out.push_str("        serde_json::to_string(self)\n");
+            out.push_str("    }\n\n");
+
+            out.push_str("    pub fn to_json_vec(&self) -> std::result::Result<Vec<u8>, serde_json::Error> {\n");
+            out.push_str("        serde_json::to_vec(self)\n");
+            out.push_str("    }\n\n");
+        }
+
         out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n");
         let _ = writeln!(
             out,
@@ -1860,12 +1890,39 @@ impl RustCodegen {
         out.push_str("    }\n\n");
 
         out.push_str("    pub fn to_xml_string(&self) -> Result<String> {\n");
-        out.push_str(
-            "        let bytes = self.to_xml()?;
-",
-        );
+        out.push_str("        let bytes = self.to_xml()?;\n");
         out.push_str("        String::from_utf8(bytes).map_err(|e| PolyXmlError::Utf8Error(e.utf8_error()))\n");
         out.push_str("    }\n\n");
+
+        if self.options.derive_serde {
+            let from_json_sig = if needs_lifetime {
+                "pub fn from_json_str(json_str: &'a str) -> std::result::Result<Self, serde_json::Error>"
+            } else {
+                "pub fn from_json_str(json_str: &str) -> std::result::Result<Self, serde_json::Error>"
+            };
+            let _ = writeln!(out, "    {}", from_json_sig);
+            out.push_str("    {\n");
+            out.push_str("        serde_json::from_str(json_str)\n");
+            out.push_str("    }\n\n");
+
+            let from_json_slice_sig = if needs_lifetime {
+                "pub fn from_json_slice(bytes: &'a [u8]) -> std::result::Result<Self, serde_json::Error>"
+            } else {
+                "pub fn from_json_slice(bytes: &[u8]) -> std::result::Result<Self, serde_json::Error>"
+            };
+            let _ = writeln!(out, "    {}", from_json_slice_sig);
+            out.push_str("    {\n");
+            out.push_str("        serde_json::from_slice(bytes)\n");
+            out.push_str("    }\n\n");
+
+            out.push_str("    pub fn to_json_string(&self) -> std::result::Result<String, serde_json::Error> {\n");
+            out.push_str("        serde_json::to_string(self)\n");
+            out.push_str("    }\n\n");
+
+            out.push_str("    pub fn to_json_vec(&self) -> std::result::Result<Vec<u8>, serde_json::Error> {\n");
+            out.push_str("        serde_json::to_vec(self)\n");
+            out.push_str("    }\n\n");
+        }
 
         out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n");
         out.push_str("        match self {\n");
