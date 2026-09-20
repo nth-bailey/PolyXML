@@ -71,7 +71,7 @@ polyxml generate \
 |---|---|---|---|
 | **Target Language** | `-l`, `--lang` | Target language (`python`, `rust`, `cpp`, `java`, `typescript`, `go`, `csharp`). Can be specified multiple times. | Required |
 | **Output Directory** | `-o`, `--out` | Target directory for generated source files. | `.` |
-| **Python Backend** | `--backend` | Python model style: `dataclass` or `pydantic-v2`. | `dataclass` |
+| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass` / `pydantic-v2` for Python; `standard` / `jackson` for Java). | Target default |
 | **Rust Zero-Copy** | `--zero-copy` | Use `Cow<'a, str>` string slices instead of owned `String`. | `true` |
 | **Streaming Codecs**| `--codecs` | Emit inherent zero-copy streaming XML serializers and deserializers. | `true` |
 | **Zod Schemas** | `--zod` | Emit runtime Zod validation schemas for TypeScript. | `false` |
@@ -114,6 +114,7 @@ codecs = true
 target = "java"
 output = "src/generated/java"
 package = "com.enterprise.banking.iso20022"
+backend = "jackson"
 
 [[generate]]
 target = "typescript"

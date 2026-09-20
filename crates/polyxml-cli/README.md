@@ -22,7 +22,7 @@ cargo install --path crates/polyxml-cli
 | **Python** | `python` | Modern Python 3.12+ `@dataclass` or Pydantic v2 models, field constraints, zero-copy streaming codecs |
 | **Rust** | `rust` | Zero-copy `Cow<'a, str>` & owned structs, automatic recursive boxing (`Box<T>`), streaming serializers/deserializers |
 | **C++** | `cpp` | Modern C++20/C++23 value types, `std::variant` choice representations, concepts, CMake/Meson export |
-| **Java** | `java` | Java 21+ records, `sealed interface` choice models, Jakarta/Java Bean Validation annotations |
+| **Java** | `java` | Java 21+ records, `sealed interface` choice models, Jackson XML/JSON annotations (`--backend jackson`) |
 | **TypeScript** | `typescript` | TypeScript 5+ interfaces, discriminated unions, Zod runtime validation schemas with `z.lazy()` recursion |
 | **Go** | `go` | Idiomatic Go 1.22+ structs with `encoding/xml` tags, pointer cycle breaking, choice mutual-exclusivity unmarshaling |
 | **C#** | `csharp` | Modern C# 12 / .NET 8+ records with primary constructors, `System.Xml.Serialization` attributes, `IValidatableObject` validation |
@@ -41,6 +41,9 @@ polyxml generate --lang python --out ./generated/python schemas/order.xsd
 
 # Generate Pydantic v2 models with runtime validation
 polyxml generate --lang python --backend pydantic-v2 --out ./generated/python schemas/order.xsd
+
+# Generate Java 21 records with Enterprise Jackson annotations
+polyxml generate --lang java --backend jackson --package com.enterprise.banking --out ./generated/java schemas/order.xsd
 
 # Generate zero-copy Rust models with codecs
 polyxml generate --lang rust --zero-copy --codecs --out ./generated/rust schemas/order.xsd
@@ -104,6 +107,7 @@ codecs = true
 target = "java"
 output = "src/generated/java"
 package = "com.enterprise.banking.iso20022"
+backend = "jackson"
 
 [[generate]]
 target = "typescript"
