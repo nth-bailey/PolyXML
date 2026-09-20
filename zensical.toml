@@ -11,6 +11,7 @@ nav = [
       { "Introduction" = "index.md" },
       { "Multi-Language Quickstart" = "quickstart.md" },
       { "Schema Compiler & CLI" = "guides/compiler.md" },
+      { "Why PolyXML? (Comparisons)" = "why-polyxml.md" },
       { "Architecture & Design" = "architecture.md" },
       { "Performance & Benchmarks" = "benchmarks.md" },
   ]},

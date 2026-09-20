@@ -44,6 +44,26 @@ While web ecosystems shifted toward JSON and Protocol Buffers, mission-critical 
 
 ---
 
+## ⚡ Why PolyXML? (Old Way vs. PolyXML Way)
+
+```
+Legacy XML Toolchains (JAXB, CodeSynthesis, xsdata, xgen)
+❌ Language Silos: Fragmented, unmaintained open-source or costly commercial tools.
+❌ Memory Bloat: Intermediate DOM allocations cause 10x-20x memory churn & GC spikes.
+❌ Antiquated Code: Sprawling pre-C++11 raw pointers and mutable JavaBeans with getters/setters.
+❌ Licensing Traps: GPL v2 dual-licensing or per-seat commercial paywalls (CodeSynthesis, gSOAP).
+
+The PolyXML Way
+✅ Unified Rust Compiler: A single, battle-tested schema compiler (like protoc) for 7 languages.
+✅ Zero-Allocation Streaming: Direct-to-struct parsing with quick-xml & lexical-core (16x-38x faster).
+✅ Modern Language Idioms: Immutable Java 21+ records, C++20 value types, Python 3.12 PEP 695 dataclasses.
+✅ 100% Permissive MIT: Zero commercial licensing fees, zero GPL infection risk.
+```
+
+👉 **[Read the Full Architectural Comparison & Head-to-Head Benchmarks →](why-polyxml.md)**
+
+---
+
 ## 🛠️ Schema Compiler & Polyglot Code Generation
 
 PolyXML includes a full-fledged schema compiler CLI (`polyxml`) that transforms W3C XSD 1.0 and 1.1 schemas into strongly-typed data contracts and high-performance codecs across all **7 target ecosystems**:

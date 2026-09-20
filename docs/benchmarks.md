@@ -9,6 +9,9 @@ PolyXML is engineered to process gigabytes of XML per second by leveraging Rust'
 
 The repository includes a fully reusable, automated benchmark suite covering both pure Rust Criterion tests and Python comparative benchmarks.
 
+> 🚀 **Looking for architectural comparisons with legacy compilers?**
+> Check out **[Why PolyXML? (The Architecture of Modern XML)](why-polyxml.md)** for in-depth comparisons against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
+
 ---
 
 ## 1. Python Deserialization & Serialization Throughput

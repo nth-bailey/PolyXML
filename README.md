@@ -47,6 +47,21 @@ While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critic
 
 ---
 
+## ⚡ Why PolyXML? (The Modern XML Paradigm)
+
+| Feature | Legacy Toolchains (JAXB, CodeSynthesis, xsdata, xgen) | PolyXML Modern Approach |
+| :--- | :--- | :--- |
+| **Compiler Architecture** | Fragmented language-specific scripts; unmaintained or closed-source | Single unified safe Rust compiler (like `protoc`), emitting 7 languages |
+| **Parsing Performance** | Slow reflection or Python-level loops (**16x–38x slower**) | Zero-allocation Rust streaming engine (**51 MB/s** throughput) |
+| **Micro-Telemetry Latency**| 43.0 μs per packet in Python (`xsdata`) | **2.5 μs** per packet (**17.1x speedup**, beating raw C DOM parsers) |
+| **Memory Footprint** | Intermediate DOM node trees inflate RAM by **10x–20x** | Monomorphized event streaming, zero intermediate DOM allocation |
+| **Generated Code Quality**| Pre-C++11 raw pointers, mutable JavaBeans with getters/setters | Immutable Java 21+ records, modern C++20 value types, C# 12 records |
+| **Licensing** | GPL v2 dual-licensing or per-seat commercial paywalls | **100% Permissive MIT License** (zero commercial royalties) |
+
+👉 **[Read the Full In-Depth Architectural Comparison & Benchmark Breakdown →](docs/why-polyxml.md)**
+
+---
+
 ## Architecture
 
 ```
