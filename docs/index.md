@@ -39,6 +39,32 @@ While web ecosystems shifted toward JSON and Protocol Buffers, mission-critical 
 === "Java (Panama FFI)"
     Java 22+ Foreign Function & Memory API (JEP 454) binding directly to off-heap memory with zero JNI boilerplate.
 
+=== "C# 12 / .NET 8+"
+    Modern immutable records with primary constructors, standard `System.Xml.Serialization` attributes, polymorphic `xs:choice` hierarchies, and built-in facet validation.
+
+---
+
+## 🛠️ Schema Compiler & Polyglot Code Generation
+
+PolyXML includes a full-fledged schema compiler CLI (`polyxml`) that transforms W3C XSD 1.0 and 1.1 schemas into strongly-typed data contracts and high-performance codecs across all **7 target ecosystems**:
+
+```mermaid
+flowchart LR
+    XSD[W3C XSD 1.0 / 1.1<br/>Schema Files] --> PARSER[Pure-Rust XSD Parser<br/>polyxml-core]
+    PARSER --> IR[PolyXML-IR<br/>Language-Agnostic IR]
+    IR --> TARJAN[Tarjan SCC Analysis<br/>Cycle Cutting & Boxing]
+    TARJAN --> CLI[polyxml CLI]
+    CLI --> PY[Python 3.12+<br/>dataclass & Pydantic v2]
+    CLI --> RS[Rust 2021/2024<br/>Zero-Copy & Owned]
+    CLI --> CPP2[C++20 / C++23<br/>Value Types & Concepts]
+    CLI --> JV[Java 21+<br/>Records & Sealed Interfaces]
+    CLI --> TS2[TypeScript 5+<br/>Interfaces & Zod Schemas]
+    CLI --> GO2[Go 1.22+<br/>Structs & xml tags]
+    CLI --> CS[C# 12 / .NET 8+<br/>Records & XmlSerializer]
+```
+
+Tested against the official **W3C XML Schema Test Suite (XSTS)** with **>99.8% schema compilation pass rate** and **>96% round-trip validation pass rate** via [polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests).
+
 ---
 
 ## Architecture at a Glance
@@ -63,5 +89,6 @@ flowchart TD
 ## Next Steps
 
 - Check out the [5-Minute Multi-Language Quickstart](quickstart.md) to see PolyXML in action.
+- Read about our [Schema Compiler & CLI Toolchain](guides/compiler.md).
 - Read about our [Architecture & Streaming Design](architecture.md).
 - Explore [Performance & Benchmarks](benchmarks.md).

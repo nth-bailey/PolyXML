@@ -65,3 +65,46 @@ graph TD
 | **Go** | Cgo allocates values off-heap; GC finalizers (`runtime.SetFinalizer`) free native memory. | Low |
 | **Node.js** | NAPI converts `PolyValue` directly into V8 JavaScript heap objects. | Low |
 | **Java** | Project Panama allocates and accesses off-heap memory via `Arena.ofConfined()`. | Zero JNI Overhead |
+
+---
+
+## 3. Schema Compiler & Intermediate Representation (IR)
+
+In addition to runtime streaming data-binding, PolyXML includes a polyglot schema compiler and code generation engine inside `polyxml-core`:
+
+```mermaid
+flowchart TD
+    subgraph Frontend [Pass 1 & 2: Parser]
+        XSD[XSD 1.0 / 1.1 Documents] --> PARSER[Streaming XSD Parser]
+        INC[Includes & Imports & Redefines] --> PARSER
+    end
+
+    subgraph IR [PolyXML-IR]
+        PARSER --> SCHEMAS[SchemaIR<br/>StructDef, EnumDef, UnionDef, TypeAlias]
+        SCHEMAS --> TOPO[3-Color Topological Sorter]
+        SCHEMAS --> TARJAN[Tarjan SCC Cycle Detector]
+    end
+
+    subgraph Backend [Code Generators]
+        TOPO --> CODEGEN[Target Codegen Engine]
+        TARJAN -. Cycle Cuts (Box/Pointer/Lazy) .-> CODEGEN
+        CODEGEN --> RS[Rust 2021/2024]
+        CODEGEN --> PY[Python 3.12+]
+        CODEGEN --> CPP[C++20/C++23]
+        CODEGEN --> JV[Java 21+]
+        CODEGEN --> TS[TypeScript 5+]
+        CODEGEN --> GO[Go 1.22+]
+        CODEGEN --> CS[C# 12 / .NET 8+]
+    end
+```
+
+### Key Compilation Invariants
+1. **Pure-Rust XSD Parser**: Ingests complex W3C schemas with full resolution of `include`, `import`, and `redefine` without external C libraries.
+2. **Intermediate Representation (PolyXML-IR)**: Strips XML Schema idiosyncrasies and normalizes types into clean structs, enums, discriminated unions, and field metadata.
+3. **Tarjan SCC Cycle-Cutting**: Detects recursive type loops at compile time and calculates minimal cut points, preventing recursive type infinite-size errors across target languages:
+   - **Rust**: Inserts `Box<T>` or `Option<Box<T>>`.
+   - **Go**: Inserts pointer types (`*T`).
+   - **C++**: Inserts `std::unique_ptr<T>`.
+   - **TypeScript**: Emits recursive `z.lazy(() => ...)` wrappers in Zod schemas.
+4. **Codecs Synthesis**: Automatically generates streaming XML serialization and deserialization methods directly within emitted data models for maximum performance.
+

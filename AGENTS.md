@@ -7,11 +7,11 @@ repository.
 
 ## 1. Project Overview
 
-`PolyXML` is the high-performance, polyglot native XML data-binding engine, providing
-ultra-fast bidirectional XML serialization and deserialization across programming
-languages, starting with Rust and Python (`dataclasses` and Pydantic v2).
+`PolyXML` is the high-performance, polyglot native XML data-binding engine and schema compiler, providing
+ultra-fast bidirectional XML serialization, deserialization, and multi-language code generation across
+7 modern ecosystems: **Rust**, **Python** (dataclasses & Pydantic v2), **C++20**, **Java 21+**, **TypeScript 5+**, **Go 1.22+**, and **C# 12 / .NET 8+**.
 
-- **Technology**: Rust 2021, PyO3 (`abi3-py312`), `quick-xml`, `lexical-core`, `smallvec`.
+- **Technology**: Rust 2021, PyO3 (`abi3-py312`), `quick-xml`, `lexical-core`, `smallvec`, `minijinja`.
 - **Repository**: `nth-bailey/PolyXML`
 - **Supported Python**: `Python >= 3.12` exclusively.
 - **Maintainer**: Bailey Nguyen (`bailey.tan.nguyen@gmail.com`).
@@ -24,7 +24,7 @@ When contributing or refactoring, strictly maintain the following invariants:
 
 1. **Pure Rust Core Engine (`crates/polyxml-core`)**:
    - The core engine MUST have **zero Python, PyO3, or runtime-specific dependencies**.
-   - All parsing, serialization, and schema IR logic must remain 100% pure, idiomatic Rust.
+   - All parsing, serialization, schema parser, and schema IR logic must remain 100% pure, idiomatic Rust.
 
 2. **Python ABI3 Portability (`abi3-py312`)**:
    - The Python extension (`crates/polyxml-python`) is compiled against the stable Python 3.12+ ABI (`abi3`).
@@ -42,6 +42,14 @@ When contributing or refactoring, strictly maintain the following invariants:
    - All Python wrapper code in `crates/polyxml-python/python/` must maintain **100%
      statement and branch test coverage** (`fail_under = 100` in `pyproject.toml`).
    - All new features or bug fixes must include corresponding tests in `tests/`.
+
+6. **Language-Agnostic Schema IR & Tarjan SCC Cycle-Cutting**:
+   - The schema compiler in `polyxml-core` normalizes XSD into `SchemaIR`.
+   - All cyclic and self-referential types must be detected and broken via Tarjan's Strongly Connected Components algorithm (`is_cycle_cut = true`) with minimal cut points (`Box<T>`, pointers, `std::unique_ptr`, `z.lazy`).
+
+7. **Standalone W3C Conformance Benchmarks**:
+   - Deep W3C XSTS conformance testing is maintained in the dedicated companion repository [`polyxml-w3c-tests`](https://github.com/nth-bailey/polyxml-w3c-tests) to keep the main repository CI fast. Any compiler changes should be verified against `polyxml-w3c-tests`.
+
 
 ---
 
