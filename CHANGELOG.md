@@ -1,3 +1,10 @@
+# [0.13.0](https://github.com/nth-bailey/PolyXML/compare/v0.12.0...v0.13.0) (2026-09-20)
+
+
+### Features
+
+* **json:** add native JSON serialization and deserialization across PolyXML ([#38](https://github.com/nth-bailey/PolyXML/issues/38)) ([86a855c](https://github.com/nth-bailey/PolyXML/commit/86a855c59f47c0fc61268c3c9e52147463d406fa))
+
 # [0.12.0](https://github.com/nth-bailey/PolyXML/compare/v0.11.1...v0.12.0) (2026-09-20)
 
 

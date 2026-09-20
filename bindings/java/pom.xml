@@ -5,7 +5,7 @@
 
     <groupId>io.github.nth-bailey</groupId>
     <artifactId>polyxml</artifactId>
-    <version>0.12.0</version>
+    <version>0.13.0</version>
     <packaging>jar</packaging>
 
     <name>PolyXML Java Bindings</name>
