@@ -1,3 +1,10 @@
+# [0.12.0](https://github.com/nth-bailey/PolyXML/compare/v0.11.1...v0.12.0) (2026-09-20)
+
+
+### Features
+
+* Next-Gen Polyglot XML Schema Compiler & Toolchain (Epic [#22](https://github.com/nth-bailey/PolyXML/issues/22)) ([#33](https://github.com/nth-bailey/PolyXML/issues/33)) ([ddfc204](https://github.com/nth-bailey/PolyXML/commit/ddfc204ea0d4feb197ed9e380cd193f5f6206455)), closes [#23](https://github.com/nth-bailey/PolyXML/issues/23) [#31](https://github.com/nth-bailey/PolyXML/issues/31) [#24](https://github.com/nth-bailey/PolyXML/issues/24) [#25](https://github.com/nth-bailey/PolyXML/issues/25) [#32](https://github.com/nth-bailey/PolyXML/issues/32) [#28](https://github.com/nth-bailey/PolyXML/issues/28) [#27](https://github.com/nth-bailey/PolyXML/issues/27) [#26](https://github.com/nth-bailey/PolyXML/issues/26) [#29](https://github.com/nth-bailey/PolyXML/issues/29) [#30](https://github.com/nth-bailey/PolyXML/issues/30)
+
 ## [0.11.1](https://github.com/nth-bailey/PolyXML/compare/v0.11.0...v0.11.1) (2026-09-17)
 
 

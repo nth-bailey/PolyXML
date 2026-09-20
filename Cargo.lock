@@ -549,7 +549,7 @@ dependencies = [
 
 [[package]]
 name = "polyxml"
-version = "0.11.1"
+version = "0.12.0"
 dependencies = [
  "criterion",
  "heck",
@@ -566,14 +566,14 @@ dependencies = [
 
 [[package]]
 name = "polyxml-c"
-version = "0.11.1"
+version = "0.12.0"
 dependencies = [
  "polyxml",
 ]
 
 [[package]]
 name = "polyxml-cli"
-version = "0.11.1"
+version = "0.12.0"
 dependencies = [
  "clap",
  "glob",
@@ -587,7 +587,7 @@ dependencies = [
 
 [[package]]
 name = "polyxml-js"
-version = "0.11.1"
+version = "0.12.0"
 dependencies = [
  "napi",
  "napi-build",
@@ -597,7 +597,7 @@ dependencies = [
 
 [[package]]
 name = "polyxml-python"
-version = "0.11.1"
+version = "0.12.0"
 dependencies = [
  "lexical-core",
  "polyxml",
