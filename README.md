@@ -46,6 +46,7 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 2. **⚡ Ultra-Fast Streaming Runtime**: Direct-to-struct deserialization and serialization powered by `quick-xml` and `lexical-core`, executing **10x–24x faster than traditional tools** with **zero intermediate DOM allocations**.
 3. **🏛️ Official W3C XSTS Conformance Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests).
 4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
+5. **🛡️ Secure by Design (Immune to XXE & SSRF)**: Pure-Rust streaming engine with zero filesystem or network capabilities. Structurally immune to XML External Entity Injection (CWE-611 / XXE) and Billion Laughs expansion—unlike legacy parsers (`lxml`, `xsdata`) that require defensive configuration flags to prevent server file exfiltration.
 
 ---
 
@@ -249,6 +250,7 @@ PolyXML strictly generates code adhering to modern programming paradigms (2024�
 | **XML ↔ JSON Transcoding** | Brittle untyped dicts (`xmltodict`), slow Python loops, duplicate schemas | Zero-copy streaming CLI (`polyxml transcode`) & dual-format models across all targets |
 | **Generated Code Quality**| Pre-C++11 raw pointers, mutable JavaBeans with getters/setters | Immutable Java 21+ records, modern C++20 value types, C# 12 records |
 | **Licensing** | GPL v2 dual-licensing or per-seat commercial paywalls | **100% Permissive MIT License** (zero commercial royalties) |
+| **Security Posture (XXE & SSRF)** | Vulnerable by default to external entity resolution (e.g. `lxml`/`xsdata` CWE-611; requires manual `resolve_entities=False`) | **Structurally immune by design**: Pure-Rust streaming parser with no filesystem/network access; external DTD entities never resolved |
 
 👉 **[Read the Full In-Depth Architectural Comparison & Benchmark Breakdown →](docs/why-polyxml.md)**
 

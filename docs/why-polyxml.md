@@ -21,7 +21,7 @@ Yet, for over twenty years, the developer tooling landscape for XML has suffered
 | **Java** | **Apache XMLBeans** | In-memory XML store maintaining full Infoset | ❌ **Very Low**: Classes extending `XmlObject` | **10x–20x memory bloat**; every field access traverses pointer trees; obsolete Ant/Maven plugins | ✅ **Streaming Core**: Zero DOM allocation, minimal memory footprint |
 | **C++** | **CodeSynthesis XSD** | Hard dependency on **Apache Xerces-C++** | ❌ **Low**: Pre-C++11 raw pointers, `auto_ptr`, Boost wrappers | Massive binary footprint; expensive **UTF-8 ↔ UTF-16 (`XMLCh`) transcoding**; punitive **GPL v2 / commercial dual-license** | ✅ **Modern C++20/C++23**: `std::variant`, `std::optional`, `std::string_view`, concepts, zero Xerces dependency, **permissive MIT license** |
 | **C++** | **gSOAP (`soapcpp2`)** | Custom low-level C parser with macro tables | ❌ **Very Low**: Procedural C/C++ | Global state variables; namespace collisions; fragile memory ownership; GPL/commercial dual-license | ✅ **Thread-Safe Modern Value Types**: RAII memory management, CMake/Meson module export |
-| **Python** | **`xsdata`** | Pure Python over `lxml` or `xml.etree` | 🟡 **High**: Emits `@dataclass` and Pydantic v2 | **16x–38x slower**; deserialization bottlenecked by Python interpreter loop and Python-level DOM traversal | ✅ **High-Performance Rust PyO3 Engine**: 16x faster deserialization, 38.7x faster serialization, PEP 695 type aliases, 100% test coverage |
+| **Python** | **`xsdata`** | Pure Python over `lxml` or `xml.etree` | 🟡 **High**: Emits `@dataclass` and Pydantic v2 | **10x–24x slower**; vulnerable to XXE file exfiltration by default in `lxml` handler (CWE-611); interpreter loop bottlenecks | ✅ **High-Performance Rust PyO3 Engine**: 10x faster deserialization, 23.5x faster serialization, structurally immune to XXE (pure Rust, zero filesystem I/O), PEP 695 type aliases, 100% test coverage |
 | **Python** | **`generateDS`** | Monolithic Python script with string matching | ❌ **Very Low**: Legacy procedural classes | Monolithic un-typed files; fails on substitution groups and circular definitions | ✅ **Pydantic v2 & `@dataclass(slots=True)`**: Complete restriction facet validation and IDE autocomplete |
 | **Rust** | **`xsd-parser`** | quick-xml / serde-xml-rs derive attributes | 🟡 **Moderate**: Rust structs with serde | **Panics on enterprise schemas** (ISO 20022); Serde impedance mismatch on mixed content and duplicate element sequences | ✅ **Pure-Rust Compiler & Zero-Copy Codecs**: Tarjan SCC cycle-cutting (`Box<T>`), streaming `Cow<'a, str>`, zero Serde mismatch |
 | **Go** | **`xgen` / `goxsd`** | Direct SAX mapping to `encoding/xml` | 🟡 **Moderate**: Standard Go structs | **Collapses `xs:choice` into optional pointers** (losing mutual exclusivity); slow reflection parser; no facet validation | ✅ **Go 1.22+ Structs with Choice Validation**: Custom `UnmarshalXML` enforcing mutual exclusivity, pointer cycle cuts, canonical initialisms (`ID`, `URL`) |
@@ -30,7 +30,7 @@ Yet, for over twenty years, the developer tooling landscape for XML has suffered
 
 ---
 
-## ⚡ The 5 Pillars of PolyXML
+## ⚡ The 6 Pillars of PolyXML
 
 ### 1. The `protoc` of XML: Unified Intermediate Representation (`SchemaIR`)
 Legacy XML tools treated code generation as a local script within each programming language. When an enterprise schema failed in Python, teams had to write bespoke monkey-patches; when it failed in C++, teams bought expensive commercial licenses.
@@ -77,6 +77,11 @@ PolyXML breaks this dichotomy through a **natively dual-format architecture**:
   - **Rust**: Inherent zero-copy `.to_json_string()`, `.to_json_vec()`, `.from_json_str()`, and `.from_json_slice()` methods alongside XML codecs, with Serde rename support.
   - **Python**: Inherent `.to_json()` and `@classmethod from_json()` on every model, drop-in `JsonSerializer` / `JsonParser` (9.5x faster than xsdata), and direct `polyxml.xml_to_json()` / `polyxml.json_to_xml()`.
 
+### 6. Secure by Design: Inherent Immunity to XXE & SSRF
+Traditional XML parsing stacks in Python, C++, and Java are fraught with severe security vulnerabilities stemming from legacy XML specifications—most notoriously **XML External Entity (XXE) injection (CWE-611)**:
+- In toolchains built atop C's `libxml2` (such as `lxml` and `xsdata`), the underlying parser resolves external SYSTEM entities by default unless defensive configuration flags like `resolve_entities=False` are explicitly configured. Untrusted XML payloads can trivially exfiltrate local files (`/etc/hostname`, cloud metadata credentials) or trigger Server-Side Request Forgery (SSRF).
+- PolyXML's streaming runtime is built entirely on safe Rust pull-parsing (`quick-xml`). The parser contains **zero network or filesystem I/O capabilities**, resolves entity references strictly against an in-memory lookup table of standard predefined XML entities (`&lt;`, `&gt;`, `&amp;`, `&apos;`, `&quot;`), and silently bypasses external DTD subsets. Security is not an optional toggle or configuration afterthought—it is an immutable invariant structurally guaranteed by the compiler and runtime architecture.
+
 ---
 
 ## 📊 Performance Benchmarks: Head-to-Head
@@ -86,43 +91,41 @@ PolyXML breaks this dichotomy through a **natively dual-format architecture**:
 
 ```
 Deserialization Throughput (Higher is Better)
-PolyXML (Typed Dataclass)    ████████████████████████████████████ 51.0 MB/s  (16.0x faster)
-ElementTree (Untyped DOM)    ████████████████████ 57.5 MB/s
+PolyXML (Typed Dataclass)    ████████████████████████████████ 29.8 MB/s  (10.0x faster)
+ElementTree (Untyped DOM)    ████████████████████████████████████ 53.0 MB/s
 xmltodict (Untyped Dict)     ████████ 12.5 MB/s
-xsdata (Typed Dataclass)     ██ 3.2 MB/s
+xsdata (Typed Dataclass)     ██ 3.0 MB/s
 
 Serialization Throughput (Higher is Better)
-PolyXML (Typed Dataclass)    ████████████████████████████████████ 96.2 MB/s  (38.7x faster)
-xmltodict (Untyped Dict)     ███ 8.9 MB/s
+PolyXML (Typed Dataclass)    ████████████████████████████████████ 58.1 MB/s  (23.5x faster)
+xmltodict (Untyped Dict)     █████ 8.9 MB/s
 xsdata (Typed Dataclass)     █ 2.5 MB/s
 ```
 
 | Engine | Data Model | Deserialization Latency | Deserialization Speedup | Serialization Latency | Serialization Speedup | Peak RAM |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **PolyXML** | **Typed Dataclass** | **13.9 ms** | **16.0x** | **7.30 ms** | **38.7x** | **2.0 MB** |
-| `lxml.objectify` | Dynamic C Proxy | 9.9 ms | 22.5x | 3.9 ms | 72.5x | 0.2 MB |
-| `ElementTree` | Untyped DOM | 12.3 ms | 18.1x | — | — | 7.1 MB |
-| `defusedxml` | Secure DOM | 27.2 ms | 8.2x | — | — | 7.1 MB |
-| `xmltodict` | Untyped Dict | 56.6 ms | 3.9x | 79.0 ms | 3.6x | 4.8 MB |
-| `xsdata` | Typed Dataclass | 222.5 ms | 1.0x (Ref) | 282.6 ms | 1.0x (Ref) | 3.3 MB |
+| **PolyXML** | **Typed Dataclass** | **24.0 ms** | **10.0x** | **12.2 ms** | **23.5x** | **2.0 MB** |
+| `lxml.objectify` | Dynamic C Proxy | 10.2 ms | 23.7x | 4.1 ms | 72.8x | 0.2 MB |
+| `ElementTree` | Untyped DOM | 13.6 ms | 17.8x | — | — | 7.1 MB |
+| `defusedxml` | Secure DOM | 29.5 ms | 8.2x | — | — | 7.1 MB |
+| `xmltodict` | Untyped Dict | 57.5 ms | 4.2x | 80.0 ms | 3.7x | 4.8 MB |
+| `xsdata` | Typed Dataclass | 241.9 ms | 1.0x (Ref) | 298.8 ms | 1.0x (Ref) | 3.3 MB |
 
 ### 2. Real-Time Micro Telemetry (Sensor ~100B, UCI Telemetry)
 *Workload: High-frequency telemetry packets in avionics, robotics, and financial feeds*
 
 | Engine | Paradigm | Deserialization Latency | Speedup vs Standard Python |
 | :--- | :--- | :---: | :---: |
-| **PolyXML** | **Typed Dataclass** | **2.5 μs** | **17.1x** |
-| **PolyXML (Pydantic)** | **Typed Pydantic v2** | **3.1 μs** | **13.7x** |
-| `lxml.etree` | Untyped DOM | 3.1 μs | 13.7x |
-| `lxml.objectify` | C Dynamic Proxy | 3.3 μs | 13.1x |
-| `ElementTree` | Untyped DOM | 4.9 μs | 8.7x |
-| `defusedxml` | Secure DOM | 8.6 μs | 5.0x |
-| `declxml` | Declarative Dict | 10.2 μs | 4.2x |
-| `xmltodict` | Untyped Dict | 10.3 μs | 4.2x |
-| `pydantic-xml` | Typed Pydantic v2 | 16.4 μs | 2.6x |
-| `xsdata` | Typed Dataclass | 43.0 μs | 1.0x (Ref) |
+| **PolyXML** | **Typed Dataclass** | **3.2 μs** | **13.9x** |
+| **PolyXML (Pydantic)** | **Typed Pydantic v2** | **3.8 μs** | **11.8x** |
+| `lxml.etree` | Untyped DOM | 3.3 μs | 13.4x |
+| `ElementTree` | Untyped DOM | 5.3 μs | 8.4x |
+| `defusedxml` | Secure DOM | 9.1 μs | 4.9x |
+| `xmltodict` | Untyped Dict | 10.6 μs | 4.2x |
+| `pydantic-xml` | Typed Pydantic v2 | 17.1 μs | 2.6x |
+| `xsdata` | Typed Dataclass | 44.5 μs | 1.0x (Ref) |
 
-> **Telemetry Benchmark Summary**: PolyXML deserializes packets in **2.5 microseconds**—beating raw C-based DOM parsers (`lxml` at 3.1 μs) while delivering fully typed, validated dataclasses.
+> **Telemetry Benchmark Summary**: PolyXML deserializes packets in **3.2 microseconds**—neck-and-neck with raw C-based DOM parsers (`lxml` at 3.3 μs) while delivering fully typed, validated dataclasses.
 
 ---
 
