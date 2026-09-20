@@ -174,3 +174,4 @@ PolyXML's schema compiler and runtime codecs are continuously tested against the
 - **Instance Validation & Round-Trip Pass Rate**: **96.4% (489 / 507 instances)**
 
 For full conformance benchmark metrics across Sun Microsystems, Microsoft, and NIST test sets, visit the [polyxml-w3c-tests repository](https://github.com/nth-bailey/polyxml-w3c-tests).
+

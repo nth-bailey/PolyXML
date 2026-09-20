@@ -185,18 +185,15 @@ fn test_csharp_records_and_enums_generation() {
 
     // Verify .NET compilation, serialization roundtrip, and validation
     let temp = tempdir().unwrap();
-    let init_status = Command::new("dotnet")
-        .args([
-            "new",
-            "console",
-            "-o",
-            temp.path().to_str().unwrap(),
-            "-n",
-            "CrmApp",
-        ])
-        .status()
-        .expect("Failed to run dotnet new console");
-    assert!(init_status.success(), "dotnet new console failed");
+    let csproj = r#"<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>"#;
+    fs::write(temp.path().join("CrmApp.csproj"), csproj).unwrap();
 
     let models_cs = temp.path().join("Models.cs");
     fs::write(&models_cs, &cs_code).unwrap();
@@ -395,18 +392,15 @@ fn test_csharp_choice_polymorphic_hierarchy() {
     assert!(cs_code.contains("[property: XmlElement(\"phone\", typeof(ContactChoice.Phone))]"));
 
     let temp = tempdir().unwrap();
-    let init_status = Command::new("dotnet")
-        .args([
-            "new",
-            "console",
-            "-o",
-            temp.path().to_str().unwrap(),
-            "-n",
-            "PaymentsApp",
-        ])
-        .status()
-        .expect("Failed to run dotnet new console");
-    assert!(init_status.success());
+    let csproj = r#"<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>"#;
+    fs::write(temp.path().join("PaymentsApp.csproj"), csproj).unwrap();
 
     fs::write(temp.path().join("Models.cs"), &cs_code).unwrap();
 
@@ -544,18 +538,15 @@ fn test_csharp_recursive_cycle() {
     assert!(cs_code.contains("[property: XmlElement(\"next\")] TreeNode? Next = null"));
 
     let temp = tempdir().unwrap();
-    let init_status = Command::new("dotnet")
-        .args([
-            "new",
-            "console",
-            "-o",
-            temp.path().to_str().unwrap(),
-            "-n",
-            "TreeApp",
-        ])
-        .status()
-        .expect("Failed to run dotnet new console");
-    assert!(init_status.success());
+    let csproj = r#"<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>"#;
+    fs::write(temp.path().join("TreeApp.csproj"), csproj).unwrap();
 
     fs::write(temp.path().join("Models.cs"), &cs_code).unwrap();
 

@@ -194,3 +194,4 @@ if (!isValid)
 | **`xs:choice`** | `abstract record` + nested sealed records | Type-safe pattern matching with switch expressions |
 | **Facets** | `IValidatableObject.Validate()` | Built-in .NET `DataAnnotations` standard integration |
 | **Enums** | `public enum EnumName` with `[XmlEnum]` | Autocomplete, strongly typed string mappings |
+

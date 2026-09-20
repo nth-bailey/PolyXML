@@ -957,18 +957,16 @@ fn test_cli_csharp_generation() {
 
     // Verify .NET build and test driver
     let app_dir = dir.path().join("cli_csharp_app");
-    let init_status = Command::new("dotnet")
-        .args([
-            "new",
-            "console",
-            "-o",
-            app_dir.to_str().unwrap(),
-            "-n",
-            "CrmCliApp",
-        ])
-        .status()
-        .expect("Failed to run dotnet new console");
-    assert!(init_status.success(), "dotnet new console failed");
+    fs::create_dir_all(&app_dir).unwrap();
+    let csproj = r#"<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>"#;
+    fs::write(app_dir.join("CrmCliApp.csproj"), csproj).unwrap();
 
     fs::copy(&generated_file, app_dir.join("Customer.cs")).unwrap();
 
