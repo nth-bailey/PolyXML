@@ -1,0 +1,392 @@
+use polyxml::codegen::python::{
+    to_enum_identifier, to_field_identifier, PythonBackend, PythonCodegen, PythonOptions,
+};
+use polyxml::ir::{
+    Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, OccursLimit, PrimitiveType, QName,
+    RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef, TypeRef, UnionBranch, UnionDef,
+};
+
+#[test]
+fn test_identifier_sanitization() {
+    assert_eq!(to_enum_identifier("pending"), "PENDING");
+    assert_eq!(to_enum_identifier("in-progress"), "IN_PROGRESS");
+    assert_eq!(to_enum_identifier("2024-Q1"), "VALUE_2024_Q1");
+    assert_eq!(to_enum_identifier("10"), "VALUE_10");
+    assert_eq!(to_enum_identifier(""), "EMPTY");
+    assert_eq!(to_enum_identifier("class"), "CLASS");
+
+    assert_eq!(to_field_identifier("class"), "class_");
+    assert_eq!(to_field_identifier("from"), "from_");
+    assert_eq!(to_field_identifier("type"), "type_");
+    assert_eq!(to_field_identifier("100mDash"), "_100m_dash");
+    assert_eq!(to_field_identifier("normalField"), "normal_field");
+}
+
+#[test]
+fn test_python_dataclass_codegen() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/shop");
+
+    // Enum
+    ir.add_type(TypeDef::Enum(EnumDef {
+        qname: QName::new(Some("https://example.com/shop"), "OrderStatus"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        variants: vec![
+            EnumValue {
+                name: "pending".into(),
+                value: "pending".into(),
+                documentation: Some("Order is pending payment".into()),
+            },
+            EnumValue {
+                name: "10-day-hold".into(),
+                value: "10-day-hold".into(),
+                documentation: None,
+            },
+            EnumValue {
+                name: "class".into(),
+                value: "class".into(),
+                documentation: None,
+            },
+        ],
+        documentation: Some("State of an order".into()),
+    }));
+
+    // Struct
+    let fields = vec![
+        FieldDef {
+            name: "id".into(),
+            xml_name: "id".into(),
+            namespace: None,
+            kind: FieldKind::Attribute,
+            type_ref: TypeRef::Primitive(PrimitiveType::Int),
+            cardinality: Cardinality::required_one(),
+            nillable: false,
+            default_value: None,
+            fixed_value: None,
+            documentation: Some("Unique identifier".into()),
+            facets: None,
+            is_cycle_cut: false,
+        },
+        FieldDef {
+            name: "type".into(), // keyword
+            xml_name: "type".into(),
+            namespace: Some("https://example.com/shop".into()),
+            kind: FieldKind::Element,
+            type_ref: TypeRef::Primitive(PrimitiveType::String),
+            cardinality: Cardinality::optional_one(),
+            nillable: true,
+            default_value: None,
+            fixed_value: None,
+            documentation: None,
+            facets: None,
+            is_cycle_cut: false,
+        },
+        FieldDef {
+            name: "status".into(),
+            xml_name: "status".into(),
+            namespace: None,
+            kind: FieldKind::Element,
+            type_ref: TypeRef::Named(QName::new(Some("https://example.com/shop"), "OrderStatus")),
+            cardinality: Cardinality::required_one(),
+            nillable: false,
+            default_value: Some("pending".into()),
+            fixed_value: None,
+            documentation: None,
+            facets: None,
+            is_cycle_cut: false,
+        },
+        FieldDef {
+            name: "tags".into(),
+            xml_name: "tag".into(),
+            namespace: None,
+            kind: FieldKind::Element,
+            type_ref: TypeRef::Primitive(PrimitiveType::String),
+            cardinality: Cardinality::unbounded(0),
+            nillable: false,
+            default_value: None,
+            fixed_value: None,
+            documentation: None,
+            facets: None,
+            is_cycle_cut: false,
+        },
+    ];
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/shop"), "Order"),
+        base_type: None,
+        is_abstract: false,
+        fields,
+        documentation: Some("Represents a customer purchase order".into()),
+    }));
+
+    let codegen = PythonCodegen::new(PythonOptions {
+        backend: PythonBackend::Dataclass,
+        slots: true,
+        kw_only: true,
+        pep695_aliases: true,
+        emit_meta: true,
+        emit_root_aliases: true,
+        emit_codecs: true,
+    });
+
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("from __future__ import annotations"));
+    assert!(code.contains("from dataclasses import dataclass, field"));
+    assert!(code.contains("from enum import StrEnum"));
+    assert!(code.contains("class OrderStatus(StrEnum):"));
+    assert!(code.contains("PENDING = \"pending\""));
+    assert!(code.contains("VALUE_10_DAY_HOLD = \"10-day-hold\""));
+    assert!(code.contains("CLASS = \"class\""));
+
+    assert!(code.contains("@dataclass(slots=True, kw_only=True)"));
+    assert!(code.contains("class Order:"));
+    assert!(code.contains("class Meta:"));
+    assert!(code.contains("name = \"Order\""));
+    assert!(code.contains("namespace = \"https://example.com/shop\""));
+
+    // Check fields
+    assert!(code.contains("id: int = field(metadata={\"type\": \"Attribute\", \"name\": \"id\"})"));
+    assert!(code.contains("type_: str | None = field(default=None, metadata={\"type\": \"Element\", \"name\": \"type\", \"namespace\": \"https://example.com/shop\", \"nillable\": True})"));
+    assert!(code.contains("status: OrderStatus = field(default=\"pending\", metadata={\"type\": \"Element\", \"name\": \"status\"})"));
+    assert!(code.contains("tags: list[str] = field(default_factory=list, metadata={\"type\": \"Element\", \"name\": \"tag\"})"));
+}
+
+#[test]
+fn test_python_pydantic_codegen_with_facets() {
+    let mut ir = SchemaIR::new();
+
+    // Simple type with facets (Age: 0 <= age <= 120)
+    ir.add_type(TypeDef::Simple(Box::new(SimpleTypeDef {
+        qname: QName::local("Age"),
+        base_type: TypeRef::Primitive(PrimitiveType::Int),
+        facets: RestrictionFacets {
+            min_inclusive: Some("0".into()),
+            max_inclusive: Some("120".into()),
+            ..Default::default()
+        },
+        documentation: Some("Human age constrained between 0 and 120".into()),
+    })));
+
+    // Struct with facets and Pydantic validators
+    let fields = vec![
+        FieldDef {
+            name: "username".into(),
+            xml_name: "username".into(),
+            namespace: None,
+            kind: FieldKind::Element,
+            type_ref: TypeRef::Primitive(PrimitiveType::String),
+            cardinality: Cardinality::required_one(),
+            nillable: false,
+            default_value: None,
+            fixed_value: None,
+            documentation: None,
+            facets: Some(RestrictionFacets {
+                min_length: Some(3),
+                max_length: Some(20),
+                patterns: vec!["^[a-zA-Z0-9_]+$".into()],
+                ..Default::default()
+            }),
+            is_cycle_cut: false,
+        },
+        FieldDef {
+            name: "user_age".into(),
+            xml_name: "age".into(),
+            namespace: None,
+            kind: FieldKind::Element,
+            type_ref: TypeRef::Named(QName::local("Age")),
+            cardinality: Cardinality::required_one(),
+            nillable: false,
+            default_value: None,
+            fixed_value: None,
+            documentation: None,
+            facets: None,
+            is_cycle_cut: false,
+        },
+    ];
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("User"),
+        base_type: None,
+        is_abstract: false,
+        fields,
+        documentation: None,
+    }));
+
+    let codegen = PythonCodegen::new(PythonOptions {
+        backend: PythonBackend::Pydantic,
+        slots: true,
+        kw_only: true,
+        pep695_aliases: true,
+        emit_meta: true,
+        emit_root_aliases: true,
+        emit_codecs: true,
+    });
+
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("from pydantic import BaseModel, ConfigDict, Field"));
+    assert!(code.contains("from typing import Annotated"));
+    assert!(code.contains("type Age = Annotated[int, Field(ge=0, le=120)]"));
+    assert!(code.contains("class User(BaseModel):"));
+    assert!(code.contains("model_config = ConfigDict(defer_build=True, populate_by_name=True)"));
+    assert!(code.contains("username: str = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"username\"}, min_length=3, max_length=20, pattern=r\"^[a-zA-Z0-9_]+$\")"));
+    assert!(code.contains(
+        "user_age: Age = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"age\"})"
+    ));
+}
+
+#[test]
+fn test_python_choice_union_codegen() {
+    let mut ir = SchemaIR::new();
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("CardPayment"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![FieldDef::new(
+            "card_number",
+            "cardNumber",
+            FieldKind::Element,
+            TypeRef::Primitive(PrimitiveType::String),
+        )],
+        documentation: None,
+    }));
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("BankTransfer"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![FieldDef::new(
+            "iban",
+            "iban",
+            FieldKind::Element,
+            TypeRef::Primitive(PrimitiveType::String),
+        )],
+        documentation: None,
+    }));
+
+    ir.add_type(TypeDef::Union(UnionDef {
+        qname: QName::local("PaymentMethod"),
+        branches: vec![
+            UnionBranch {
+                variant_name: "Card".into(),
+                xml_name: "card".into(),
+                namespace: None,
+                type_ref: TypeRef::Named(QName::local("CardPayment")),
+                documentation: None,
+            },
+            UnionBranch {
+                variant_name: "Bank".into(),
+                xml_name: "bank".into(),
+                namespace: None,
+                type_ref: TypeRef::Named(QName::local("BankTransfer")),
+                documentation: None,
+            },
+        ],
+        documentation: Some("Payment choice".into()),
+    }));
+
+    let codegen = PythonCodegen::new(PythonOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("type PaymentMethod = CardPayment | BankTransfer"));
+}
+
+#[test]
+fn test_python_recursive_type_codegen() {
+    let mut ir = SchemaIR::new();
+
+    let fields = vec![
+        FieldDef::new(
+            "name",
+            "name",
+            FieldKind::Element,
+            TypeRef::Primitive(PrimitiveType::String),
+        ),
+        FieldDef {
+            name: "sub_departments".into(),
+            xml_name: "subDepartment".into(),
+            namespace: None,
+            kind: FieldKind::Element,
+            type_ref: TypeRef::List(Box::new(TypeRef::Named(QName::local("Department")))),
+            cardinality: Cardinality {
+                min_occurs: 0,
+                max_occurs: OccursLimit::Unbounded,
+            },
+            nillable: false,
+            default_value: None,
+            fixed_value: None,
+            documentation: None,
+            facets: None,
+            is_cycle_cut: false,
+        },
+        FieldDef {
+            name: "parent".into(),
+            xml_name: "parent".into(),
+            namespace: None,
+            kind: FieldKind::Element,
+            type_ref: TypeRef::Boxed(Box::new(TypeRef::Named(QName::local("Department")))),
+            cardinality: Cardinality::optional_one(),
+            nillable: true,
+            default_value: None,
+            fixed_value: None,
+            documentation: None,
+            facets: None,
+            is_cycle_cut: true,
+        },
+    ];
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("Department"),
+        base_type: None,
+        is_abstract: false,
+        fields,
+        documentation: None,
+    }));
+
+    let codegen = PythonCodegen::new(PythonOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("class Department:"));
+    assert!(code.contains("sub_departments: list[Department] = field(default_factory=list"));
+    assert!(code.contains("parent: Department | None = field(default=None"));
+}
+
+#[test]
+fn test_python_codecs_generation() {
+    let mut ir = SchemaIR::new();
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("Item"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![FieldDef::new(
+            "name",
+            "name",
+            FieldKind::Element,
+            TypeRef::Primitive(PrimitiveType::String),
+        )],
+        documentation: None,
+    }));
+
+    // With codecs enabled
+    let codegen_enabled = PythonCodegen::new(PythonOptions {
+        emit_codecs: true,
+        ..Default::default()
+    });
+    let code_enabled = codegen_enabled.generate_module(&ir);
+    assert!(code_enabled.contains("def from_xml(cls, data: bytes | str) -> Self:"));
+    assert!(code_enabled.contains("def to_xml("));
+    assert!(code_enabled.contains("return polyxml.deserialize(raw_bytes, cls)"));
+    assert!(code_enabled.contains(
+        "return polyxml.serialize(self, indent=indent, namespaces=namespaces, ns_map=ns_map)"
+    ));
+
+    // With codecs disabled
+    let codegen_disabled = PythonCodegen::new(PythonOptions {
+        emit_codecs: false,
+        ..Default::default()
+    });
+    let code_disabled = codegen_disabled.generate_module(&ir);
+    assert!(!code_disabled.contains("def from_xml("));
+    assert!(!code_disabled.contains("def to_xml("));
+}

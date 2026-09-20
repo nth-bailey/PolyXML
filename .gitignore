@@ -39,6 +39,8 @@ node_modules/
 
 # CMake / C++
 bindings/cpp/build/
+gcm.cache/
+**/gcm.cache/
 
 # Java / Maven
 bindings/java/target/

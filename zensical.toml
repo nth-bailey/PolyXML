@@ -10,6 +10,8 @@ nav = [
   { "Get Started" = [
       { "Introduction" = "index.md" },
       { "Multi-Language Quickstart" = "quickstart.md" },
+      { "Schema Compiler & CLI" = "guides/compiler.md" },
+      { "Why PolyXML? (Comparisons)" = "why-polyxml.md" },
       { "Architecture & Design" = "architecture.md" },
       { "Performance & Benchmarks" = "benchmarks.md" },
   ]},
@@ -20,6 +22,7 @@ nav = [
       { "Go (Cgo)" = "guides/go.md" },
       { "TypeScript & Node.js" = "guides/node.md" },
       { "Java 22 (Panama FFI)" = "guides/java.md" },
+      { "C# 12 / .NET 8+" = "guides/csharp.md" },
   ]},
 ]
 

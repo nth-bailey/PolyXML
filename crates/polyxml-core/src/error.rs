@@ -25,6 +25,13 @@ pub enum PolyXmlError {
     #[error("Unexpected root element '{actual}', expected '{expected}'")]
     UnexpectedRootElement { expected: String, actual: String },
 
+    #[error("Facet violation for field '{field}': expected {expected}, got '{actual}'")]
+    FacetViolation {
+        field: String,
+        expected: String,
+        actual: String,
+    },
+
     #[error("Serialization error: {0}")]
     SerializationError(String),
 
@@ -34,8 +41,14 @@ pub enum PolyXmlError {
     #[error("XML parsing error: {0}")]
     XmlError(#[from] quick_xml::Error),
 
+    #[error("XML attribute error: {0}")]
+    AttrError(#[from] quick_xml::events::attributes::AttrError),
+
     #[error("XML unescape error: {0}")]
     EscapeError(#[from] quick_xml::escape::EscapeError),
+
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
 }
 
 pub type Result<T> = std::result::Result<T, PolyXmlError>;

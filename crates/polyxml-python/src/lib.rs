@@ -47,6 +47,15 @@ fn lookup_py_class<'py>(py: Python<'py>, schema_name: &str) -> Option<Bound<'py,
 }
 
 fn unwrap_optional_type<'py>(type_obj: &Bound<'py, PyAny>) -> Bound<'py, PyAny> {
+    if let Ok(val) = type_obj.getattr("__value__") {
+        return unwrap_optional_type(&val);
+    }
+    if type_obj.hasattr("__metadata__").unwrap_or(false) {
+        if let Ok(origin) = type_obj.getattr("__origin__") {
+            return unwrap_optional_type(&origin);
+        }
+    }
+
     let is_union = if let Ok(origin) = type_obj.getattr("__origin__") {
         if let Ok(origin_name) = origin.getattr("__name__") {
             let origin_str: String = origin_name.extract().unwrap_or_default();
@@ -120,6 +129,15 @@ fn resolve_scalar_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<
 }
 
 fn resolve_value_type(py: Python<'_>, type_obj: &Bound<'_, PyAny>) -> PyResult<ValueType> {
+    if let Ok(val) = type_obj.getattr("__value__") {
+        return resolve_value_type(py, &val);
+    }
+    if type_obj.hasattr("__metadata__").unwrap_or(false) {
+        if let Ok(origin) = type_obj.getattr("__origin__") {
+            return resolve_value_type(py, &origin);
+        }
+    }
+
     // Handle typing.Optional / Union and PEP 604 UnionType
     let is_union = if let Ok(origin) = type_obj.getattr("__origin__") {
         if let Ok(origin_name) = origin.getattr("__name__") {

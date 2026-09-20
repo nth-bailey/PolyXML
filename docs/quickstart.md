@@ -205,3 +205,61 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
         }
     }
     ```
+
+=== "C# 12 / .NET 8+"
+
+    ### Example Model & Serialization
+    ```csharp
+    using System;
+    using System.IO;
+    using System.Xml.Serialization;
+
+    [XmlRoot("Sensor")]
+    public record Sensor(
+        [property: XmlAttribute("id")] int Id,
+        [property: XmlElement("name")] string Name,
+        [property: XmlElement("reading")] double Reading,
+        [property: XmlElement("calibrated")] bool Calibrated = false
+    )
+    {
+        public Sensor() : this(0, string.Empty, 0.0, false) { }
+    }
+
+    // 1. Deserialize XML
+    var xml = "<Sensor id=\"101\"><name>Barometric</name><reading>1013.25</reading><calibrated>true</calibrated></Sensor>";
+    var serializer = new XmlSerializer(typeof(Sensor));
+    using var reader = new StringReader(xml);
+    var sensor = (Sensor)serializer.Deserialize(reader)!;
+    Console.WriteLine($"Sensor: {sensor.Name}, Reading: {sensor.Reading}");
+
+    // 2. Serialize back to XML
+    using var writer = new StringWriter();
+    serializer.Serialize(writer, sensor);
+    Console.WriteLine(writer.ToString());
+    ```
+
+=== "Schema Compiler CLI"
+
+    ### 1. Compile Schema to Multiple Languages
+    ```bash
+    # Generate models for Python, Rust, and C# simultaneously
+    polyxml generate \
+      --lang python --backend pydantic-v2 \
+      --lang rust --zero-copy --codecs \
+      --lang csharp --namespace Sensors \
+      --out ./generated \
+      schemas/sensor.xsd
+    ```
+
+    ### 2. Declarative Workspace Build
+    ```bash
+    # Build all targets defined in polyxml.toml
+    polyxml build --config polyxml.toml
+    ```
+
+    ### 3. Schema Static Analysis
+    ```bash
+    # Check schema validity and cycle topology
+    polyxml validate schemas/*.xsd
+    ```
+

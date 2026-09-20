@@ -17,10 +17,12 @@ Powered by `polyxml-core` written in Rust and PyO3 (`abi3-py312`).
 from dataclasses import dataclass, field
 import polyxml
 
+
 @dataclass
 class Item:
     id: int = field(metadata={"type": "Attribute"})
     name: str = field(metadata={"type": "Element"})
+
 
 # 1. XML Deserialization
 item = polyxml.deserialize(b'<Item id="1"><name>Gadget</name></Item>', Item)
