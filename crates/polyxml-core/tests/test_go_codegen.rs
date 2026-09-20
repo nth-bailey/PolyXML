@@ -158,6 +158,7 @@ fn test_go_struct_and_enum_generation() {
     let options = GoOptions {
         package_name: "crm".to_string(),
         emit_xml_tags: true,
+        emit_json_tags: true,
         validate_choice_exclusivity: true,
         validate_facets: true,
         emit_root_aliases: true,
@@ -171,11 +172,12 @@ fn test_go_struct_and_enum_generation() {
     assert!(go_code.contains("OrderStatusPending OrderStatus = \"pending\""));
     assert!(go_code.contains("func (e OrderStatus) IsValid() bool"));
     assert!(go_code.contains("type Customer struct {"));
-    assert!(go_code.contains("ID int32 `xml:\"id,attr\"`"));
-    assert!(go_code.contains("Name string `xml:\"name\"`"));
-    assert!(go_code.contains("Email *string `xml:\"email,omitempty\"`"));
-    assert!(go_code.contains("Tags []string `xml:\"tag\"`"));
-    assert!(go_code.contains("Status OrderStatus `xml:\"status\"`"));
+    assert!(go_code.contains("XMLName xml.Name `json:\"-\"`"));
+    assert!(go_code.contains("ID int32 `xml:\"id,attr\" json:\"id\"`"));
+    assert!(go_code.contains("Name string `xml:\"name\" json:\"name\"`"));
+    assert!(go_code.contains("Email *string `xml:\"email,omitempty\" json:\"email,omitempty\"`"));
+    assert!(go_code.contains("Tags []string `xml:\"tag\" json:\"tag\"`"));
+    assert!(go_code.contains("Status OrderStatus `xml:\"status\" json:\"status\"`"));
 
     // Verify Go compilation and test execution
     let temp = tempdir().unwrap();
@@ -188,7 +190,9 @@ fn test_go_struct_and_enum_generation() {
         r#"package crm
 
 import (
+    "encoding/json"
     "encoding/xml"
+    "strings"
     "testing"
 )
 
@@ -206,25 +210,49 @@ func TestCustomerRoundtrip(t *testing.T) {
         t.Fatalf("expected status to be valid")
     }
 
-    data, err := xml.Marshal(c)
+    // 1. XML Roundtrip
+    xmlData, err := xml.Marshal(c)
     if err != nil {
-        t.Fatalf("marshal failed: %v", err)
+        t.Fatalf("xml marshal failed: %v", err)
     }
 
-    var decoded Customer
-    if err := xml.Unmarshal(data, &decoded); err != nil {
-        t.Fatalf("unmarshal failed: %v", err)
+    var xmlDecoded Customer
+    if err := xml.Unmarshal(xmlData, &xmlDecoded); err != nil {
+        t.Fatalf("xml unmarshal failed: %v", err)
     }
 
-    if decoded.ID != 42 || decoded.Name != "Alice" || decoded.Email == nil || *decoded.Email != "alice@example.com" {
-        t.Fatalf("roundtrip mismatch: %+v", decoded)
+    if xmlDecoded.ID != 42 || xmlDecoded.Name != "Alice" || xmlDecoded.Email == nil || *xmlDecoded.Email != "alice@example.com" {
+        t.Fatalf("xml roundtrip mismatch: %+v", xmlDecoded)
     }
-    if len(decoded.Tags) != 2 || decoded.Tags[0] != "vip" {
-        t.Fatalf("tags mismatch: %+v", decoded.Tags)
+    if len(xmlDecoded.Tags) != 2 || xmlDecoded.Tags[0] != "vip" {
+        t.Fatalf("xml tags mismatch: %+v", xmlDecoded.Tags)
     }
 
-    if err := decoded.Validate(); err != nil {
+    if err := xmlDecoded.Validate(); err != nil {
         t.Fatalf("validation failed: %v", err)
+    }
+
+    // 2. JSON Roundtrip
+    jsonData, err := json.Marshal(c)
+    if err != nil {
+        t.Fatalf("json marshal failed: %v", err)
+    }
+
+    jsonStr := string(jsonData)
+    if strings.Contains(jsonStr, "XMLName") {
+        t.Fatalf("json contains XMLName: %s", jsonStr)
+    }
+    if !strings.Contains(jsonStr, `"id":42`) {
+        t.Fatalf("json missing id: %s", jsonStr)
+    }
+
+    var jsonDecoded Customer
+    if err := json.Unmarshal(jsonData, &jsonDecoded); err != nil {
+        t.Fatalf("json unmarshal failed: %v", err)
+    }
+
+    if jsonDecoded.ID != 42 || jsonDecoded.Name != "Alice" || jsonDecoded.Email == nil || *jsonDecoded.Email != "alice@example.com" {
+        t.Fatalf("json roundtrip mismatch: %+v", jsonDecoded)
     }
 }
 "#,
@@ -313,6 +341,7 @@ fn test_go_choice_mutual_exclusivity() {
     let options = GoOptions {
         package_name: "payments".to_string(),
         emit_xml_tags: true,
+        emit_json_tags: true,
         validate_choice_exclusivity: true,
         validate_facets: true,
         emit_root_aliases: true,
@@ -448,7 +477,7 @@ fn test_go_recursive_cycle_pointers() {
     let codegen = GoCodegen::new(options);
     let go_code = codegen.generate_module(&ir);
 
-    assert!(go_code.contains("Next *TreeNode `xml:\"next,omitempty\"`"));
+    assert!(go_code.contains("Next *TreeNode `xml:\"next,omitempty\" json:\"next,omitempty\"`"));
 
     let temp = tempdir().unwrap();
     let mod_path = temp.path().join("tree.go");

@@ -1,6 +1,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::only_used_in_recursion)]
 #![allow(clippy::useless_conversion)]
+#![allow(clippy::too_many_arguments)]
 
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyString, PyTuple, PyType};
@@ -929,6 +930,108 @@ fn serialize_json<'py>(
 }
 
 #[pyfunction]
+#[pyo3(signature = (source, target_type=None, schema_path=None, root=None, indent=None, by_alias=None))]
+fn xml_to_json<'py>(
+    py: Python<'py>,
+    source: &[u8],
+    target_type: Option<Bound<'py, PyType>>,
+    schema_path: Option<&str>,
+    root: Option<&str>,
+    indent: Option<usize>,
+    by_alias: Option<bool>,
+) -> PyResult<Bound<'py, PyBytes>> {
+    let bytes = if let Some(ref target_type) = target_type {
+        let meta = get_or_create_schema_meta(target_type)?;
+        polyxml::xml_to_json(
+            source,
+            Some(Arc::clone(&meta.schema)),
+            indent,
+            by_alias.unwrap_or(true),
+        )
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?
+    } else if let Some(path) = schema_path {
+        let xsd_str = std::fs::read_to_string(path).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Failed to read schema file: {}", e))
+        })?;
+        let mut parser = polyxml::schema_parser::XsdParser::new();
+        let ir = parser.parse_str(&xsd_str).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Failed to parse schema: {}", e))
+        })?;
+        let model_schema = ModelSchema::from_ir(&ir, root).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!(
+                "Failed to build schema from IR: {}",
+                e
+            ))
+        })?;
+        polyxml::xml_to_json(source, Some(model_schema), indent, by_alias.unwrap_or(true))
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?
+    } else {
+        polyxml::transcoder::xml_to_json_dynamic(source, indent)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?
+    };
+
+    Ok(PyBytes::new(py, &bytes))
+}
+
+#[pyfunction]
+#[pyo3(signature = (source, target_type=None, schema_path=None, root=None, indent=None, namespaces=None, ns_map=None))]
+fn json_to_xml<'py>(
+    py: Python<'py>,
+    source: &[u8],
+    target_type: Option<Bound<'py, PyType>>,
+    schema_path: Option<&str>,
+    root: Option<&str>,
+    indent: Option<usize>,
+    namespaces: Option<bool>,
+    ns_map: Option<HashMap<String, String>>,
+) -> PyResult<Bound<'py, PyBytes>> {
+    let bytes = if let Some(ref target_type) = target_type {
+        let meta = get_or_create_schema_meta(target_type)?;
+        let root_name = root.unwrap_or(&meta.schema.name);
+        polyxml::json_to_xml(
+            source,
+            Some(Arc::clone(&meta.schema)),
+            Some(root_name),
+            indent,
+            namespaces,
+            ns_map.as_ref(),
+        )
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?
+    } else if let Some(path) = schema_path {
+        let xsd_str = std::fs::read_to_string(path).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Failed to read schema file: {}", e))
+        })?;
+        let mut parser = polyxml::schema_parser::XsdParser::new();
+        let ir = parser.parse_str(&xsd_str).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Failed to parse schema: {}", e))
+        })?;
+        let model_schema = ModelSchema::from_ir(&ir, root).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!(
+                "Failed to build schema from IR: {}",
+                e
+            ))
+        })?;
+        let root_name = root
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| model_schema.name.clone());
+        polyxml::json_to_xml(
+            source,
+            Some(model_schema),
+            Some(&root_name),
+            indent,
+            namespaces,
+            ns_map.as_ref(),
+        )
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?
+    } else {
+        polyxml::transcoder::json_to_xml_dynamic(source, root, indent)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?
+    };
+
+    Ok(PyBytes::new(py, &bytes))
+}
+
+#[pyfunction]
 fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
@@ -941,6 +1044,8 @@ fn _polyxml(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(iterparse, m)?)?;
     m.add_function(wrap_pyfunction!(serialize, m)?)?;
     m.add_function(wrap_pyfunction!(serialize_json, m)?)?;
+    m.add_function(wrap_pyfunction!(xml_to_json, m)?)?;
+    m.add_function(wrap_pyfunction!(json_to_xml, m)?)?;
     m.add_function(wrap_pyfunction!(version, m)?)?;
     Ok(())
 }

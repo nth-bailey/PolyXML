@@ -16,6 +16,8 @@ pub struct GoOptions {
     pub package_name: String,
     /// Emit encoding/xml tags (default: true)
     pub emit_xml_tags: bool,
+    /// Emit encoding/json tags (default: true)
+    pub emit_json_tags: bool,
     /// Emit custom UnmarshalXML/MarshalXML for xs:choice mutual exclusivity validation (default: true)
     pub validate_choice_exclusivity: bool,
     /// Emit Validate() error method for restriction facets (default: true)
@@ -29,6 +31,7 @@ impl Default for GoOptions {
         Self {
             package_name: "models".to_string(),
             emit_xml_tags: true,
+            emit_json_tags: true,
             validate_choice_exclusivity: true,
             validate_facets: true,
             emit_root_aliases: true,
@@ -540,7 +543,11 @@ impl GoCodegen {
 
         // Emit XMLName if xml tags enabled
         if self.options.emit_xml_tags {
-            writeln!(out, "    XMLName xml.Name").unwrap();
+            if self.options.emit_json_tags {
+                writeln!(out, "    XMLName xml.Name `json:\"-\"`").unwrap();
+            } else {
+                writeln!(out, "    XMLName xml.Name").unwrap();
+            }
         }
 
         // Struct composition / inheritance if base struct exists
@@ -562,10 +569,17 @@ impl GoCodegen {
                 .iter()
                 .any(|f| f.name == "value" || f.kind == FieldKind::Text);
             if !has_value_field {
-                let tag = if self.options.emit_xml_tags {
-                    " `xml:\",chardata\"`"
+                let mut parts = Vec::new();
+                if self.options.emit_xml_tags {
+                    parts.push("xml:\",chardata\"".to_string());
+                }
+                if self.options.emit_json_tags {
+                    parts.push("json:\"value,omitempty\"".to_string());
+                }
+                let tag = if parts.is_empty() {
+                    String::new()
                 } else {
-                    ""
+                    format!(" `{}`", parts.join(" "))
                 };
                 writeln!(out, "    Value {}{}", base_type_str, tag).unwrap();
             }
@@ -579,7 +593,7 @@ impl GoCodegen {
 
             let field_name = to_go_field_name(&f.name);
             let field_type = self.resolve_field_type(f);
-            let tag = self.build_field_xml_tag(f);
+            let tag = self.build_field_struct_tags(f);
             writeln!(out, "    {} {}{}", field_name, field_type, tag).unwrap();
         }
 
@@ -606,30 +620,52 @@ impl GoCodegen {
         }
     }
 
-    fn build_field_xml_tag(&self, f: &FieldDef) -> String {
-        if !self.options.emit_xml_tags {
-            return String::new();
+    fn build_field_struct_tags(&self, f: &FieldDef) -> String {
+        let mut parts = Vec::new();
+
+        if self.options.emit_xml_tags {
+            let is_opt = f.cardinality.is_optional() || f.nillable;
+            let xml_val = match f.kind {
+                FieldKind::Attribute => {
+                    if is_opt {
+                        format!("{},attr,omitempty", f.xml_name)
+                    } else {
+                        format!("{},attr", f.xml_name)
+                    }
+                }
+                FieldKind::Text => ",chardata".to_string(),
+                FieldKind::Any => ",any".to_string(),
+                FieldKind::AnyAttribute => ",any,attr".to_string(),
+                FieldKind::Element => {
+                    if is_opt {
+                        format!("{},omitempty", f.xml_name)
+                    } else {
+                        f.xml_name.clone()
+                    }
+                }
+            };
+            parts.push(format!("xml:\"{}\"", xml_val));
         }
 
-        let is_opt = f.cardinality.is_optional() || f.nillable;
-        match f.kind {
-            FieldKind::Attribute => {
-                if is_opt {
-                    format!(" `xml:\"{},attr,omitempty\"`", f.xml_name)
-                } else {
-                    format!(" `xml:\"{},attr\"`", f.xml_name)
-                }
-            }
-            FieldKind::Text => " `xml:\",chardata\"`".to_string(),
-            FieldKind::Any => " `xml:\",any\"`".to_string(),
-            FieldKind::AnyAttribute => " `xml:\",any,attr\"`".to_string(),
-            FieldKind::Element => {
-                if is_opt {
-                    format!(" `xml:\"{},omitempty\"`", f.xml_name)
-                } else {
-                    format!(" `xml:\"{}\"`", f.xml_name)
-                }
-            }
+        if self.options.emit_json_tags {
+            let is_opt = f.cardinality.is_optional() || f.nillable;
+            let json_name = if f.kind == FieldKind::Text {
+                "value".to_string()
+            } else {
+                f.xml_name.clone()
+            };
+            let json_val = if is_opt {
+                format!("{},omitempty", json_name)
+            } else {
+                json_name
+            };
+            parts.push(format!("json:\"{}\"", json_val));
+        }
+
+        if parts.is_empty() {
+            String::new()
+        } else {
+            format!(" `{}`", parts.join(" "))
         }
     }
 
