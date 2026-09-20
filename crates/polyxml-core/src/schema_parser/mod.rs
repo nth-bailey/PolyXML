@@ -301,7 +301,10 @@ impl XsdParser {
                         }
                         "sequence" | "all" => {
                             let is_unbounded = get_attr_value(e, "maxOccurs")
-                                .map(|v| v == "unbounded" || v.parse::<u32>().map(|n| n > 1).unwrap_or(false))
+                                .map(|v| {
+                                    v == "unbounded"
+                                        || v.parse::<u32>().map(|n| n > 1).unwrap_or(false)
+                                })
                                 .unwrap_or(false);
                             compositor_stack.push(is_unbounded);
                         }
@@ -309,7 +312,10 @@ impl XsdParser {
                             // If direct child or main compositor is choice, record choice branches
                             is_choice_model = true;
                             let is_unbounded = get_attr_value(e, "maxOccurs")
-                                .map(|v| v == "unbounded" || v.parse::<u32>().map(|n| n > 1).unwrap_or(false))
+                                .map(|v| {
+                                    v == "unbounded"
+                                        || v.parse::<u32>().map(|n| n > 1).unwrap_or(false)
+                                })
                                 .unwrap_or(false);
                             if is_unbounded {
                                 choice_is_unbounded = true;
@@ -318,9 +324,13 @@ impl XsdParser {
                         }
                         "element" => {
                             let in_unbounded = compositor_stack.iter().any(|&b| b);
-                            if let Some(field) =
-                                parse_element_field(e, target_ns, prefixes, is_choice_model, in_unbounded)
-                            {
+                            if let Some(field) = parse_element_field(
+                                e,
+                                target_ns,
+                                prefixes,
+                                is_choice_model,
+                                in_unbounded,
+                            ) {
                                 if is_choice_model {
                                     choice_branches.push(UnionBranch {
                                         variant_name: field.name.clone(),
@@ -358,9 +368,13 @@ impl XsdParser {
                         }
                         "element" => {
                             let in_unbounded = compositor_stack.iter().any(|&b| b);
-                            if let Some(field) =
-                                parse_element_field(e, target_ns, prefixes, is_choice_model, in_unbounded)
-                            {
+                            if let Some(field) = parse_element_field(
+                                e,
+                                target_ns,
+                                prefixes,
+                                is_choice_model,
+                                in_unbounded,
+                            ) {
                                 if is_choice_model {
                                     choice_branches.push(UnionBranch {
                                         variant_name: field.name.clone(),
@@ -397,7 +411,11 @@ impl XsdParser {
             buf.clear();
         }
 
-        if is_choice_model && !choice_is_unbounded && !choice_branches.is_empty() && fields.len() == choice_branches.len() {
+        if is_choice_model
+            && !choice_is_unbounded
+            && !choice_branches.is_empty()
+            && fields.len() == choice_branches.len()
+        {
             Ok(Some(TypeDef::Union(UnionDef {
                 qname,
                 branches: choice_branches,
@@ -595,9 +613,13 @@ impl XsdParser {
                         "complexType" => {
                             let anon_name = format!("{}Type", name);
                             let anon_qname = QName::new(target_ns, anon_name.clone());
-                            if let Some(type_def) =
-                                self.parse_complex_type(reader, e, target_ns, prefixes, Some(anon_name))?
-                            {
+                            if let Some(type_def) = self.parse_complex_type(
+                                reader,
+                                e,
+                                target_ns,
+                                prefixes,
+                                Some(anon_name),
+                            )? {
                                 match type_def {
                                     TypeDef::Struct(mut s) => {
                                         s.qname = anon_qname.clone();
@@ -616,9 +638,13 @@ impl XsdParser {
                         "simpleType" => {
                             let anon_name = format!("{}SimpleType", name);
                             let anon_qname = QName::new(target_ns, anon_name.clone());
-                            if let Some(type_def) =
-                                self.parse_simple_type(reader, e, target_ns, prefixes, Some(anon_name))?
-                            {
+                            if let Some(type_def) = self.parse_simple_type(
+                                reader,
+                                e,
+                                target_ns,
+                                prefixes,
+                                Some(anon_name),
+                            )? {
                                 match type_def {
                                     TypeDef::Enum(mut ed) => {
                                         ed.qname = anon_qname.clone();
