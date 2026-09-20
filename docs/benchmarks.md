@@ -63,12 +63,12 @@ Statistical benchmarks measured with Criterion.rs:
 
 | Workload / Target | Operation | Latency | Throughput | Zero Allocations |
 | :--- | :--- | :---: | :---: | :---: |
-| **Sensor Micro (130B)** | Deserialization | **1.19 μs** | **75.1 MiB/s** | Direct scalar parse |
-| **Sensor Micro (130B)** | Serialization | **479 ns** | **187.2 MiB/s** | Zero intermediate DOM |
-| **Catalog (1,000 items, ~70 KB)** | Deserialization | **1.01 ms** | **60.2 MiB/s** | Zero intermediate DOM |
-| **Catalog (1,000 items, ~70 KB)** | Serialization | **358 μs** | **169.1 MiB/s** | Streaming buffer |
-| **Catalog (10,000 items, ~724 KB)** | Deserialization | **10.18 ms** | **62.7 MiB/s** | Streaming buffer |
-| **Catalog (10,000 items, ~724 KB)** | Serialization | **3.61 ms** | **175.2 MiB/s** | Streaming buffer |
+| **Sensor Micro (130B)** | Deserialization | **1.19 μs** | **75.0 MiB/s** | Direct scalar parse |
+| **Sensor Micro (130B)** | Serialization | **456 ns** | **196.5 MiB/s** | Zero intermediate DOM |
+| **Catalog (1,000 items, ~70 KB)** | Deserialization | **1.00 ms** | **60.6 MiB/s** | Zero intermediate DOM |
+| **Catalog (1,000 items, ~70 KB)** | Serialization | **305 μs** | **198.3 MiB/s** | Streaming buffer |
+| **Catalog (10,000 items, ~724 KB)** | Deserialization | **10.54 ms** | **60.5 MiB/s** | Streaming buffer |
+| **Catalog (10,000 items, ~724 KB)** | Serialization | **3.20 ms** | **197.8 MiB/s** | Streaming buffer |
 
 ---
 
