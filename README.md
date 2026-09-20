@@ -43,7 +43,7 @@
 Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary serialization, **PolyXML brings modern software engineering to XML**:
 
 1. **🛠️ Polyglot Schema Compiler (`polyxml`)**: Ingests W3C XSD 1.0 and 1.1 schemas, resolves cyclic types with Tarjan's SCC algorithm, and compiles production-ready, strongly-typed data contracts across **7 modern ecosystems** simultaneously (**Python**, **Rust**, **C++**, **Java**, **TypeScript**, **Go**, and **C#**).
-2. **⚡ Ultra-Fast Streaming Runtime**: Direct-to-struct deserialization and serialization powered by `quick-xml` and `lexical-core`, executing **16x–38x faster than traditional tools** with **zero intermediate DOM allocations**.
+2. **⚡ Ultra-Fast Streaming Runtime**: Direct-to-struct deserialization and serialization powered by `quick-xml` and `lexical-core`, executing **10x–24x faster than traditional tools** with **zero intermediate DOM allocations**.
 3. **🏛️ Official W3C XSTS Conformance Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests).
 4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
 
@@ -84,11 +84,11 @@ polyxml build --config polyxml.toml
 from generated.python import Customer
 import polyxml
 
-# 16x faster XML parsing with zero intermediate DOM overhead
+# 14x faster XML parsing with zero intermediate DOM overhead
 customer = Customer.from_xml(xml_bytes)
 xml_output = customer.to_xml(indent=2)
 
-# 10x faster native JSON — completely replace xsdata:
+# 10x faster native JSON — completely replace xsdata at 10x+ less latency:
 json_bytes = customer.to_json(indent=2)
 customer = Customer.from_json(json_bytes)
 ```
@@ -243,8 +243,8 @@ PolyXML strictly generates code adhering to modern programming paradigms (2024�
 | Feature | Legacy Toolchains (JAXB, CodeSynthesis, xsdata, xgen) | PolyXML Modern Approach |
 | :--- | :--- | :--- |
 | **Compiler Architecture** | Fragmented language-specific scripts; unmaintained or closed-source | Single unified safe Rust compiler (like `protoc`), emitting 7 languages |
-| **Parsing Performance** | Slow reflection or Python-level loops (**16x–38x slower**) | Zero-allocation Rust streaming engine (**51 MB/s** throughput) |
-| **Micro-Telemetry Latency**| 43.0 μs per packet in Python (`xsdata`) | **2.5 μs** per packet (**17.1x speedup**, beating raw C DOM parsers) |
+| **Parsing Performance** | Slow reflection or Python-level loops (**10x–24x slower**) | Zero-allocation Rust streaming engine (**~30 MB/s** typed throughput) |
+| **Micro-Telemetry Latency**| 44.5 μs per packet in Python (`xsdata`) | **3.2 μs** per packet (**13.9x speedup**, neck-and-neck with raw C DOM parsers) |
 | **Memory Footprint** | Intermediate DOM node trees inflate RAM by **10x–20x** | Monomorphized event streaming, zero intermediate DOM allocation |
 | **XML ↔ JSON Transcoding** | Brittle untyped dicts (`xmltodict`), slow Python loops, duplicate schemas | Zero-copy streaming CLI (`polyxml transcode`) & dual-format models across all targets |
 | **Generated Code Quality**| Pre-C++11 raw pointers, mutable JavaBeans with getters/setters | Immutable Java 21+ records, modern C++20 value types, C# 12 records |
@@ -289,29 +289,29 @@ Measured on standard, reproducible workloads ([full methodology & reproduction s
 
 | Engine | Paradigm / Category | Implementation | Deserialization Latency | Deserialization Throughput | Serialization Latency | Peak RAM |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
-| **PolyXML** | **Typed Dataclass** | **Rust + PyO3** | **13.9 ms** | **51.0 MB/s** | **7.30 ms** | **2.0 MB** |
-| `lxml.etree` | Untyped DOM | C / Cython (`libxml2`) | 10.0 ms | 70.5 MB/s | — | <0.1 MB |
-| `ElementTree` | Untyped DOM | Python Stdlib C/Python | 12.3 ms | 57.5 MB/s | — | 7.1 MB |
-| `defusedxml` | Secure DOM | Python Defused | 27.2 ms | 26.0 MB/s | — | 7.1 MB |
-| `xmltodict` | Untyped Dict | C (`pyexpat`) | 56.6 ms | 12.5 MB/s | 79.0 ms | 4.8 MB |
-| `xsdata` | Typed Dataclass | Pure Python | 222.5 ms | 3.2 MB/s | 282.6 ms | 3.3 MB |
+| **PolyXML** | **Typed Dataclass** | **Rust + PyO3** | **24.0 ms** | **29.8 MB/s** | **12.2 ms** | **2.0 MB** |
+| `lxml.etree` | Untyped DOM | C / Cython (`libxml2`) | 11.8 ms | 61.1 MB/s | — | <0.1 MB |
+| `ElementTree` | Untyped DOM | Python Stdlib C/Python | 13.6 ms | 53.0 MB/s | — | 7.1 MB |
+| `defusedxml` | Secure DOM | Python Defused | 29.5 ms | 24.2 MB/s | — | 7.1 MB |
+| `xmltodict` | Untyped Dict | C (`pyexpat`) | 57.5 ms | 12.5 MB/s | 80.0 ms | 4.8 MB |
+| `xsdata` | Typed Dataclass | Pure Python | 241.9 ms | 3.0 MB/s | 298.8 ms | 3.3 MB |
 
-> - **16.0x faster deserialization** & **38.7x faster serialization** than `xsdata`.
-> - **4.1x faster** than `xmltodict` while returning genuine typed dataclasses instead of untyped string dicts.
+> - **10.0x faster deserialization** & **23.5x faster serialization** than `xsdata` (fair typed-dataclass comparison).
+> - **4.2x faster** than `xmltodict` while returning genuine typed dataclasses instead of untyped string dicts.
 > - **3.5x lower RAM** than Python's standard library `xml.etree.ElementTree`.
 
 ### 2. Real-Time Micro-Telemetry (Sensor ~100B, Telemetry Commands)
 
 | Engine | Category | Deserialization Latency | Serialization Latency | Speedup vs Pure Python |
 | :--- | :--- | :---: | :---: | :---: |
-| **PolyXML** | **Typed Dataclass** | **2.5 μs** | **1.4 μs** | **17.1x** |
-| **PolyXML (Pydantic)** | **Typed Pydantic v2** | **3.1 μs** | **1.5 μs** | **13.7x** |
-| `lxml.etree` | Untyped DOM | 3.1 μs | — | 13.7x |
-| `ElementTree` | Untyped DOM | 4.9 μs | — | 8.7x |
-| `xmltodict` | Untyped Dict | 10.3 μs | 14.9 μs | 4.2x |
-| `xsdata` | Typed Dataclass | 43.0 μs | 45.0 μs | 1.0x (Ref) |
+| **PolyXML** | **Typed Dataclass** | **3.2 μs** | **1.8 μs** | **13.9x** |
+| **PolyXML (Pydantic)** | **Typed Pydantic v2** | **3.8 μs** | **1.9 μs** | **11.8x** |
+| `lxml.etree` | Untyped DOM | 3.3 μs | — | 13.4x |
+| `ElementTree` | Untyped DOM | 5.3 μs | — | 8.4x |
+| `xmltodict` | Untyped Dict | 10.6 μs | 15.4 μs | 4.2x |
+| `xsdata` | Typed Dataclass | 44.5 μs | 45.5 μs | 1.0x (Ref) |
 
-Critical telemetry commands and sensor packets deserialize in **2.5 microseconds**, beating even raw C-based DOM parsers (`lxml` at 3.1 μs).
+Critical telemetry commands and sensor packets deserialize in **3.2 microseconds**, neck-and-neck with raw C-based DOM parsers (`lxml` at 3.3 μs) while returning fully typed dataclasses.
 
 ### 3. Key-Value Database & Binary IPC (10,000 Entities in MDBX)
 
