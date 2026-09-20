@@ -448,3 +448,54 @@ fn test_rust_codecs_codegen() {
     assert!(!code_disabled.contains("pub fn from_json_str("));
     assert!(!code_disabled.contains("pub fn to_json_string("));
 }
+
+#[test]
+fn test_rust_attribute_codec_loop_syntax() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/siri");
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/siri"), "Envelope"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "version".into(),
+                xml_name: "version".into(),
+                namespace: None,
+                kind: FieldKind::Attribute,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::optional_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "body".into(),
+                xml_name: "Body".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: None,
+    }));
+
+    let codegen = RustCodegen::new(RustOptions {
+        emit_codecs: true,
+        ..Default::default()
+    });
+    let code = codegen.generate_module(&ir);
+    assert!(code.contains("for attr in start.attributes() {"));
+    assert!(code.contains("match std::str::from_utf8(attr.key.local_name().as_ref()).unwrap_or(\"\") {"));
+    assert!(code.contains("\"version\" => {"));
+}
+

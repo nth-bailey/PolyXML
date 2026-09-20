@@ -1038,7 +1038,7 @@ impl RustCodegen {
         if !attr_fields.is_empty() {
             out.push_str("\n        for attr in start.attributes() {\n");
             out.push_str("            let attr = attr?;\n");
-            out.push_str("            match attr.key.local_name().as_ref() {\n");
+            out.push_str("            match std::str::from_utf8(attr.key.local_name().as_ref()).unwrap_or(\"\") {\n");
             for meta in &attr_fields {
                 let _ = writeln!(out, "                \"{}\" => {{", meta.field.xml_name);
                 self.emit_attr_parse(out, &meta.field, &meta.rust_name, ir);
@@ -1046,6 +1046,7 @@ impl RustCodegen {
             }
             out.push_str("                _ => {}\n");
             out.push_str("            }\n");
+            out.push_str("        }\n");
         }
 
         let elem_fields: Vec<_> = field_metas
