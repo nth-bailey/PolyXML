@@ -1,3 +1,10 @@
+# [0.18.0](https://github.com/nth-bailey/PolyXML/compare/v0.17.0...v0.18.0) (2026-09-20)
+
+
+### Features
+
+* **dist:** add universal install script, deb/rpm packaging, and release-binaries CI workflow ([e00f307](https://github.com/nth-bailey/PolyXML/commit/e00f3073db867a7726d7addfb77df38bddc2b0b5))
+
 # [0.17.0](https://github.com/nth-bailey/PolyXML/compare/v0.16.0...v0.17.0) (2026-09-20)
 
 
