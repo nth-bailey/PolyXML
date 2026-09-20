@@ -595,10 +595,11 @@ impl CSharpCodegen {
 
     fn emit_struct_validator(&self, out: &mut String, s: &StructDef, indent: &str) {
         let struct_name = to_csharp_type_name(&s.qname.local);
+        let new_kw = if s.base_type.is_some() { "new " } else { "" };
         writeln!(
             out,
-            "{}    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)",
-            indent
+            "{}    public {}IEnumerable<ValidationResult> Validate(ValidationContext validationContext)",
+            indent, new_kw
         )
         .unwrap();
         writeln!(out, "{}    {{", indent).unwrap();
