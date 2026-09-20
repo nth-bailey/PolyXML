@@ -12,11 +12,14 @@ use std::sync::{Arc, RwLock};
 use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
 use polyxml::value::PolyValue;
 
+use smallvec::SmallVec;
+
 type PyObject = Py<PyAny>;
 
 struct CachedFieldMeta {
     py_string: Py<PyString>,
     is_init: bool,
+    #[allow(dead_code)]
     is_kw_only: bool,
     py_type: Option<PyObject>,
 }
@@ -25,6 +28,8 @@ struct CachedSchemaMeta {
     schema: Arc<ModelSchema>,
     py_cls: PyObject,
     is_dataclass: bool,
+    all_init: bool,
+    kwnames: Option<Py<PyTuple>>,
     fields: Vec<CachedFieldMeta>,
 }
 
@@ -394,10 +399,24 @@ fn get_or_create_schema_meta<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<Cach
     let (schema, cached_fields) = extract_schema_from_class(cls)?;
     let py_cls_obj: PyObject = cls.clone().into_any().unbind();
 
+    let all_init =
+        is_dataclass && !cached_fields.is_empty() && cached_fields.iter().all(|f| f.is_init);
+    let kwnames = if all_init {
+        let py_strings: Vec<Bound<'py, PyString>> = cached_fields
+            .iter()
+            .map(|f| f.py_string.bind(cls.py()).clone())
+            .collect();
+        PyTuple::new(cls.py(), &py_strings).ok().map(|t| t.unbind())
+    } else {
+        None
+    };
+
     let meta = Arc::new(CachedSchemaMeta {
         schema: Arc::clone(&schema),
         py_cls: py_cls_obj,
         is_dataclass,
+        all_init,
+        kwnames,
         fields: cached_fields,
     });
 
@@ -559,6 +578,149 @@ fn poly_value_to_py<'py>(
                 Ok(py_list.into_any().unbind())
             }
         }
+        PolyValue::Record {
+            schema: rec_schema,
+            values,
+        } => {
+            let meta_opt = if let ValueType::Nested(ref s) = val_type {
+                lookup_cached_meta(&s.name)
+            } else {
+                None
+            };
+
+            let effective_cls = match cls {
+                Some(c) => Some(c.clone()),
+                None => meta_opt.as_ref().map(|m| m.py_cls.bind(py).clone()),
+            };
+
+            if let Some(ref target_cls) = effective_cls {
+                if let ValueType::Nested(ref schema) = val_type {
+                    // Method 1: Python 3.12+ Vectorcall for Dataclasses
+                    if let Some(ref meta) = meta_opt {
+                        if meta.is_dataclass && meta.all_init && !meta.fields.is_empty() {
+                            if let Some(ref kwnames) = meta.kwnames {
+                                let mut args_ptrs: SmallVec<[*mut pyo3::ffi::PyObject; 16]> =
+                                    SmallVec::with_capacity(schema.fields.len());
+                                let mut py_vals: SmallVec<[PyObject; 16]> =
+                                    SmallVec::with_capacity(schema.fields.len());
+                                let mut all_found = true;
+
+                                for (i, field) in schema.fields.iter().enumerate() {
+                                    if let Some(Some(field_val)) = values.get(i) {
+                                        let field_cls =
+                                            if let ValueType::Nested(ref s) = field.val_type {
+                                                lookup_py_class(py, &s.name)
+                                            } else {
+                                                None
+                                            };
+                                        let f_meta = meta.fields.get(i);
+                                        let py_val = poly_value_to_py(
+                                            py,
+                                            field_val,
+                                            &field.val_type,
+                                            field_cls.as_ref(),
+                                            f_meta,
+                                        )?;
+                                        args_ptrs.push(py_val.as_ptr());
+                                        py_vals.push(py_val);
+                                    } else {
+                                        all_found = false;
+                                        break;
+                                    }
+                                }
+
+                                if all_found && args_ptrs.len() == schema.fields.len() {
+                                    unsafe {
+                                        let res_ptr = pyo3::ffi::PyObject_Vectorcall(
+                                            target_cls.as_ptr(),
+                                            args_ptrs.as_ptr(),
+                                            0,
+                                            kwnames.as_ptr(),
+                                        );
+                                        if !res_ptr.is_null() {
+                                            return Ok(Bound::from_owned_ptr(py, res_ptr).unbind());
+                                        } else {
+                                            return Err(PyErr::fetch(py));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Method 2: Keyword arguments with init=False post-init support
+                    let kwargs = PyDict::new(py);
+                    let mut post_init_fields: Vec<(Py<PyString>, PyObject)> = Vec::new();
+
+                    for (i, field) in schema.fields.iter().enumerate() {
+                        if let Some(Some(field_val)) = values.get(i) {
+                            let field_cls = if let ValueType::Nested(ref s) = field.val_type {
+                                lookup_py_class(py, &s.name)
+                            } else {
+                                None
+                            };
+                            let f_meta = meta_opt.as_ref().and_then(|m| m.fields.get(i));
+                            let is_init = f_meta.map(|f| f.is_init).unwrap_or(true);
+                            let py_val = poly_value_to_py(
+                                py,
+                                field_val,
+                                &field.val_type,
+                                field_cls.as_ref(),
+                                f_meta,
+                            )?;
+                            if let Some(meta) = f_meta {
+                                if is_init {
+                                    kwargs.set_item(meta.py_string.bind(py), py_val)?;
+                                } else {
+                                    post_init_fields.push((meta.py_string.clone_ref(py), py_val));
+                                }
+                            } else if is_init {
+                                kwargs.set_item(&field.name, py_val)?;
+                            } else {
+                                post_init_fields
+                                    .push((PyString::new(py, &field.name).unbind(), py_val));
+                            }
+                        }
+                    }
+                    let instance = target_cls.call((), Some(&kwargs))?;
+                    for (attr_name, val) in post_init_fields {
+                        instance.setattr(&attr_name, val)?;
+                    }
+                    return Ok(instance.unbind());
+                }
+
+                let dict = PyDict::new(py);
+                for (i, field) in rec_schema.fields.iter().enumerate() {
+                    if let Some(Some(v)) = values.get(i) {
+                        let py_v = poly_value_to_py(
+                            py,
+                            v,
+                            &ValueType::Scalar(ScalarType::Any),
+                            None,
+                            None,
+                        )?;
+                        dict.set_item(&field.name, py_v)?;
+                    }
+                }
+                let instance = target_cls.call((), Some(&dict))?;
+                Ok(instance.unbind())
+            } else {
+                let dict = PyDict::new(py);
+                for (i, field) in rec_schema.fields.iter().enumerate() {
+                    if let Some(Some(v)) = values.get(i) {
+                        let py_v = poly_value_to_py(
+                            py,
+                            v,
+                            &ValueType::Scalar(ScalarType::Any),
+                            None,
+                            None,
+                        )?;
+                        dict.set_item(&field.name, py_v)?;
+                    }
+                }
+                Ok(dict.into_any().unbind())
+            }
+        }
         PolyValue::Object(map) => {
             let meta_opt = if let ValueType::Nested(ref s) = val_type {
                 lookup_cached_meta(&s.name)
@@ -573,40 +735,54 @@ fn poly_value_to_py<'py>(
 
             if let Some(ref target_cls) = effective_cls {
                 if let ValueType::Nested(ref schema) = val_type {
-                    // Method 1: Fast Positional Tuple Construction for Dataclasses when all fields are present AND all fields are is_init and not kw_only
+                    // Method 1: Python 3.12+ Vectorcall for Dataclasses
                     if let Some(ref meta) = meta_opt {
-                        if meta.is_dataclass
-                            && schema.fields.len() == map.len()
-                            && meta.fields.iter().all(|f| f.is_init && !f.is_kw_only)
-                        {
-                            let mut args_vec = Vec::with_capacity(schema.fields.len());
-                            let mut all_found = true;
-                            for (i, field) in schema.fields.iter().enumerate() {
-                                if let Some(field_val) = map.get(&field.name) {
-                                    let field_cls = if let ValueType::Nested(ref s) = field.val_type
-                                    {
-                                        lookup_py_class(py, &s.name)
+                        if meta.is_dataclass && meta.all_init && !meta.fields.is_empty() {
+                            if let Some(ref kwnames) = meta.kwnames {
+                                let mut args_ptrs: SmallVec<[*mut pyo3::ffi::PyObject; 16]> =
+                                    SmallVec::with_capacity(schema.fields.len());
+                                let mut py_vals: SmallVec<[PyObject; 16]> =
+                                    SmallVec::with_capacity(schema.fields.len());
+                                let mut all_found = true;
+
+                                for (i, field) in schema.fields.iter().enumerate() {
+                                    if let Some(field_val) = map.get(&field.name) {
+                                        let field_cls =
+                                            if let ValueType::Nested(ref s) = field.val_type {
+                                                lookup_py_class(py, &s.name)
+                                            } else {
+                                                None
+                                            };
+                                        let f_meta = meta.fields.get(i);
+                                        let py_val = poly_value_to_py(
+                                            py,
+                                            field_val,
+                                            &field.val_type,
+                                            field_cls.as_ref(),
+                                            f_meta,
+                                        )?;
+                                        args_ptrs.push(py_val.as_ptr());
+                                        py_vals.push(py_val);
                                     } else {
-                                        None
-                                    };
-                                    let f_meta = meta.fields.get(i);
-                                    let py_val = poly_value_to_py(
-                                        py,
-                                        field_val,
-                                        &field.val_type,
-                                        field_cls.as_ref(),
-                                        f_meta,
-                                    )?;
-                                    args_vec.push(py_val);
-                                } else {
-                                    all_found = false;
-                                    break;
+                                        all_found = false;
+                                        break;
+                                    }
                                 }
-                            }
-                            if all_found {
-                                let tuple = pyo3::types::PyTuple::new(py, &args_vec)?;
-                                if let Ok(instance) = target_cls.call1(tuple) {
-                                    return Ok(instance.unbind());
+
+                                if all_found && args_ptrs.len() == schema.fields.len() {
+                                    unsafe {
+                                        let res_ptr = pyo3::ffi::PyObject_Vectorcall(
+                                            target_cls.as_ptr(),
+                                            args_ptrs.as_ptr(),
+                                            0,
+                                            kwnames.as_ptr(),
+                                        );
+                                        if !res_ptr.is_null() {
+                                            return Ok(Bound::from_owned_ptr(py, res_ptr).unbind());
+                                        } else {
+                                            return Err(PyErr::fetch(py));
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -679,18 +855,99 @@ fn py_to_poly_value<'py>(
     schema: &ModelSchema,
     meta_opt: Option<&CachedSchemaMeta>,
 ) -> PyResult<PolyValue> {
-    let mut map = HashMap::with_capacity(schema.fields.len());
+    if let Some(meta) = meta_opt {
+        let mut values: Vec<Option<PolyValue>> = vec![None; schema.fields.len()];
 
-    for (i, field) in schema.fields.iter().enumerate() {
-        let val_res = if let Some(meta) = meta_opt {
-            if let Some(f_meta) = meta.fields.get(i) {
+        for (i, field) in schema.fields.iter().enumerate() {
+            let val_res = if let Some(f_meta) = meta.fields.get(i) {
                 obj.getattr(f_meta.py_string.bind(py))
             } else {
                 obj.getattr(field.name.as_str())
+            };
+
+            if let Ok(val) = val_res {
+                if val.is_none() {
+                    values[i] = Some(PolyValue::Null);
+                    continue;
+                }
+
+                match &field.val_type {
+                    ValueType::Scalar(st) => match st {
+                        ScalarType::Int => {
+                            let int_val: i64 = if let Ok(enum_val) = val.getattr("value") {
+                                enum_val.extract()?
+                            } else {
+                                val.extract()?
+                            };
+                            values[i] = Some(PolyValue::Int(int_val));
+                        }
+                        ScalarType::Float => {
+                            let f: f64 = val.extract()?;
+                            values[i] = Some(PolyValue::Float(f));
+                        }
+                        ScalarType::Bool => {
+                            let b: bool = val.extract()?;
+                            values[i] = Some(PolyValue::Bool(b));
+                        }
+                        _ => {
+                            let s: String = if let Ok(enum_val) = val.getattr("value") {
+                                enum_val.str()?.extract()?
+                            } else {
+                                val.str()?.extract()?
+                            };
+                            values[i] = Some(PolyValue::String(s));
+                        }
+                    },
+                    ValueType::List(inner) => {
+                        if let Ok(list) = val.cast::<PyList>() {
+                            let mut poly_items = Vec::with_capacity(list.len());
+                            let child_meta = if let ValueType::Nested(sub_schema) = inner.as_ref() {
+                                lookup_cached_meta(&sub_schema.name)
+                            } else {
+                                None
+                            };
+                            for item in list.iter() {
+                                if let ValueType::Nested(sub_schema) = inner.as_ref() {
+                                    poly_items.push(py_to_poly_value(
+                                        py,
+                                        &item,
+                                        sub_schema,
+                                        child_meta.as_deref(),
+                                    )?);
+                                } else {
+                                    let s: String = if let Ok(enum_val) = item.getattr("value") {
+                                        enum_val.str()?.extract()?
+                                    } else {
+                                        item.str()?.extract()?
+                                    };
+                                    poly_items.push(PolyValue::String(s));
+                                }
+                            }
+                            values[i] = Some(PolyValue::List(poly_items));
+                        }
+                    }
+                    ValueType::Nested(sub_schema) => {
+                        let child_meta = lookup_cached_meta(&sub_schema.name);
+                        values[i] = Some(py_to_poly_value(
+                            py,
+                            &val,
+                            sub_schema,
+                            child_meta.as_deref(),
+                        )?);
+                    }
+                }
             }
-        } else {
-            obj.getattr(field.name.as_str())
-        };
+        }
+        return Ok(PolyValue::Record {
+            schema: Arc::clone(&meta.schema),
+            values: values.into_boxed_slice(),
+        });
+    }
+
+    let mut map = HashMap::with_capacity(schema.fields.len());
+
+    for field in &schema.fields {
+        let val_res = obj.getattr(field.name.as_str());
 
         if let Ok(val) = val_res {
             if val.is_none() {

@@ -1,6 +1,9 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
-#[derive(Debug, Clone, PartialEq)]
+use crate::schema::ModelSchema;
+
+#[derive(Debug, Clone)]
 pub enum PolyValue {
     Null,
     Bool(bool),
@@ -9,6 +12,46 @@ pub enum PolyValue {
     String(String),
     List(Vec<PolyValue>),
     Object(HashMap<String, PolyValue>),
+    Record {
+        schema: Arc<ModelSchema>,
+        values: Box<[Option<PolyValue>]>,
+    },
+}
+
+impl PartialEq for PolyValue {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (PolyValue::Null, PolyValue::Null) => true,
+            (PolyValue::Bool(a), PolyValue::Bool(b)) => a == b,
+            (PolyValue::Int(a), PolyValue::Int(b)) => a == b,
+            (PolyValue::Float(a), PolyValue::Float(b)) => a == b,
+            (PolyValue::String(a), PolyValue::String(b)) => a == b,
+            (PolyValue::List(a), PolyValue::List(b)) => a == b,
+            (PolyValue::Object(a), PolyValue::Object(b)) => a == b,
+            (
+                PolyValue::Record {
+                    schema: s1,
+                    values: v1,
+                },
+                PolyValue::Record {
+                    schema: s2,
+                    values: v2,
+                },
+            ) => (Arc::ptr_eq(s1, s2) || s1.name == s2.name) && v1 == v2,
+            (PolyValue::Record { schema, values }, PolyValue::Object(map))
+            | (PolyValue::Object(map), PolyValue::Record { schema, values }) => {
+                for (idx, field) in schema.fields.iter().enumerate() {
+                    let rec_val = values.get(idx).and_then(|v| v.as_ref());
+                    let map_val = map.get(&field.name);
+                    if rec_val != map_val {
+                        return false;
+                    }
+                }
+                true
+            }
+            _ => false,
+        }
+    }
 }
 
 impl PolyValue {
@@ -58,9 +101,43 @@ impl PolyValue {
         }
     }
 
+    pub fn as_record(&self) -> Option<(&Arc<ModelSchema>, &[Option<PolyValue>])> {
+        match self {
+            PolyValue::Record { schema, values } => Some((schema, values.as_ref())),
+            _ => None,
+        }
+    }
+
+    pub fn get_by_index(&self, idx: usize) -> Option<&PolyValue> {
+        match self {
+            PolyValue::Record { values, .. } => values.get(idx).and_then(|v| v.as_ref()),
+            _ => None,
+        }
+    }
+
     pub fn get(&self, key: &str) -> Option<&PolyValue> {
         match self {
             PolyValue::Object(o) => o.get(key),
+            PolyValue::Record { schema, values } => {
+                let idx = schema.fields.iter().position(|f| f.name == key)?;
+                values.get(idx).and_then(|v| v.as_ref())
+            }
+            _ => None,
+        }
+    }
+
+    pub fn to_hash_map(&self) -> Option<HashMap<String, PolyValue>> {
+        match self {
+            PolyValue::Object(o) => Some(o.clone()),
+            PolyValue::Record { schema, values } => {
+                let mut map = HashMap::with_capacity(schema.fields.len());
+                for (idx, field) in schema.fields.iter().enumerate() {
+                    if let Some(Some(val)) = values.get(idx) {
+                        map.insert(field.name.clone(), val.clone());
+                    }
+                }
+                Some(map)
+            }
             _ => None,
         }
     }

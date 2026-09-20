@@ -212,12 +212,20 @@ impl XmlSerializer {
         is_root: bool,
         element_ns: Option<&str>,
     ) -> Result<()> {
-        let obj = match value {
-            PolyValue::Object(o) => o,
+        match value {
+            PolyValue::Record { .. } | PolyValue::Object(_) => {}
             _ => {
                 return Err(PolyXmlError::SerializationError(
-                    "Expected Object value for model".into(),
-                ))
+                    "Expected Object or Record value for model".into(),
+                ));
+            }
+        }
+
+        let get_field = |idx: usize, name: &str| -> Option<&PolyValue> {
+            match value {
+                PolyValue::Record { values, .. } => values.get(idx).and_then(|v| v.as_ref()),
+                PolyValue::Object(o) => o.get(name),
+                _ => None,
             }
         };
 
@@ -245,9 +253,9 @@ impl XmlSerializer {
         }
 
         // 1. Collect and write attributes
-        for field in &schema.fields {
+        for (idx, field) in schema.fields.iter().enumerate() {
             if field.kind == FieldKind::Attribute {
-                if let Some(val) = obj.get(&field.name) {
+                if let Some(val) = get_field(idx, &field.name) {
                     if !val.is_null() {
                         let local_attr = std::str::from_utf8(&field.xml_name)?;
                         let attr_name = if let Some(ctx) = ns_ctx {
@@ -271,7 +279,7 @@ impl XmlSerializer {
         // 2. Write text content if present
         if let Some(text_idx) = schema.text_field {
             let field = &schema.fields[text_idx];
-            if let Some(val) = obj.get(&field.name) {
+            if let Some(val) = get_field(text_idx, &field.name) {
                 let mut buf = [0u8; lexical_core::BUFFER_SIZE];
                 if let Some(text_content) = Self::format_scalar_to(val, &mut buf) {
                     if !text_content.is_empty() {
@@ -295,9 +303,9 @@ impl XmlSerializer {
         }
 
         // 3. Write child elements
-        for field in &schema.fields {
+        for (idx, field) in schema.fields.iter().enumerate() {
             if field.kind == FieldKind::Element {
-                if let Some(val) = obj.get(&field.name) {
+                if let Some(val) = get_field(idx, &field.name) {
                     if val.is_null() {
                         continue;
                     }

@@ -27,6 +27,15 @@ impl From<&PolyValue> for JsonValue {
                 }
                 JsonValue::Object(map)
             }
+            PolyValue::Record { schema, values } => {
+                let mut map = serde_json::Map::with_capacity(schema.fields.len());
+                for (idx, field) in schema.fields.iter().enumerate() {
+                    if let Some(Some(v)) = values.get(idx) {
+                        map.insert(field.name.clone(), JsonValue::from(v));
+                    }
+                }
+                JsonValue::Object(map)
+            }
         }
     }
 }
@@ -67,17 +76,25 @@ pub fn poly_value_to_json_value(
     schema: &ModelSchema,
     by_alias: bool,
 ) -> JsonValue {
+    let get_field = |idx: usize, name: &str| -> Option<&PolyValue> {
+        match val {
+            PolyValue::Record { values, .. } => values.get(idx).and_then(|v| v.as_ref()),
+            PolyValue::Object(map) => map.get(name),
+            _ => None,
+        }
+    };
+
     match val {
-        PolyValue::Object(map) => {
+        PolyValue::Record { .. } | PolyValue::Object(_) => {
             let mut json_map = serde_json::Map::with_capacity(schema.fields.len());
-            for field in &schema.fields {
+            for (idx, field) in schema.fields.iter().enumerate() {
                 let key = if by_alias {
                     std::str::from_utf8(&field.xml_name).unwrap_or(field.name.as_str())
                 } else {
                     field.name.as_str()
                 };
 
-                if let Some(field_val) = map.get(&field.name) {
+                if let Some(field_val) = get_field(idx, &field.name) {
                     let converted = match &field.val_type {
                         ValueType::Nested(nested_schema) => {
                             if field_val.is_null() {

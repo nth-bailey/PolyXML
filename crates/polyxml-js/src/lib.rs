@@ -75,6 +75,16 @@ fn poly_value_to_js(env: &Env, val: &PolyValue) -> Result<JsUnknown> {
             }
             Ok(obj.into_unknown())
         }
+        PolyValue::Record { schema, values } => {
+            let mut obj = env.create_object()?;
+            for (idx, field) in schema.fields.iter().enumerate() {
+                if let Some(Some(item)) = values.get(idx) {
+                    let js_val = poly_value_to_js(env, item)?;
+                    obj.set(field.name.as_str(), js_val)?;
+                }
+            }
+            Ok(obj.into_unknown())
+        }
     }
 }
 

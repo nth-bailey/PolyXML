@@ -310,16 +310,10 @@ pub unsafe extern "C" fn polyxml_value_get_field(
         Ok(s) => s,
         Err(_) => return std::ptr::null(),
     };
-    match &(*val).0 {
-        PolyValue::Object(map) => {
-            if let Some(sub_val) = map.get(key_str) {
-                // Return borrowed reference as pointer
-                sub_val as *const PolyValue as *const PolyXmlValue
-            } else {
-                std::ptr::null()
-            }
-        }
-        _ => std::ptr::null(),
+    if let Some(sub_val) = (*val).0.get(key_str) {
+        sub_val as *const PolyValue as *const PolyXmlValue
+    } else {
+        std::ptr::null()
     }
 }
 

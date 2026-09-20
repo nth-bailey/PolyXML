@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use quick_xml::events::{BytesStart, Event};
@@ -48,19 +47,10 @@ impl StackFrame {
     }
 
     fn finish(mut self) -> Result<PolyValue> {
-        let mut obj = HashMap::with_capacity(self.schema.fields.len());
-
-        for (idx, field) in self.schema.fields.iter().enumerate() {
-            if let Some(val) = self.values.get_mut(idx).and_then(|v| v.take()) {
-                obj.insert(field.name.clone(), val);
-            }
-        }
-
         if !self.list_values.is_empty() {
             for (idx, list_opt) in self.list_values.into_iter().enumerate() {
                 if let Some(list) = list_opt {
-                    let field = &self.schema.fields[idx];
-                    obj.insert(field.name.clone(), PolyValue::List(list));
+                    self.values[idx] = Some(PolyValue::List(list));
                 }
             }
         }
@@ -72,12 +62,12 @@ impl StackFrame {
                     match &field.val_type {
                         ValueType::Scalar(st) => {
                             let val = ValueConverter::parse_scalar(st, text_buf, &field.name)?;
-                            obj.insert(field.name.clone(), val);
+                            self.values[text_idx] = Some(val);
                         }
                         ValueType::List(inner) => {
                             if let ValueType::Scalar(st) = &**inner {
                                 let val = ValueConverter::parse_scalar(st, text_buf, &field.name)?;
-                                obj.insert(field.name.clone(), PolyValue::List(vec![val]));
+                                self.values[text_idx] = Some(PolyValue::List(vec![val]));
                             }
                         }
                         _ => {}
@@ -86,7 +76,10 @@ impl StackFrame {
             }
         }
 
-        Ok(PolyValue::Object(obj))
+        Ok(PolyValue::Record {
+            schema: self.schema,
+            values: self.values.into_vec().into_boxed_slice(),
+        })
     }
 }
 
@@ -313,12 +306,24 @@ impl XmlDeserializer {
                     if unknown_depth > 0 {
                         continue;
                     }
-                    let unescaped = quick_xml::escape::unescape(e.as_ref())?;
-                    if active_scalar_field.is_some() {
-                        text_buf.extend_from_slice(unescaped.as_bytes());
-                    } else if let Some(frame) = stack.last_mut() {
-                        if let Some(ref mut tb) = frame.frame_text_buf {
-                            tb.extend_from_slice(unescaped.as_bytes());
+                    let raw = e.as_ref();
+                    let raw_bytes = raw.as_bytes();
+                    if memchr::memchr(b'&', raw_bytes).is_none() {
+                        if active_scalar_field.is_some() {
+                            text_buf.extend_from_slice(raw_bytes);
+                        } else if let Some(frame) = stack.last_mut() {
+                            if let Some(ref mut tb) = frame.frame_text_buf {
+                                tb.extend_from_slice(raw_bytes);
+                            }
+                        }
+                    } else {
+                        let unescaped = quick_xml::escape::unescape(raw)?;
+                        if active_scalar_field.is_some() {
+                            text_buf.extend_from_slice(unescaped.as_bytes());
+                        } else if let Some(frame) = stack.last_mut() {
+                            if let Some(ref mut tb) = frame.frame_text_buf {
+                                tb.extend_from_slice(unescaped.as_bytes());
+                            }
                         }
                     }
                 }
