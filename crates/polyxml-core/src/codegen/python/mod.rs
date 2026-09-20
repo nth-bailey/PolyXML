@@ -208,7 +208,7 @@ impl PythonCodegen {
                     let line_trimmed = line.trim_start();
                     if line_trimmed.starts_with("//") {
                         let content = line_trimmed.strip_prefix("//").unwrap_or("");
-                        out.push_str("#");
+                        out.push('#');
                         out.push_str(content);
                         out.push('\n');
                     } else {
