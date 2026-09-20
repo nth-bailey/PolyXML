@@ -1,3 +1,10 @@
+## [0.19.2](https://github.com/nth-bailey/PolyXML/compare/v0.19.1...v0.19.2) (2026-09-20)
+
+
+### Performance Improvements
+
+* **core,python:** optimize parser, serializer, and dataclass vectorcall ([5674d7e](https://github.com/nth-bailey/PolyXML/commit/5674d7ec33ccd95bcb12bed9f74fac193f308c22))
+
 ## [0.19.1](https://github.com/nth-bailey/PolyXML/compare/v0.19.0...v0.19.1) (2026-09-20)
 
 
