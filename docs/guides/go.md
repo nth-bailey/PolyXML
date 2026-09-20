@@ -301,7 +301,7 @@ PolyXML Go bindings bind Go's GC to native Rust resources through `runtime.SetFi
 
 ## 7. Dual-Format Go Models (XML + JSON Code Generation)
 
-When generating Go code using the PolyXML compiler CLI (`polyxml generate --lang go`), the compiler emits structs equipped with both `xml:"..."` and `json:"..."` struct tags:
+When generating Go code using the PolyXML CLI (`polyxml generate --lang go`), the generator emits structs equipped with both `xml:"..."` and `json:"..."` struct tags:
 
 ```go
 package banking

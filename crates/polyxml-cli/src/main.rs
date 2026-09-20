@@ -20,7 +20,7 @@ use polyxml::schema_parser::XsdParser;
 #[derive(Debug, Parser)]
 #[command(
     name = "polyxml",
-    about = "Polyglot XML schema compiler and data-binding toolchain",
+    about = "Modern XSD-to-code generator and streaming XML data-binding toolchain",
     version,
     propagate_version = true
 )]
@@ -31,7 +31,7 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Compile XSD schema(s) into target language models
+    /// Generate type-safe data models and codecs from XSD schema(s)
     Generate(GenerateArgs),
 
     /// Orchestrate multi-language project generation from polyxml.toml

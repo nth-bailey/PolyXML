@@ -6,8 +6,8 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 readme = "README.md"
-description = "Command-line interface and polyglot schema compiler for PolyXML"
-keywords = ["xml", "schema", "compiler", "codegen", "cli"]
+description = "Command-line interface and polyglot XSD-to-code generator for PolyXML"
+keywords = ["xml", "xsd", "codegen", "data-binding", "cli"]
 categories = ["command-line-utilities", "development-tools::build-utils"]
 
 [[bin]]

@@ -55,13 +55,13 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 
 ## ⚡ Quick Start: From XSD to Code in Seconds
 
-Install the PolyXML compiler in seconds on Linux and macOS:
+Install the PolyXML CLI in seconds on Linux and macOS:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nth-bailey/PolyXML/main/scripts/install.sh | bash
 ```
 
-Compile any W3C XML Schema into strongly-typed code for all 7 languages in a single command:
+Generate strongly-typed code for all 7 languages from any W3C XML Schema in a single command:
 
 ```bash
 # 1. Multi-target compilation in a single invocation
