@@ -1,3 +1,10 @@
+# [0.17.0](https://github.com/nth-bailey/PolyXML/compare/v0.16.0...v0.17.0) (2026-09-20)
+
+
+### Features
+
+* **codegen:** support C# source-gen, TS Valibot/TypeBox, Go Sonic/EasyJSON, and Rust rkyv (closes [#40](https://github.com/nth-bailey/PolyXML/issues/40), [#42](https://github.com/nth-bailey/PolyXML/issues/42), [#43](https://github.com/nth-bailey/PolyXML/issues/43), [#45](https://github.com/nth-bailey/PolyXML/issues/45)) ([ba410bc](https://github.com/nth-bailey/PolyXML/commit/ba410bc2ce8bde5e36f13304556a3af316949c2d))
+
 # [0.16.0](https://github.com/nth-bailey/PolyXML/compare/v0.15.0...v0.16.0) (2026-09-20)
 
 
