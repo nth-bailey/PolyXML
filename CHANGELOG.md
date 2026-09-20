@@ -1,3 +1,11 @@
+## [0.14.3](https://github.com/nth-bailey/PolyXML/compare/v0.14.2...v0.14.3) (2026-09-20)
+
+
+### Bug Fixes
+
+* **rust-codegen:** close attribute loop delimiter and match utf-8 attribute keys ([d0e9a87](https://github.com/nth-bailey/PolyXML/commit/d0e9a87c464f992c31a7a2da42456594d773ddbe))
+* **rust-codegen:** use attr.key.local_name().as_ref() directly for str matching ([3409c3f](https://github.com/nth-bailey/PolyXML/commit/3409c3f681ae2ff20c3e3e23c7897da1bbea6d24))
+
 ## [0.14.2](https://github.com/nth-bailey/PolyXML/compare/v0.14.1...v0.14.2) (2026-09-20)
 
 
