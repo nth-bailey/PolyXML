@@ -1,3 +1,10 @@
+# [0.19.0](https://github.com/nth-bailey/PolyXML/compare/v0.18.0...v0.19.0) (2026-09-20)
+
+
+### Features
+
+* **codegen:** add [@generated](https://github.com/generated) tag and custom_header configuration ([a939577](https://github.com/nth-bailey/PolyXML/commit/a93957760e1196a85329d0742105b31835611405))
+
 # [0.18.0](https://github.com/nth-bailey/PolyXML/compare/v0.17.0...v0.18.0) (2026-09-20)
 
 
