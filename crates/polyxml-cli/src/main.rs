@@ -452,7 +452,7 @@ fn emit_target_code(
                 zero_copy: opts.zero_copy.unwrap_or(true),
                 derive_serde: true,
                 derive_default: true,
-                emit_polyxml_attrs: true,
+                emit_polyxml_attrs: false,
                 emit_root_aliases: true,
                 emit_codecs: opts.codecs.unwrap_or(true),
             };
