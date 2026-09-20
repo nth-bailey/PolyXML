@@ -147,8 +147,8 @@ pub fn to_enum_identifier(val: &str) -> String {
     let with_prefix = if identifier
         .chars()
         .next()
-        .map(|c| c.is_ascii_digit())
-        .unwrap_or(false)
+        .map(|c| !c.is_ascii_alphabetic() && c != '_')
+        .unwrap_or(true)
     {
         format!("VALUE_{}", identifier)
     } else {
@@ -167,8 +167,8 @@ pub fn to_field_identifier(name: &str) -> String {
     let safe_name = if snake
         .chars()
         .next()
-        .map(|c| c.is_ascii_digit())
-        .unwrap_or(false)
+        .map(|c| !c.is_ascii_alphabetic() && c != '_')
+        .unwrap_or(true)
     {
         format!("_{}", snake)
     } else if snake.is_empty() {
@@ -211,7 +211,7 @@ impl PythonCodegen {
                 TypeDef::Simple(s) => self.emit_simple_type(&mut out, s),
                 TypeDef::Enum(e) => self.emit_enum(&mut out, e),
                 TypeDef::Union(u) => self.emit_union(&mut out, u),
-                TypeDef::Struct(s) => self.emit_struct(&mut out, s),
+                TypeDef::Struct(s) => self.emit_struct(&mut out, s, ir),
             }
         }
 
@@ -260,6 +260,12 @@ impl PythonCodegen {
             }
         }
 
+        for elem in ir.elements.values() {
+            if let TypeRef::Primitive(PrimitiveType::Decimal) = &elem.type_ref {
+                has_decimal = true;
+            }
+        }
+
         if self.options.backend == PythonBackend::Dataclass && has_structs {
             out.push_str("from dataclasses import dataclass, field\n");
         }
@@ -303,22 +309,28 @@ impl PythonCodegen {
 
         // Topologically sort structs based on inheritance
         let mut ordered_structs: Vec<&'a TypeDef> = Vec::new();
+        let mut visiting = HashSet::new();
         let mut visited = HashSet::new();
 
         fn visit<'a>(
             s: &'a StructDef,
             ir: &'a SchemaIR,
+            visiting: &mut HashSet<QName>,
             visited: &mut HashSet<QName>,
             ordered: &mut Vec<&'a TypeDef>,
         ) {
-            if visited.contains(&s.qname) {
+            if visited.contains(&s.qname) || visiting.contains(&s.qname) {
                 return;
             }
+            visiting.insert(s.qname.clone());
             if let Some(ref base_qname) = s.base_type {
-                if let Some(TypeDef::Struct(parent)) = ir.find_type(base_qname) {
-                    visit(parent, ir, visited, ordered);
+                if base_qname != &s.qname {
+                    if let Some(TypeDef::Struct(parent)) = ir.find_type(base_qname) {
+                        visit(parent, ir, visiting, visited, ordered);
+                    }
                 }
             }
+            visiting.remove(&s.qname);
             visited.insert(s.qname.clone());
             if let Some(td) = ir.find_type(&s.qname) {
                 ordered.push(td);
@@ -326,7 +338,7 @@ impl PythonCodegen {
         }
 
         for s in &structs {
-            visit(s, ir, &mut visited, &mut ordered_structs);
+            visit(s, ir, &mut visiting, &mut visited, &mut ordered_structs);
         }
 
         let mut result = Vec::new();
@@ -413,8 +425,20 @@ impl PythonCodegen {
         let _ = writeln!(out, "type {} = {}", union_name, branch_types.join(" | "));
     }
 
-    fn emit_struct(&self, out: &mut String, s: &StructDef) {
+    fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
         let class_name = AsPascalCase(&s.qname.local).to_string();
+
+        let struct_base = s
+            .base_type
+            .as_ref()
+            .filter(|b| {
+                if let Some(TypeDef::Struct(_)) = ir.find_type(b) {
+                    *b != &s.qname
+                } else {
+                    false
+                }
+            })
+            .map(|b| AsPascalCase(&b.local).to_string());
 
         match self.options.backend {
             PythonBackend::Dataclass => {
@@ -430,16 +454,14 @@ impl PythonCodegen {
                 };
                 let _ = writeln!(out, "@dataclass({}, {})", slots_arg, kw_arg);
 
-                if let Some(ref base) = s.base_type {
-                    let base_name = AsPascalCase(&base.local).to_string();
+                if let Some(ref base_name) = struct_base {
                     let _ = writeln!(out, "class {}({}):", class_name, base_name);
                 } else {
                     let _ = writeln!(out, "class {}:", class_name);
                 }
             }
             PythonBackend::Pydantic => {
-                if let Some(ref base) = s.base_type {
-                    let base_name = AsPascalCase(&base.local).to_string();
+                if let Some(ref base_name) = struct_base {
                     let _ = writeln!(out, "class {}({}):", class_name, base_name);
                 } else {
                     let _ = writeln!(out, "class {}(BaseModel):", class_name);

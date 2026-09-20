@@ -117,7 +117,7 @@ impl XsdParser {
                     let local = strip_prefix(e.name().into_inner());
 
                     match local {
-                        "include" => {
+                        "include" | "redefine" => {
                             if let Some(schema_location) = get_attr_value(e, "schemaLocation") {
                                 if let Some(dir) = base_dir {
                                     let inc_path = dir.join(&schema_location);
@@ -145,6 +145,7 @@ impl XsdParser {
                                 e,
                                 target_namespace.as_deref(),
                                 &prefixes,
+                                None,
                             )? {
                                 ir.add_type(type_def);
                             }
@@ -155,6 +156,7 @@ impl XsdParser {
                                 e,
                                 target_namespace.as_deref(),
                                 &prefixes,
+                                None,
                             )? {
                                 ir.add_type(type_def);
                             }
@@ -177,7 +179,7 @@ impl XsdParser {
                     let local = strip_prefix(e.name().into_inner());
 
                     match local {
-                        "include" => {
+                        "include" | "redefine" => {
                             if let Some(schema_location) = get_attr_value(e, "schemaLocation") {
                                 if let Some(dir) = base_dir {
                                     let inc_path = dir.join(&schema_location);
@@ -208,6 +210,32 @@ impl XsdParser {
                                 ir.add_element(elem_def);
                             }
                         }
+                        "complexType" => {
+                            if let Some(name) = get_attr_value(e, "name") {
+                                let is_abstract = get_attr_value(e, "abstract")
+                                    .map(|v| v == "true" || v == "1")
+                                    .unwrap_or(false);
+                                let qname = QName::new(target_namespace.as_deref(), name);
+                                ir.add_type(TypeDef::Struct(StructDef {
+                                    qname,
+                                    base_type: None,
+                                    is_abstract,
+                                    fields: Vec::new(),
+                                    documentation: None,
+                                }));
+                            }
+                        }
+                        "simpleType" => {
+                            if let Some(name) = get_attr_value(e, "name") {
+                                let qname = QName::new(target_namespace.as_deref(), name);
+                                ir.add_type(TypeDef::Simple(Box::new(SimpleTypeDef {
+                                    qname,
+                                    base_type: TypeRef::string(),
+                                    facets: RestrictionFacets::default(),
+                                    documentation: None,
+                                })));
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -229,8 +257,9 @@ impl XsdParser {
         start: &BytesStart,
         target_ns: Option<&str>,
         prefixes: &HashMap<String, String>,
+        name_override: Option<String>,
     ) -> Result<Option<TypeDef>, SchemaError> {
-        let name = match get_attr_value(start, "name") {
+        let name = match get_attr_value(start, "name").or(name_override) {
             Some(n) => n,
             None => return Ok(None), // Anonymous type handled in place
         };
@@ -244,9 +273,11 @@ impl XsdParser {
         let mut base_type = None;
         let mut documentation = None;
         let mut is_choice_model = false;
+        let mut choice_is_unbounded = false;
         let mut choice_branches = Vec::new();
         let mut buf = Vec::new();
 
+        let mut compositor_stack: Vec<bool> = Vec::new();
         let mut depth = 1;
         while depth > 0 {
             match reader.read_event_into(&mut buf)? {
@@ -262,16 +293,33 @@ impl XsdParser {
                         }
                         "extension" => {
                             if let Some(base) = get_attr_value(e, "base") {
-                                base_type = Some(resolve_qname(&base, target_ns, prefixes));
+                                let resolved = resolve_qname(&base, target_ns, prefixes);
+                                if resolved != qname {
+                                    base_type = Some(resolved);
+                                }
                             }
+                        }
+                        "sequence" | "all" => {
+                            let is_unbounded = get_attr_value(e, "maxOccurs")
+                                .map(|v| v == "unbounded" || v.parse::<u32>().map(|n| n > 1).unwrap_or(false))
+                                .unwrap_or(false);
+                            compositor_stack.push(is_unbounded);
                         }
                         "choice" => {
                             // If direct child or main compositor is choice, record choice branches
                             is_choice_model = true;
+                            let is_unbounded = get_attr_value(e, "maxOccurs")
+                                .map(|v| v == "unbounded" || v.parse::<u32>().map(|n| n > 1).unwrap_or(false))
+                                .unwrap_or(false);
+                            if is_unbounded {
+                                choice_is_unbounded = true;
+                            }
+                            compositor_stack.push(is_unbounded);
                         }
                         "element" => {
+                            let in_unbounded = compositor_stack.iter().any(|&b| b);
                             if let Some(field) =
-                                parse_element_field(e, target_ns, prefixes, is_choice_model)
+                                parse_element_field(e, target_ns, prefixes, is_choice_model, in_unbounded)
                             {
                                 if is_choice_model {
                                     choice_branches.push(UnionBranch {
@@ -302,12 +350,16 @@ impl XsdParser {
                     match local {
                         "extension" => {
                             if let Some(base) = get_attr_value(e, "base") {
-                                base_type = Some(resolve_qname(&base, target_ns, prefixes));
+                                let resolved = resolve_qname(&base, target_ns, prefixes);
+                                if resolved != qname {
+                                    base_type = Some(resolved);
+                                }
                             }
                         }
                         "element" => {
+                            let in_unbounded = compositor_stack.iter().any(|&b| b);
                             if let Some(field) =
-                                parse_element_field(e, target_ns, prefixes, is_choice_model)
+                                parse_element_field(e, target_ns, prefixes, is_choice_model, in_unbounded)
                             {
                                 if is_choice_model {
                                     choice_branches.push(UnionBranch {
@@ -332,7 +384,11 @@ impl XsdParser {
                         _ => {}
                     }
                 }
-                Event::End(_) => {
+                Event::End(ref e) => {
+                    let local = strip_prefix(e.name().into_inner());
+                    if local == "sequence" || local == "choice" || local == "all" {
+                        compositor_stack.pop();
+                    }
                     depth -= 1;
                 }
                 Event::Eof => break,
@@ -341,7 +397,7 @@ impl XsdParser {
             buf.clear();
         }
 
-        if is_choice_model && !choice_branches.is_empty() && fields.len() == choice_branches.len() {
+        if is_choice_model && !choice_is_unbounded && !choice_branches.is_empty() && fields.len() == choice_branches.len() {
             Ok(Some(TypeDef::Union(UnionDef {
                 qname,
                 branches: choice_branches,
@@ -364,8 +420,9 @@ impl XsdParser {
         start: &BytesStart,
         target_ns: Option<&str>,
         prefixes: &HashMap<String, String>,
+        name_override: Option<String>,
     ) -> Result<Option<TypeDef>, SchemaError> {
-        let name = match get_attr_value(start, "name") {
+        let name = match get_attr_value(start, "name").or(name_override) {
             Some(n) => n,
             None => return Ok(None),
         };
@@ -537,21 +594,30 @@ impl XsdParser {
                         }
                         "complexType" => {
                             let anon_name = format!("{}Type", name);
-                            let anon_qname = QName::new(target_ns, anon_name);
-                            if let Some(TypeDef::Struct(mut s)) =
-                                self.parse_complex_type(reader, e, target_ns, prefixes)?
+                            let anon_qname = QName::new(target_ns, anon_name.clone());
+                            if let Some(type_def) =
+                                self.parse_complex_type(reader, e, target_ns, prefixes, Some(anon_name))?
                             {
-                                s.qname = anon_qname.clone();
-                                ir.add_type(TypeDef::Struct(s));
+                                match type_def {
+                                    TypeDef::Struct(mut s) => {
+                                        s.qname = anon_qname.clone();
+                                        ir.add_type(TypeDef::Struct(s));
+                                    }
+                                    TypeDef::Union(mut u) => {
+                                        u.qname = anon_qname.clone();
+                                        ir.add_type(TypeDef::Union(u));
+                                    }
+                                    _ => {}
+                                }
                                 type_ref = TypeRef::Named(anon_qname);
                             }
                             depth -= 1;
                         }
                         "simpleType" => {
                             let anon_name = format!("{}SimpleType", name);
-                            let anon_qname = QName::new(target_ns, anon_name);
+                            let anon_qname = QName::new(target_ns, anon_name.clone());
                             if let Some(type_def) =
-                                self.parse_simple_type(reader, e, target_ns, prefixes)?
+                                self.parse_simple_type(reader, e, target_ns, prefixes, Some(anon_name))?
                             {
                                 match type_def {
                                     TypeDef::Enum(mut ed) => {
@@ -642,6 +708,7 @@ fn parse_element_field(
     target_ns: Option<&str>,
     prefixes: &HashMap<String, String>,
     in_choice: bool,
+    in_unbounded_compositor: bool,
 ) -> Option<FieldDef> {
     let name = get_attr_value(e, "name")
         .or_else(|| get_attr_value(e, "ref").map(|r| strip_prefix(&r).to_string()))?;
@@ -663,10 +730,14 @@ fn parse_element_field(
             .unwrap_or(1)
     };
 
-    let max_occurs = match get_attr_value(e, "maxOccurs").as_deref() {
-        Some("unbounded") => OccursLimit::Unbounded,
-        Some(v) => OccursLimit::Count(v.parse().unwrap_or(1)),
-        None => OccursLimit::Count(1),
+    let max_occurs = if in_unbounded_compositor {
+        OccursLimit::Unbounded
+    } else {
+        match get_attr_value(e, "maxOccurs").as_deref() {
+            Some("unbounded") => OccursLimit::Unbounded,
+            Some(v) => OccursLimit::Count(v.parse().unwrap_or(1)),
+            None => OccursLimit::Count(1),
+        }
     };
 
     let nillable = get_attr_value(e, "nillable")

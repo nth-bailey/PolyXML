@@ -134,7 +134,8 @@ fn python_keywords() -> &'static HashSet<&'static str> {
             "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
             "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global",
             "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise",
-            "return", "try", "while", "with", "yield", "match", "case", "type",
+            "return", "try", "while", "with", "yield", "match", "case", "type", "field",
+            "dataclass", "self",
         ]
         .into_iter()
         .collect()

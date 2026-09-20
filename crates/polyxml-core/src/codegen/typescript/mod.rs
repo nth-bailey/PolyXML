@@ -225,28 +225,34 @@ impl TypeScriptCodegen {
 
         // Topologically sort structs based on inheritance
         let mut ordered_structs: Vec<&'a TypeDef> = Vec::new();
+        let mut visiting = HashSet::new();
         let mut visited = HashSet::new();
 
         fn visit<'a>(
             s: &'a StructDef,
             ir: &'a SchemaIR,
+            visiting: &mut HashSet<QName>,
             visited: &mut HashSet<QName>,
             ordered: &mut Vec<&'a TypeDef>,
         ) {
-            if visited.contains(&s.qname) {
+            if visited.contains(&s.qname) || visiting.contains(&s.qname) {
                 return;
             }
+            visiting.insert(s.qname.clone());
             if let Some(ref base_qname) = s.base_type {
-                if let Some(TypeDef::Struct(base_struct)) = ir.types.get(base_qname) {
-                    visit(base_struct, ir, visited, ordered);
+                if base_qname != &s.qname {
+                    if let Some(TypeDef::Struct(base_struct)) = ir.types.get(base_qname) {
+                        visit(base_struct, ir, visiting, visited, ordered);
+                    }
                 }
             }
+            visiting.remove(&s.qname);
             visited.insert(s.qname.clone());
             ordered.push(ir.types.get(&s.qname).unwrap());
         }
 
         for s in structs {
-            visit(s, ir, &mut visited, &mut ordered_structs);
+            visit(s, ir, &mut visiting, &mut visited, &mut ordered_structs);
         }
 
         let mut res = Vec::new();
