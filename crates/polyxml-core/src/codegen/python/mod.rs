@@ -204,8 +204,19 @@ impl PythonCodegen {
         if let Some(ref header) = self.options.custom_header {
             let trimmed = header.trim();
             if !trimmed.is_empty() {
-                out.push_str(trimmed);
-                out.push_str("\n\n");
+                for line in trimmed.lines() {
+                    let line_trimmed = line.trim_start();
+                    if line_trimmed.starts_with("//") {
+                        let content = line_trimmed.strip_prefix("//").unwrap_or("");
+                        out.push_str("#");
+                        out.push_str(content);
+                        out.push('\n');
+                    } else {
+                        out.push_str(line);
+                        out.push('\n');
+                    }
+                }
+                out.push('\n');
             }
         }
 
