@@ -1,3 +1,10 @@
+## [0.14.1](https://github.com/nth-bailey/PolyXML/compare/v0.14.0...v0.14.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ci:** eliminate concurrent dotnet first-time initialization race in tests ([621668e](https://github.com/nth-bailey/PolyXML/commit/621668e54e94ba3558c542959af6f2efbc299872))
+
 # [0.14.0](https://github.com/nth-bailey/PolyXML/compare/v0.13.0...v0.14.0) (2026-09-20)
 
 
