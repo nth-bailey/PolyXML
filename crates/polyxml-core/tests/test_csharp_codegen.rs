@@ -180,7 +180,7 @@ fn test_csharp_records_and_enums_generation() {
 
     assert!(cs_code.contains("using System.Text.Json.Serialization;"));
     assert!(cs_code.contains("namespace Crm.Models;"));
-    assert!(cs_code.contains("[JsonConverter(typeof(JsonStringEnumConverter))]"));
+    assert!(cs_code.contains("[JsonConverter(typeof(JsonStringEnumConverter<OrderStatus>))]"));
     assert!(cs_code.contains("public enum OrderStatus"));
     assert!(cs_code.contains("[XmlEnum(\"pending\")]"));
     assert!(cs_code.contains("Pending,"));

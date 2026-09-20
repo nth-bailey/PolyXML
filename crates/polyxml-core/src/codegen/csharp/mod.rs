@@ -391,8 +391,8 @@ impl CSharpCodegen {
         if self.options.emit_json_attributes {
             writeln!(
                 out,
-                "{}[JsonConverter(typeof(JsonStringEnumConverter))]",
-                indent
+                "{}[JsonConverter(typeof(JsonStringEnumConverter<{}>))]",
+                indent, enum_name
             )
             .unwrap();
         }
@@ -669,7 +669,7 @@ impl CSharpCodegen {
                 || f.nillable
                 || (f.cardinality.is_list() && f.cardinality.min_occurs == 0);
             let default_arg = if is_opt {
-                "default".to_string()
+                format!("default({})", field_type)
             } else {
                 format!("default({})!", field_type)
             };
