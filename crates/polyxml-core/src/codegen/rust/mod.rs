@@ -25,6 +25,8 @@ pub struct RustOptions {
     pub emit_root_aliases: bool,
     /// Emit streaming XML codecs (from_xml, to_xml, decode_xml, encode_xml) (default: true).
     pub emit_codecs: bool,
+    /// Derive rkyv::{Archive, Serialize, Deserialize} zero-copy wire format serialization (default: false).
+    pub emit_rkyv: bool,
 }
 
 impl Default for RustOptions {
@@ -36,6 +38,7 @@ impl Default for RustOptions {
             emit_polyxml_attrs: false,
             emit_root_aliases: true,
             emit_codecs: true,
+            emit_rkyv: false,
         }
     }
 }
@@ -431,6 +434,13 @@ impl RustCodegen {
         }
 
         let _ = writeln!(out, "#[derive({})]", derives.join(", "));
+        if self.options.emit_rkyv {
+            let _ = writeln!(
+                out,
+                "#[cfg_attr(feature = \"rkyv\", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]"
+            );
+            let _ = writeln!(out, "#[cfg_attr(feature = \"rkyv\", rkyv(check_bytes))]");
+        }
         let _ = writeln!(out, "pub enum {} {{", enum_name);
 
         let mut seen_variants = HashSet::new();
@@ -520,6 +530,13 @@ impl RustCodegen {
         }
 
         let _ = writeln!(out, "#[derive({})]", derives.join(", "));
+        if self.options.emit_rkyv {
+            let _ = writeln!(
+                out,
+                "#[cfg_attr(feature = \"rkyv\", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]"
+            );
+            let _ = writeln!(out, "#[cfg_attr(feature = \"rkyv\", rkyv(check_bytes))]");
+        }
         let type_signature = if needs_lifetime {
             format!("{}<'a>", union_name)
         } else {
@@ -587,6 +604,13 @@ impl RustCodegen {
         }
 
         let _ = writeln!(out, "#[derive({})]", derives.join(", "));
+        if self.options.emit_rkyv {
+            let _ = writeln!(
+                out,
+                "#[cfg_attr(feature = \"rkyv\", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]"
+            );
+            let _ = writeln!(out, "#[cfg_attr(feature = \"rkyv\", rkyv(check_bytes))]");
+        }
 
         let struct_decl = if needs_lifetime {
             format!("pub struct {}<'a>", struct_name)

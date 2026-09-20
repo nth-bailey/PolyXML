@@ -174,6 +174,43 @@ Customer restored = JsonSerializer.Deserialize<Customer>(jsonString)!;
 assert(restored.Name == customer.Name);
 ```
 
+### Compile-Time Source Generation (`--source-gen`)
+
+For Native AOT, high-throughput microservices, and reflection-free environments, PolyXML can emit a compile-time `JsonSerializerContext`:
+
+```bash
+polyxml generate --lang csharp --source-gen --record-kind struct --out ./src/Generated schema.xsd
+```
+
+This generates `[JsonSourceGenerationOptions]` and `[JsonSerializable(typeof(T))]` annotations:
+
+```csharp
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(Customer))]
+public partial class CustomerJsonContext : JsonSerializerContext
+{
+}
+```
+
+Usage in .NET 8 / 9 Native AOT:
+
+```csharp
+// Zero-reflection, Native AOT-friendly JSON serialization
+string json = JsonSerializer.Serialize(customer, CustomerJsonContext.Default.Customer);
+Customer restored = JsonSerializer.Deserialize(json, CustomerJsonContext.Default.Customer);
+```
+
+### Record Structs (`--record-kind struct`)
+
+By default, PolyXML emits reference `record class` types. For zero-allocation, cache-friendly scenarios where data contracts are small or short-lived, pass `--record-kind struct`:
+
+```csharp
+public readonly record struct Customer(
+    [property: XmlAttribute("id"), JsonPropertyName("id")] int Id,
+    [property: XmlElement("name"), JsonPropertyName("name")] string Name
+) : IValidatableObject;
+```
+
 ---
 
 ## 4. Restriction Facet Validation

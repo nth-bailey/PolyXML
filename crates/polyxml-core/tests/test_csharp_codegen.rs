@@ -172,6 +172,7 @@ fn test_csharp_records_and_enums_generation() {
         record_kind: CSharpRecordKind::Class,
         use_file_scoped_namespaces: true,
         emit_root_records: true,
+        ..Default::default()
     };
 
     let codegen = CSharpCodegen::new(options);
@@ -411,6 +412,7 @@ fn test_csharp_choice_polymorphic_hierarchy() {
         record_kind: CSharpRecordKind::Class,
         use_file_scoped_namespaces: true,
         emit_root_records: true,
+        ..Default::default()
     };
 
     let codegen = CSharpCodegen::new(options);
@@ -563,6 +565,7 @@ fn test_csharp_recursive_cycle() {
         record_kind: CSharpRecordKind::Class,
         use_file_scoped_namespaces: true,
         emit_root_records: true,
+        ..Default::default()
     };
 
     let codegen = CSharpCodegen::new(options);
@@ -655,4 +658,108 @@ public class Program
         run_status.success(),
         "dotnet run failed on recursive tree models"
     );
+}
+
+#[test]
+fn test_csharp_record_kind_from_str_loose() {
+    assert_eq!(
+        CSharpRecordKind::from_str_loose("class"),
+        Some(CSharpRecordKind::Class)
+    );
+    assert_eq!(
+        CSharpRecordKind::from_str_loose("record"),
+        Some(CSharpRecordKind::Class)
+    );
+    assert_eq!(
+        CSharpRecordKind::from_str_loose("struct"),
+        Some(CSharpRecordKind::Struct)
+    );
+    assert_eq!(
+        CSharpRecordKind::from_str_loose("record-struct"),
+        Some(CSharpRecordKind::Struct)
+    );
+    assert_eq!(CSharpRecordKind::from_str_loose("invalid"), None);
+}
+
+#[test]
+fn test_csharp_source_gen_context() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/crm");
+
+    // Enum
+    ir.add_type(TypeDef::Enum(EnumDef {
+        qname: QName::new(Some("https://example.com/crm"), "OrderStatus"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        variants: vec![
+            EnumValue {
+                name: "pending".into(),
+                value: "pending".into(),
+                documentation: None,
+            },
+            EnumValue {
+                name: "shipped".into(),
+                value: "shipped".into(),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+
+    // Struct
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/crm"), "Customer"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "id".into(),
+                xml_name: "id".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::Int),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "name".into(),
+                xml_name: "name".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: None,
+    }));
+
+    let options = CSharpOptions {
+        namespace: "Crm.Models".to_string(),
+        emit_source_gen: true,
+        source_gen_context_name: "CrmJsonContext".to_string(),
+        record_kind: CSharpRecordKind::Struct,
+        ..Default::default()
+    };
+
+    let codegen = CSharpCodegen::new(options);
+    let code = codegen.generate_module(&ir);
+
+    // Record struct
+    assert!(code.contains("public readonly record struct Customer("));
+
+    // Source generation context
+    assert!(code.contains("[JsonSourceGenerationOptions(WriteIndented = true)]"));
+    assert!(code.contains("[JsonSerializable(typeof(Customer))]"));
+    assert!(code.contains("[JsonSerializable(typeof(List<Customer>))]"));
+    assert!(code.contains("[JsonSerializable(typeof(OrderStatus))]"));
+    assert!(code.contains("public partial class CrmJsonContext : JsonSerializerContext"));
 }

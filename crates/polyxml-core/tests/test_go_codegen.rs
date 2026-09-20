@@ -3,8 +3,8 @@ use std::process::Command;
 use tempfile::tempdir;
 
 use polyxml::codegen::go::{
-    to_go_constant_name, to_go_field_name, to_go_package_name, to_go_type_name, GoCodegen,
-    GoOptions,
+    to_go_constant_name, to_go_field_name, to_go_package_name, to_go_type_name, GoBackend,
+    GoCodegen, GoOptions,
 };
 use polyxml::ir::{
     Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets,
@@ -156,6 +156,7 @@ fn test_go_struct_and_enum_generation() {
     }));
 
     let options = GoOptions {
+        backend: GoBackend::Standard,
         package_name: "crm".to_string(),
         emit_xml_tags: true,
         emit_json_tags: true,
@@ -339,6 +340,7 @@ fn test_go_choice_mutual_exclusivity() {
     }));
 
     let options = GoOptions {
+        backend: GoBackend::Standard,
         package_name: "payments".to_string(),
         emit_xml_tags: true,
         emit_json_tags: true,
@@ -538,4 +540,130 @@ func TestRecursiveTree(t *testing.T) {
         .status()
         .expect("Failed to run go test");
     assert!(test_status.success(), "go test failed on recursive tree");
+}
+
+#[test]
+fn test_go_backend_from_str_loose() {
+    assert_eq!(
+        GoBackend::from_str_loose("standard"),
+        Some(GoBackend::Standard)
+    );
+    assert_eq!(GoBackend::from_str_loose("std"), Some(GoBackend::Standard));
+    assert_eq!(
+        GoBackend::from_str_loose("default"),
+        Some(GoBackend::Standard)
+    );
+    assert_eq!(
+        GoBackend::from_str_loose("easyjson"),
+        Some(GoBackend::EasyJson)
+    );
+    assert_eq!(
+        GoBackend::from_str_loose("easy-json"),
+        Some(GoBackend::EasyJson)
+    );
+    assert_eq!(
+        GoBackend::from_str_loose("easy_json"),
+        Some(GoBackend::EasyJson)
+    );
+    assert_eq!(GoBackend::from_str_loose("sonic"), Some(GoBackend::Sonic));
+    assert_eq!(
+        GoBackend::from_str_loose("bytedance"),
+        Some(GoBackend::Sonic)
+    );
+    assert_eq!(GoBackend::from_str_loose("unknown"), None);
+}
+
+#[test]
+fn test_go_easyjson_backend() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/easy");
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/easy"), "Payload"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![FieldDef {
+            name: "id".into(),
+            xml_name: "id".into(),
+            namespace: None,
+            kind: FieldKind::Element,
+            type_ref: TypeRef::Primitive(PrimitiveType::Int),
+            cardinality: Cardinality::required_one(),
+            nillable: false,
+            default_value: None,
+            fixed_value: None,
+            documentation: None,
+            facets: None,
+            is_cycle_cut: false,
+        }],
+        documentation: None,
+    }));
+
+    let options = GoOptions {
+        backend: GoBackend::EasyJson,
+        package_name: "easy".to_string(),
+        ..Default::default()
+    };
+    let codegen = GoCodegen::new(options);
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("//easyjson:json"));
+    assert!(code.contains("type Payload struct {"));
+}
+
+#[test]
+fn test_go_sonic_backend() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/sonic");
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/sonic"), "Metric"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "cpuUsage".into(),
+                xml_name: "cpuUsage".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::Double),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "notes".into(),
+                xml_name: "notes".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                cardinality: Cardinality::optional_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: None,
+    }));
+
+    let options = GoOptions {
+        backend: GoBackend::Sonic,
+        package_name: "metrics".to_string(),
+        emit_xml_tags: true,
+        emit_json_tags: true,
+        ..Default::default()
+    };
+    let codegen = GoCodegen::new(options);
+    let code = codegen.generate_module(&ir);
+
+    assert!(code.contains("XMLName xml.Name `json:\"-\" sonic:\"-\"`"));
+    assert!(
+        code.contains("CpuUsage float64 `xml:\"cpuUsage\" json:\"cpuUsage\" sonic:\"cpuUsage\"`")
+    );
+    assert!(code.contains("Notes *string `xml:\"notes,omitempty\" json:\"notes,omitempty\" sonic:\"notes,omitempty\"`"));
 }

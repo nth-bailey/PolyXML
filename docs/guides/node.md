@@ -208,3 +208,64 @@ console.log(Buffer.from(outBytes).toString('utf-8'));
 2. **Reuse `ModelSchema` Objects**: Schema definitions should be instantiated once as top-level constants rather than recreated inside request handlers.
 3. **Prefer Compact Serialization for APIs**: When sending XML over network APIs, omit the `indent` argument (`serialize(root, val, schema)`) to minimize bandwidth and skip whitespace generation.
 
+---
+
+## 7. Schema Codegen Backends (`--backend zod | valibot | typebox`)
+
+When compiling XSD schemas into TypeScript models via `polyxml generate --lang ts`, PolyXML supports multiple runtime validation libraries:
+
+```bash
+# 1. Pure TypeScript interfaces/types (default)
+polyxml generate --lang ts --out ./src/models schema.xsd
+
+# 2. Runtime Zod validation schemas
+polyxml generate --lang ts --backend zod --out ./src/models schema.xsd
+
+# 3. Compact tree-shakeable Valibot schemas
+polyxml generate --lang ts --backend valibot --out ./src/models schema.xsd
+
+# 4. High-throughput JSON-Schema compatible TypeBox schemas
+polyxml generate --lang ts --backend typebox --out ./src/models schema.xsd
+```
+
+### Valibot Example (`--backend valibot`)
+
+```typescript
+import * as v from "valibot";
+
+export const PostalCodeSchema = v.pipe(
+  v.string(),
+  v.minLength(3),
+  v.maxLength(10),
+  v.regex(/^[A-Z0-9]+$/)
+);
+
+export const StatusSchema = v.picklist(["active", "inactive"]);
+
+export const CustomerSchema = v.object({
+  postalCode: PostalCodeSchema,
+  status: v.optional(StatusSchema),
+});
+```
+
+### TypeBox Example (`--backend typebox`)
+
+```typescript
+import { Type, Static } from "@sinclair/typebox";
+
+export const CodeSchema = Type.String({ minLength: 2, maxLength: 8 });
+
+export const RoleSchema = Type.Union([
+  Type.Literal("admin"),
+  Type.Literal("user"),
+]);
+
+export const AccountSchema = Type.Object({
+  code: CodeSchema,
+  role: Type.Optional(RoleSchema),
+});
+
+export type Account = Static<typeof AccountSchema>;
+```
+
+

@@ -63,6 +63,9 @@ pub struct TargetConfig {
     pub mode: Option<String>,
     pub serializer: Option<String>,
     pub zod: Option<bool>,
+    pub source_gen: Option<bool>,
+    pub record_kind: Option<String>,
+    pub rkyv: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -84,6 +87,9 @@ pub struct CodegenTargetConfig {
     pub mode: Option<String>,
     pub serializer: Option<String>,
     pub zod: Option<bool>,
+    pub source_gen: Option<bool>,
+    pub record_kind: Option<String>,
+    pub rkyv: Option<bool>,
 }
 
 impl std::str::FromStr for WorkspaceManifest {
@@ -141,6 +147,9 @@ impl WorkspaceManifest {
                         mode: cfg.mode.clone(),
                         serializer: cfg.serializer.clone(),
                         zod: cfg.zod,
+                        source_gen: cfg.source_gen,
+                        record_kind: cfg.record_kind.clone(),
+                        rkyv: cfg.rkyv,
                     });
                 }
             }

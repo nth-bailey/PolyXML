@@ -9,9 +9,34 @@ use crate::ir::{
     StructDef, TypeDef, TypeRef, UnionDef,
 };
 
+/// Target serialization backend for Go codegen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum GoBackend {
+    /// Standard library `encoding/json` and `encoding/xml` (default)
+    #[default]
+    Standard,
+    /// Mailru/EasyJSON static reflectionless serialization generator (`//easyjson:json`)
+    EasyJson,
+    /// ByteDance Sonic high-performance JIT serialization (`sonic:"..."` struct tags)
+    Sonic,
+}
+
+impl GoBackend {
+    pub fn from_str_loose(s: &str) -> Option<Self> {
+        match s.to_lowercase().trim() {
+            "standard" | "std" | "default" => Some(Self::Standard),
+            "easyjson" | "easy-json" | "easy_json" => Some(Self::EasyJson),
+            "sonic" | "bytedance" => Some(Self::Sonic),
+            _ => None,
+        }
+    }
+}
+
 /// Options configuring Go 1.22+ code generation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GoOptions {
+    /// Target serialization backend (default: GoBackend::Standard)
+    pub backend: GoBackend,
     /// Package name for generated Go code (default: "models")
     pub package_name: String,
     /// Emit encoding/xml tags (default: true)
@@ -29,6 +54,7 @@ pub struct GoOptions {
 impl Default for GoOptions {
     fn default() -> Self {
         Self {
+            backend: GoBackend::Standard,
             package_name: "models".to_string(),
             emit_xml_tags: true,
             emit_json_tags: true,
@@ -407,6 +433,10 @@ impl GoCodegen {
             }
         }
 
+        if self.options.backend == GoBackend::EasyJson {
+            writeln!(out, "//easyjson:json").unwrap();
+        }
+
         // Choice container struct
         writeln!(out, "type {} struct {{", choice_name).unwrap();
         for branch in &u.branches {
@@ -415,12 +445,22 @@ impl GoCodegen {
             }
             let field_name = to_go_field_name(&branch.variant_name);
             let mapped_type = self.context.map_type_ref(&branch.type_ref);
-            let xml_tag = if self.options.emit_xml_tags {
-                format!(" `xml:\"{},omitempty\"`", branch.xml_name)
-            } else {
+            let mut tag_parts = Vec::new();
+            if self.options.emit_xml_tags {
+                tag_parts.push(format!("xml:\"{},omitempty\"", branch.xml_name));
+            }
+            if self.options.emit_json_tags {
+                tag_parts.push(format!("json:\"{},omitempty\"", branch.xml_name));
+            }
+            if self.options.backend == GoBackend::Sonic {
+                tag_parts.push(format!("sonic:\"{},omitempty\"", branch.xml_name));
+            }
+            let tag = if tag_parts.is_empty() {
                 String::new()
+            } else {
+                format!(" `{}`", tag_parts.join(" "))
             };
-            writeln!(out, "    {} *{}{}", field_name, mapped_type, xml_tag).unwrap();
+            writeln!(out, "    {} *{}{}", field_name, mapped_type, tag).unwrap();
         }
         writeln!(out, "}}\n").unwrap();
 
@@ -539,14 +579,25 @@ impl GoCodegen {
             }
         }
 
+        if self.options.backend == GoBackend::EasyJson {
+            writeln!(out, "//easyjson:json").unwrap();
+        }
+
         writeln!(out, "type {} struct {{", struct_name).unwrap();
 
         // Emit XMLName if xml tags enabled
         if self.options.emit_xml_tags {
+            let mut xml_tags = Vec::new();
             if self.options.emit_json_tags {
-                writeln!(out, "    XMLName xml.Name `json:\"-\"`").unwrap();
-            } else {
+                xml_tags.push("json:\"-\"");
+            }
+            if self.options.backend == GoBackend::Sonic {
+                xml_tags.push("sonic:\"-\"");
+            }
+            if xml_tags.is_empty() {
                 writeln!(out, "    XMLName xml.Name").unwrap();
+            } else {
+                writeln!(out, "    XMLName xml.Name `{}`", xml_tags.join(" ")).unwrap();
             }
         }
 
@@ -575,6 +626,9 @@ impl GoCodegen {
                 }
                 if self.options.emit_json_tags {
                     parts.push("json:\"value,omitempty\"".to_string());
+                }
+                if self.options.backend == GoBackend::Sonic {
+                    parts.push("sonic:\"value,omitempty\"".to_string());
                 }
                 let tag = if parts.is_empty() {
                     String::new()
@@ -647,7 +701,7 @@ impl GoCodegen {
             parts.push(format!("xml:\"{}\"", xml_val));
         }
 
-        if self.options.emit_json_tags {
+        if self.options.emit_json_tags || self.options.backend == GoBackend::Sonic {
             let is_opt = f.cardinality.is_optional() || f.nillable;
             let json_name = if f.kind == FieldKind::Text {
                 "value".to_string()
@@ -659,7 +713,12 @@ impl GoCodegen {
             } else {
                 json_name
             };
-            parts.push(format!("json:\"{}\"", json_val));
+            if self.options.emit_json_tags {
+                parts.push(format!("json:\"{}\"", json_val));
+            }
+            if self.options.backend == GoBackend::Sonic {
+                parts.push(format!("sonic:\"{}\"", json_val));
+            }
         }
 
         if parts.is_empty() {

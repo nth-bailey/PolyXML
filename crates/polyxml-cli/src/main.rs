@@ -6,13 +6,14 @@ use std::process::{self, Command};
 
 use clap::{Args, Parser, Subcommand};
 use config::WorkspaceManifest;
+use heck::AsPascalCase;
 use polyxml::codegen::cpp::{CppBackend, CppCodegen, CppMode, CppOptions};
 use polyxml::codegen::csharp::{CSharpCodegen, CSharpOptions, CSharpRecordKind};
-use polyxml::codegen::go::{GoCodegen, GoOptions};
+use polyxml::codegen::go::{GoBackend, GoCodegen, GoOptions};
 use polyxml::codegen::java::{JavaBackend, JavaCodegen, JavaOptions};
 use polyxml::codegen::python::{PythonBackend, PythonCodegen, PythonOptions};
 use polyxml::codegen::rust::{RustCodegen, RustOptions};
-use polyxml::codegen::typescript::{TypeScriptCodegen, TypeScriptOptions};
+use polyxml::codegen::typescript::{TypeScriptBackend, TypeScriptCodegen, TypeScriptOptions};
 use polyxml::ir::{SchemaIR, TypeDef};
 use polyxml::schema_parser::XsdParser;
 
@@ -76,6 +77,18 @@ pub struct GenerateArgs {
     /// Emit runtime Zod validation schemas for TypeScript (default: false)
     #[arg(long = "zod", default_missing_value = "true", num_args = 0..=1)]
     pub zod: Option<bool>,
+
+    /// C# System.Text.Json compile-time source generation context (default: false)
+    #[arg(long = "source-gen", default_missing_value = "true", num_args = 0..=1)]
+    pub source_gen: Option<bool>,
+
+    /// C# record representation ('class' or 'struct', default: 'class')
+    #[arg(long = "record-kind", value_name = "KIND")]
+    pub record_kind: Option<String>,
+
+    /// Rust rkyv zero-copy binary wire format serialization (default: false)
+    #[arg(long = "rkyv", default_missing_value = "true", num_args = 0..=1)]
+    pub rkyv: Option<bool>,
 
     /// Output directory for generated source files
     #[arg(short = 'o', long = "out", alias = "out-dir", value_name = "DIR")]
@@ -231,6 +244,9 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
             zero_copy: args.zero_copy,
             codecs: args.codecs,
             zod: args.zod,
+            source_gen: args.source_gen,
+            record_kind: args.record_kind.as_deref(),
+            rkyv: args.rkyv,
         };
 
         for (schema_path, ir) in &compiled_schemas {
@@ -323,6 +339,9 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
             zero_copy: target.zero_copy,
             codecs: target.codecs,
             zod: target.zod,
+            source_gen: target.source_gen,
+            record_kind: target.record_kind.as_deref(),
+            rkyv: target.rkyv,
         };
 
         for (schema_path, ir) in &compiled_schemas {
@@ -418,6 +437,9 @@ pub struct TargetEmitOptions<'a> {
     pub zero_copy: Option<bool>,
     pub codecs: Option<bool>,
     pub zod: Option<bool>,
+    pub source_gen: Option<bool>,
+    pub record_kind: Option<&'a str>,
+    pub rkyv: Option<bool>,
 }
 
 fn emit_target_code(
@@ -470,6 +492,7 @@ fn emit_target_code(
                 emit_polyxml_attrs: false,
                 emit_root_aliases: true,
                 emit_codecs: opts.codecs.unwrap_or(true),
+                emit_rkyv: opts.rkyv.unwrap_or(false),
             };
 
             let codegen = RustCodegen::new(options);
@@ -493,7 +516,13 @@ fn emit_target_code(
             Ok(())
         }
         "ts" | "typescript" => {
+            let ts_backend = opts
+                .backend
+                .and_then(TypeScriptBackend::from_str_loose)
+                .unwrap_or(TypeScriptBackend::None);
+
             let options = TypeScriptOptions {
+                backend: ts_backend,
                 emit_zod: opts.zod.unwrap_or(false),
                 use_interface: true,
                 readonly_fields: false,
@@ -587,7 +616,13 @@ fn emit_target_code(
                 .map(|s| s.to_string_lossy())
                 .unwrap_or_else(|| "models".into());
 
+            let go_backend = opts
+                .backend
+                .and_then(GoBackend::from_str_loose)
+                .unwrap_or(GoBackend::Standard);
+
             let options = GoOptions {
+                backend: go_backend,
                 package_name: pkg.to_string(),
                 emit_xml_tags: true,
                 emit_json_tags: true,
@@ -612,14 +647,21 @@ fn emit_target_code(
                 .map(|s| s.to_string_lossy())
                 .unwrap_or_else(|| "Models".into());
 
+            let record_kind = opts
+                .record_kind
+                .and_then(CSharpRecordKind::from_str_loose)
+                .unwrap_or(CSharpRecordKind::Class);
+
             let options = CSharpOptions {
                 namespace: ns.to_string(),
                 emit_xml_attributes: true,
                 emit_json_attributes: true,
                 emit_validation: true,
-                record_kind: CSharpRecordKind::Class,
+                record_kind,
                 use_file_scoped_namespaces: true,
                 emit_root_records: true,
+                emit_source_gen: opts.source_gen.unwrap_or(false),
+                source_gen_context_name: format!("{}JsonContext", AsPascalCase(&file_stem)),
             };
 
             let codegen = CSharpCodegen::new(options);

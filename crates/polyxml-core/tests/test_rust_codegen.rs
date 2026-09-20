@@ -133,6 +133,7 @@ fn test_rust_zero_copy_codegen() {
         emit_polyxml_attrs: true,
         emit_root_aliases: true,
         emit_codecs: false,
+        emit_rkyv: false,
     });
 
     let code = codegen.generate_module(&ir);
@@ -183,6 +184,7 @@ fn test_rust_owned_codegen() {
         emit_polyxml_attrs: true,
         emit_root_aliases: true,
         emit_codecs: false,
+        emit_rkyv: false,
     });
 
     let code = codegen.generate_module(&ir);
@@ -497,4 +499,79 @@ fn test_rust_attribute_codec_loop_syntax() {
     assert!(code.contains("for attr in start.attributes() {"));
     assert!(code.contains("match attr.key.local_name().as_ref() {"));
     assert!(code.contains("\"version\" => {"));
+}
+
+#[test]
+fn test_rust_rkyv_derives() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/rkyv");
+
+    ir.add_type(TypeDef::Enum(EnumDef {
+        qname: QName::new(Some("https://example.com/rkyv"), "DeviceStatus"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        variants: vec![
+            EnumValue {
+                name: "active".into(),
+                value: "active".into(),
+                documentation: None,
+            },
+            EnumValue {
+                name: "idle".into(),
+                value: "idle".into(),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+
+    ir.add_type(TypeDef::Union(UnionDef {
+        qname: QName::new(Some("https://example.com/rkyv"), "Payload"),
+        branches: vec![
+            UnionBranch {
+                variant_name: "text".into(),
+                xml_name: "text".into(),
+                namespace: None,
+                type_ref: TypeRef::Primitive(PrimitiveType::String),
+                documentation: None,
+            },
+            UnionBranch {
+                variant_name: "number".into(),
+                xml_name: "number".into(),
+                namespace: None,
+                type_ref: TypeRef::Primitive(PrimitiveType::Int),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/rkyv"), "Packet"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![FieldDef {
+            name: "id".into(),
+            xml_name: "id".into(),
+            namespace: None,
+            kind: FieldKind::Element,
+            type_ref: TypeRef::Primitive(PrimitiveType::Int),
+            cardinality: Cardinality::required_one(),
+            nillable: false,
+            default_value: None,
+            fixed_value: None,
+            documentation: None,
+            facets: None,
+            is_cycle_cut: false,
+        }],
+        documentation: None,
+    }));
+
+    let codegen = RustCodegen::new(RustOptions {
+        emit_rkyv: true,
+        ..Default::default()
+    });
+    let code = codegen.generate_module(&ir);
+
+    // Verify rkyv derives on enum, union, struct
+    assert!(code.contains("#[cfg_attr(feature = \"rkyv\", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]"));
+    assert!(code.contains("#[cfg_attr(feature = \"rkyv\", rkyv(check_bytes))]"));
 }

@@ -15,11 +15,11 @@ pub mod typescript;
 
 pub use cpp::{CppBackend, CppCodegen, CppMode, CppOptions};
 pub use csharp::{CSharpCodegen, CSharpOptions, CSharpRecordKind};
-pub use go::{GoCodegen, GoOptions};
+pub use go::{GoBackend, GoCodegen, GoOptions};
 pub use java::{JavaBackend, JavaCodegen, JavaOptions};
 pub use python::{PythonBackend, PythonCodegen, PythonOptions};
 pub use rust::{RustCodegen, RustOptions};
-pub use typescript::{TypeScriptCodegen, TypeScriptOptions};
+pub use typescript::{TypeScriptBackend, TypeScriptCodegen, TypeScriptOptions};
 
 use crate::ir::{PrimitiveType, TypeRef};
 

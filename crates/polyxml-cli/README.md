@@ -20,12 +20,12 @@ cargo install --path crates/polyxml-cli
 | Target | Flag (`--lang`) | Generated Artifacts & Features |
 | :--- | :--- | :--- |
 | **Python** | `python` | Modern Python 3.12+ `@dataclass` or Pydantic v2 models, field constraints, zero-copy streaming codecs |
-| **Rust** | `rust` | Zero-copy `Cow<'a, str>` & owned structs, automatic recursive boxing (`Box<T>`), streaming serializers/deserializers |
+| **Rust** | `rust` | Zero-copy `Cow<'a, str>` & owned structs, automatic recursive boxing (`Box<T>`), streaming serializers/deserializers, rkyv wire format (`--rkyv`) |
 | **C++** | `cpp` | Modern C++20/C++23 value types, C++20 Modules (`--mode modules`), Glaze reflection (`--backend glaze`), CMake/Meson export |
 | **Java** | `java` | Java 21+ records, `sealed interface` choice models, Jackson XML/JSON annotations (`--backend jackson`) |
-| **TypeScript** | `typescript` | TypeScript 5+ interfaces, discriminated unions, Zod runtime validation schemas with `z.lazy()` recursion |
-| **Go** | `go` | Idiomatic Go 1.22+ structs with `encoding/xml` tags, pointer cycle breaking, choice mutual-exclusivity unmarshaling |
-| **C#** | `csharp` | Modern C# 12 / .NET 8+ records with primary constructors, `System.Xml.Serialization` attributes, `IValidatableObject` validation |
+| **TypeScript** | `typescript` | TypeScript 5+ interfaces, discriminated unions, runtime validation schemas via Zod, Valibot, or TypeBox (`--backend`) |
+| **Go** | `go` | Idiomatic Go 1.22+ structs with `encoding/xml` tags, reflectionless EasyJSON (`--backend easyjson`) & ByteDance Sonic JIT (`--backend sonic`) |
+| **C#** | `csharp` | Modern C# 12 / .NET 8+ records and record structs (`--record-kind struct`), compile-time Native AOT source generation (`--source-gen`) |
 
 ---
 
@@ -48,8 +48,17 @@ polyxml generate --lang java --backend jackson --package com.enterprise.banking 
 # Generate C++20 Modules with Glaze reflectionless serde
 polyxml generate --lang cpp --mode modules --backend glaze --package enterprise::crm --out ./generated/cpp schemas/order.xsd
 
-# Generate zero-copy Rust models with codecs
-polyxml generate --lang rust --zero-copy --codecs --out ./generated/rust schemas/order.xsd
+# Generate zero-copy Rust models with codecs and rkyv wire format
+polyxml generate --lang rust --zero-copy --codecs --rkyv --out ./generated/rust schemas/order.xsd
+
+# Generate TypeScript with tree-shakeable Valibot schemas
+polyxml generate --lang ts --backend valibot --out ./generated/ts schemas/order.xsd
+
+# Generate Go models with ByteDance Sonic JIT tags
+polyxml generate --lang go --backend sonic --package crm --out ./generated/go schemas/order.xsd
+
+# Generate C# record structs with Native AOT source generation
+polyxml generate --lang csharp --record-kind struct --source-gen --namespace Enterprise.Crm --out ./generated/csharp schemas/order.xsd
 
 # Multi-target compilation in a single invocation
 polyxml generate \
@@ -105,6 +114,7 @@ target = "rust"
 output = "src/generated/rust"
 zero_copy = true
 codecs = true
+rkyv = true
 
 [[generate]]
 target = "java"
@@ -115,6 +125,7 @@ backend = "jackson"
 [[generate]]
 target = "typescript"
 output = "src/generated/ts"
+backend = "valibot"
 
 [[generate]]
 target = "cpp"
@@ -126,9 +137,12 @@ backend = "glaze"
 target = "go"
 output = "src/generated/go"
 package = "payments"
+backend = "sonic"
 
 [[generate]]
 target = "csharp"
 output = "src/generated/csharp"
 namespace = "Enterprise.Banking.Iso20022"
+source_gen = true
+record_kind = "struct"
 ```

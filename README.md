@@ -221,12 +221,12 @@ PolyXML strictly generates code adhering to modern programming paradigms (2024�
 | Target Language | CLI Flag (`--lang`) | Generated Code Paradigm | Modern Features & Highlights |
 | :--- | :--- | :--- | :--- |
 | **Python 3.12+** | `python` | `@dataclass(slots=True)` & Pydantic v2 | PEP 695 type aliases, PEP 604 unions, restriction facets, native JSON codecs (10x faster xsdata replacement) |
-| **Rust 2021/2024** | `rust` | Zero-copy `Cow<'a, str>` & Owned structs | Automatic Tarjan SCC recursive boxing (`Box<T>`), inherent streaming codecs, inherent JSON serialization |
+| **Rust 2021/2024** | `rust` | Zero-copy `Cow<'a, str>` & Owned structs | Automatic Tarjan SCC recursive boxing (`Box<T>`), inherent streaming codecs, rkyv zero-copy wire format (`--rkyv`) |
 | **C++20 / C++23** | `cpp` | Modern value types & `std::variant` | C++20 Modules (`--mode modules`), Glaze reflection (`--backend glaze`), CMake/Meson export |
 | **Java 21+** | `java` | Modern `record` & `sealed interface` | Exhaustive switch pattern matching, compact constructor facet validation, Jackson XML/JSON (`--backend jackson`) |
-| **TypeScript 5+** | `typescript` | Interfaces & Discriminated Unions | Runtime Zod schemas, circular reference resolution via `z.lazy()`, `as const` enums |
-| **Go 1.22+** | `go` | Structs with `encoding/xml` & `encoding/json` | Dual `xml:"..."` and `json:"..."` struct tags, `json:"-"` on `XMLName`, custom `UnmarshalXML` choice exclusivity |
-| **C# 12 / .NET 8+** | `csharp` | Records with Primary Constructors | Parameterless constructors, `[JsonPropertyName]` & `[JsonConverter]`, `IValidatableObject` |
+| **TypeScript 5+** | `typescript` | Interfaces & Discriminated Unions | Runtime Zod, Valibot, or TypeBox validation backends (`--backend`), circular reference resolution, `as const` enums |
+| **Go 1.22+** | `go` | Structs with `encoding/xml` & `encoding/json` | Dual struct tags, reflectionless ByteDance Sonic & EasyJSON backends (`--backend`), choice exclusivity |
+| **C# 12 / .NET 8+** | `csharp` | Records (`class` or `struct`) | Compile-time source generation (`--source-gen`), record structs (`--record-kind struct`), `IValidatableObject` |
 
 👉 **[Read the Full Schema Compiler & CLI Guide →](docs/guides/compiler.md)**
 

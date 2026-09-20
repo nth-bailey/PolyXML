@@ -334,6 +334,49 @@ func handleCustomer(xmlData []byte) ([]byte, error) {
 	// Direct-to-JSON serialization using Go's standard library:
 	return json.MarshalIndent(customer, "", "  ")
 }
+
+---
+
+## 8. High-Throughput Reflectionless Backends (`--backend easyjson | sonic`)
+
+PolyXML supports high-performance reflectionless serialization backends for Go:
+
+```bash
+# 1. Standard encoding/json (default)
+polyxml generate --lang go --backend standard --out ./src/models schema.xsd
+
+# 2. EasyJSON static marshallers
+polyxml generate --lang go --backend easyjson --out ./src/models schema.xsd
+
+# 3. ByteDance Sonic JIT serialization
+polyxml generate --lang go --backend sonic --out ./src/models schema.xsd
+```
+
+### EasyJSON (`--backend easyjson`)
+
+Emits `//easyjson:json` comments above struct definitions. Run the EasyJSON CLI tool (`easyjson -all models.go`) to generate fast, static marshallers and unmarshallers without reflection:
+
+```go
+//easyjson:json
+type Customer struct {
+	XMLName xml.Name `json:"-"`
+	ID      int32    `xml:"id,attr" json:"id"`
+	Name    string   `xml:"name" json:"name"`
+}
+```
+
+### ByteDance Sonic (`--backend sonic`)
+
+Emits `sonic:"..."` struct tags alongside standard `json:"..."` tags, providing direct hints to ByteDance's Sonic JIT compiler for lightning-fast zero-allocation encoding and decoding:
+
+```go
+type Customer struct {
+	XMLName xml.Name `json:"-" sonic:"-"`
+	ID      int32    `xml:"id,attr" json:"id" sonic:"id"`
+	Name    string   `xml:"name" json:"name" sonic:"name"`
+}
+```
+
 ```
 
 

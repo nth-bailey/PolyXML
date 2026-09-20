@@ -1224,3 +1224,279 @@ fn test_cli_transcode_bidirectional() {
     assert!(roundtrip_str.contains("<port>8080</port>"));
     assert!(roundtrip_str.contains("<port>8443</port>"));
 }
+
+#[test]
+fn test_cli_csharp_source_gen_and_record_struct() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("customer.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:crm">
+            <xs:complexType name="Customer">
+                <xs:sequence>
+                    <xs:element name="Id" type="xs:int"/>
+                    <xs:element name="Name" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    let out_dir = dir.path().join("csharp_out");
+    let status = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema_file.to_str().unwrap(),
+            "--lang",
+            "csharp",
+            "--source-gen",
+            "--record-kind",
+            "struct",
+            "-o",
+            out_dir.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute generate");
+    assert!(status.success());
+
+    let cs_file = out_dir.join("Customer.cs");
+    let content = fs::read_to_string(&cs_file).unwrap();
+    assert!(content.contains("public readonly record struct Customer("));
+    assert!(content.contains("[JsonSourceGenerationOptions(WriteIndented = true)]"));
+    assert!(content.contains("[JsonSerializable(typeof(Customer))]"));
+    assert!(content.contains("public partial class CustomerJsonContext : JsonSerializerContext"));
+}
+
+#[test]
+fn test_cli_typescript_valibot_and_typebox_backend() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("item.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:store">
+            <xs:complexType name="Item">
+                <xs:sequence>
+                    <xs:element name="Sku" type="xs:string"/>
+                    <xs:element name="Price" type="xs:decimal"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    // 1. Valibot
+    let vali_dir = dir.path().join("ts_vali");
+    let status_vali = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema_file.to_str().unwrap(),
+            "--lang",
+            "ts",
+            "--backend",
+            "valibot",
+            "-o",
+            vali_dir.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute generate with valibot");
+    assert!(status_vali.success());
+
+    let vali_content = fs::read_to_string(vali_dir.join("item.ts")).unwrap();
+    assert!(vali_content.contains("import * as v from \"valibot\";"));
+    assert!(vali_content.contains("export const ItemSchema = v.object({"));
+
+    // 2. TypeBox
+    let tb_dir = dir.path().join("ts_tb");
+    let status_tb = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema_file.to_str().unwrap(),
+            "--lang",
+            "ts",
+            "--backend",
+            "typebox",
+            "-o",
+            tb_dir.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute generate with typebox");
+    assert!(status_tb.success());
+
+    let tb_content = fs::read_to_string(tb_dir.join("item.ts")).unwrap();
+    assert!(tb_content.contains("import { Type, Static } from \"@sinclair/typebox\";"));
+    assert!(tb_content.contains("export const ItemSchema = Type.Object({"));
+}
+
+#[test]
+fn test_cli_go_easyjson_and_sonic_backend() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("service.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:service">
+            <xs:complexType name="Config">
+                <xs:sequence>
+                    <xs:element name="Host" type="xs:string"/>
+                    <xs:element name="Port" type="xs:int"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    // 1. EasyJSON
+    let easy_dir = dir.path().join("go_easy");
+    let status_easy = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema_file.to_str().unwrap(),
+            "--lang",
+            "go",
+            "--backend",
+            "easyjson",
+            "-o",
+            easy_dir.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute generate with easyjson");
+    assert!(status_easy.success());
+
+    let easy_content = fs::read_to_string(easy_dir.join("service.go")).unwrap();
+    assert!(easy_content.contains("//easyjson:json"));
+    assert!(easy_content.contains("type Config struct {"));
+
+    // 2. Sonic
+    let sonic_dir = dir.path().join("go_sonic");
+    let status_sonic = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema_file.to_str().unwrap(),
+            "--lang",
+            "go",
+            "--backend",
+            "sonic",
+            "-o",
+            sonic_dir.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute generate with sonic");
+    assert!(status_sonic.success());
+
+    let sonic_content = fs::read_to_string(sonic_dir.join("service.go")).unwrap();
+    assert!(sonic_content.contains("sonic:\"Host\""));
+    assert!(sonic_content.contains("sonic:\"Port\""));
+}
+
+#[test]
+fn test_cli_rust_rkyv_flag() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("event.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:events">
+            <xs:complexType name="Event">
+                <xs:sequence>
+                    <xs:element name="Id" type="xs:long"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    let out_dir = dir.path().join("rust_out");
+    let status = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema_file.to_str().unwrap(),
+            "--lang",
+            "rust",
+            "--rkyv",
+            "-o",
+            out_dir.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute generate with rkyv");
+    assert!(status.success());
+
+    let rs_content = fs::read_to_string(out_dir.join("event.rs")).unwrap();
+    assert!(rs_content.contains("#[cfg_attr(feature = \"rkyv\", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]"));
+    assert!(rs_content.contains("#[cfg_attr(feature = \"rkyv\", rkyv(check_bytes))]"));
+}
+
+#[test]
+fn test_cli_build_polyxml_manifest_with_new_features() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("model.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:app">
+            <xs:complexType name="AppConfig">
+                <xs:sequence>
+                    <xs:element name="Name" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    let manifest_file = dir.path().join("polyxml.toml");
+    fs::write(
+        &manifest_file,
+        r#"
+[workspace]
+name = "feature-test"
+schemas = ["model.xsd"]
+
+[[generate]]
+target = "csharp"
+output = "cs"
+source_gen = true
+record_kind = "struct"
+
+[[generate]]
+target = "ts"
+output = "ts"
+backend = "valibot"
+
+[[generate]]
+target = "go"
+output = "go"
+backend = "sonic"
+
+[[generate]]
+target = "rust"
+output = "rs"
+rkyv = true
+"#,
+    )
+    .unwrap();
+
+    let status = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "-c", manifest_file.to_str().unwrap()])
+        .current_dir(dir.path())
+        .status()
+        .expect("Failed to execute polyxml build");
+    assert!(status.success());
+
+    // Verify C# output
+    let cs = fs::read_to_string(dir.path().join("cs").join("Model.cs")).unwrap();
+    assert!(cs.contains("record struct AppConfig"));
+    assert!(cs.contains("[JsonSourceGenerationOptions"));
+
+    // Verify TS output
+    let ts = fs::read_to_string(dir.path().join("ts").join("model.ts")).unwrap();
+    assert!(ts.contains("import * as v from \"valibot\";"));
+
+    // Verify Go output
+    let go = fs::read_to_string(dir.path().join("go").join("model.go")).unwrap();
+    assert!(go.contains("sonic:\"Name\""));
+
+    // Verify Rust output
+    let rs = fs::read_to_string(dir.path().join("rs").join("model.rs")).unwrap();
+    assert!(rs.contains("derive(rkyv::Archive"));
+}

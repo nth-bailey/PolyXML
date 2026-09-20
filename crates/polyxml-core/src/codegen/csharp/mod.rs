@@ -24,6 +24,16 @@ pub enum CSharpRecordKind {
     Struct,
 }
 
+impl CSharpRecordKind {
+    pub fn from_str_loose(s: &str) -> Option<Self> {
+        match s.to_lowercase().trim() {
+            "class" | "record" | "record-class" | "reference" => Some(Self::Class),
+            "struct" | "record-struct" | "value" => Some(Self::Struct),
+            _ => None,
+        }
+    }
+}
+
 /// Options configuring C# 12 / .NET 8+ code generation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CSharpOptions {
@@ -33,6 +43,10 @@ pub struct CSharpOptions {
     pub emit_xml_attributes: bool,
     /// Emit System.Text.Json.Serialization attributes ([JsonPropertyName], etc.)
     pub emit_json_attributes: bool,
+    /// Emit System.Text.Json compile-time source generation context (JsonSerializerContext)
+    pub emit_source_gen: bool,
+    /// Name of the generated JsonSerializerContext partial class (default: "PolyXmlJsonContext")
+    pub source_gen_context_name: String,
     /// Emit IValidatableObject and restriction facet validation logic
     pub emit_validation: bool,
     /// Record emission kind (record class vs record struct)
@@ -49,6 +63,8 @@ impl Default for CSharpOptions {
             namespace: "Generated".to_string(),
             emit_xml_attributes: true,
             emit_json_attributes: true,
+            emit_source_gen: false,
+            source_gen_context_name: "PolyXmlJsonContext".to_string(),
             emit_validation: true,
             record_kind: CSharpRecordKind::Class,
             use_file_scoped_namespaces: true,
@@ -228,7 +244,7 @@ impl CSharpCodegen {
         if self.options.emit_xml_attributes {
             writeln!(out, "using System.Xml.Serialization;").unwrap();
         }
-        if self.options.emit_json_attributes {
+        if self.options.emit_json_attributes || self.options.emit_source_gen {
             writeln!(out, "using System.Text.Json.Serialization;").unwrap();
         }
         writeln!(out).unwrap();
@@ -274,6 +290,11 @@ impl CSharpCodegen {
             self.emit_root_elements(&mut out, ir, indent);
         }
 
+        // Emit Source Generator Context if requested
+        if self.options.emit_source_gen {
+            self.emit_source_gen_context(&mut out, ir, indent);
+        }
+
         if !self.options.use_file_scoped_namespaces {
             writeln!(out, "}}").unwrap();
         }
@@ -286,6 +307,64 @@ impl CSharpCodegen {
         let code = self.generate_module(ir);
         let filename = format!("{}.cs", to_csharp_type_name(base_name));
         vec![(filename, code)]
+    }
+
+    fn emit_source_gen_context(&self, out: &mut String, ir: &SchemaIR, indent: &str) {
+        writeln!(out).unwrap();
+        writeln!(
+            out,
+            "{}/// <summary>\n{}/// Source-generated JsonSerializerContext for Native AOT and high-throughput serialization.\n{}/// </summary>",
+            indent, indent, indent
+        )
+        .unwrap();
+        writeln!(
+            out,
+            "{}[JsonSourceGenerationOptions(WriteIndented = true)]",
+            indent
+        )
+        .unwrap();
+
+        // Enums
+        for def in ir.types.values() {
+            if let TypeDef::Enum(e) = def {
+                let name = to_csharp_type_name(&e.qname.local);
+                writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
+            }
+        }
+
+        // Simple types
+        for def in ir.types.values() {
+            if let TypeDef::Simple(s) = def {
+                let name = to_csharp_type_name(&s.qname.local);
+                writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
+            }
+        }
+
+        // Unions
+        for def in ir.types.values() {
+            if let TypeDef::Union(u) = def {
+                let name = to_csharp_type_name(&u.qname.local);
+                writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
+            }
+        }
+
+        // Structs
+        for def in ir.types.values() {
+            if let TypeDef::Struct(s) = def {
+                let name = to_csharp_type_name(&s.qname.local);
+                writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
+                writeln!(out, "{}[JsonSerializable(typeof(List<{}>))]", indent, name).unwrap();
+            }
+        }
+
+        let ctx_name = &self.options.source_gen_context_name;
+        writeln!(
+            out,
+            "{}public partial class {} : JsonSerializerContext\n{}{{",
+            indent, ctx_name, indent
+        )
+        .unwrap();
+        writeln!(out, "{}}}", indent).unwrap();
     }
 
     fn emit_enum(&self, out: &mut String, e: &EnumDef, indent: &str) {

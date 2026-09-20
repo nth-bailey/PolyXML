@@ -10,9 +10,37 @@ use crate::ir::{
     TypeRef, UnionDef,
 };
 
+/// Target validation schema backend for TypeScript codegen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum TypeScriptBackend {
+    /// Pure TypeScript types/interfaces without runtime schemas (default)
+    #[default]
+    None,
+    /// Runtime Zod validation schemas (`import { z } from 'zod';`)
+    Zod,
+    /// Ultra-compact tree-shakeable Valibot schemas (`import * as v from 'valibot';`)
+    Valibot,
+    /// High-throughput JSON-Schema compatible TypeBox schemas (`import { Type, Static } from '@sinclair/typebox';`)
+    TypeBox,
+}
+
+impl TypeScriptBackend {
+    pub fn from_str_loose(s: &str) -> Option<Self> {
+        match s.to_lowercase().trim() {
+            "none" | "interfaces" | "standard" | "default" => Some(Self::None),
+            "zod" => Some(Self::Zod),
+            "valibot" | "vali" => Some(Self::Valibot),
+            "typebox" | "sinclair" => Some(Self::TypeBox),
+            _ => None,
+        }
+    }
+}
+
 /// Options configuring TypeScript 5+ code generation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TypeScriptOptions {
+    /// Runtime schema validation backend (default: None)
+    pub backend: TypeScriptBackend,
     /// Emit runtime Zod validation schemas alongside static types (default: false)
     pub emit_zod: bool,
     /// Use `interface` instead of `type` alias for complex type structs (default: true)
@@ -23,9 +51,22 @@ pub struct TypeScriptOptions {
     pub emit_root_aliases: bool,
 }
 
+impl TypeScriptOptions {
+    pub fn effective_backend(&self) -> TypeScriptBackend {
+        if self.backend != TypeScriptBackend::None {
+            self.backend
+        } else if self.emit_zod {
+            TypeScriptBackend::Zod
+        } else {
+            TypeScriptBackend::None
+        }
+    }
+}
+
 impl Default for TypeScriptOptions {
     fn default() -> Self {
         Self {
+            backend: TypeScriptBackend::None,
             emit_zod: false,
             use_interface: true,
             readonly_fields: false,
@@ -203,8 +244,17 @@ impl TypeScriptCodegen {
         }
         out.push_str(" */\n\n");
 
-        if self.options.emit_zod {
-            out.push_str("import { z } from \"zod\";\n\n");
+        match self.options.effective_backend() {
+            TypeScriptBackend::None => {}
+            TypeScriptBackend::Zod => {
+                out.push_str("import { z } from \"zod\";\n\n");
+            }
+            TypeScriptBackend::Valibot => {
+                out.push_str("import * as v from \"valibot\";\n\n");
+            }
+            TypeScriptBackend::TypeBox => {
+                out.push_str("import { Type, Static } from \"@sinclair/typebox\";\n\n");
+            }
         }
     }
 
@@ -300,11 +350,26 @@ impl TypeScriptCodegen {
 
         let _ = writeln!(out, "export type {} = {};\n", ts_name, base_type);
 
-        if self.options.emit_zod {
-            let schema_name = format!("{}Schema", ts_name);
-            let mut zod_expr = self.zod_expr_for_type(&s.base_type);
-            self.apply_facets_to_zod(&mut zod_expr, &s.facets, &s.base_type);
-            let _ = writeln!(out, "export const {} = {};\n", schema_name, zod_expr);
+        match self.options.effective_backend() {
+            TypeScriptBackend::None => {}
+            TypeScriptBackend::Zod => {
+                let schema_name = format!("{}Schema", ts_name);
+                let mut zod_expr = self.zod_expr_for_type(&s.base_type);
+                self.apply_facets_to_zod(&mut zod_expr, &s.facets, &s.base_type);
+                let _ = writeln!(out, "export const {} = {};\n", schema_name, zod_expr);
+            }
+            TypeScriptBackend::Valibot => {
+                let schema_name = format!("{}Schema", ts_name);
+                let mut vali_expr = self.valibot_expr_for_type(&s.base_type);
+                self.apply_facets_to_valibot(&mut vali_expr, &s.facets, &s.base_type);
+                let _ = writeln!(out, "export const {} = {};\n", schema_name, vali_expr);
+            }
+            TypeScriptBackend::TypeBox => {
+                let schema_name = format!("{}Schema", ts_name);
+                let mut tb_expr = self.typebox_expr_for_type(&s.base_type);
+                self.apply_facets_to_typebox(&mut tb_expr, &s.facets, &s.base_type);
+                let _ = writeln!(out, "export const {} = {};\n", schema_name, tb_expr);
+            }
         }
     }
 
@@ -330,19 +395,43 @@ impl TypeScriptCodegen {
             ts_name, ts_name, ts_name
         );
 
-        if self.options.emit_zod {
-            let schema_name = format!("{}Schema", ts_name);
-            let literals = e
-                .variants
-                .iter()
-                .map(|v| format!("{:?}", v.value))
-                .collect::<Vec<_>>()
-                .join(", ");
-            let _ = writeln!(
-                out,
-                "export const {} = z.enum([{}]);\n",
-                schema_name, literals
-            );
+        let schema_name = format!("{}Schema", ts_name);
+        let literals = e
+            .variants
+            .iter()
+            .map(|v| format!("{:?}", v.value))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        match self.options.effective_backend() {
+            TypeScriptBackend::None => {}
+            TypeScriptBackend::Zod => {
+                let _ = writeln!(
+                    out,
+                    "export const {} = z.enum([{}]);\n",
+                    schema_name, literals
+                );
+            }
+            TypeScriptBackend::Valibot => {
+                let _ = writeln!(
+                    out,
+                    "export const {} = v.picklist([{}]);\n",
+                    schema_name, literals
+                );
+            }
+            TypeScriptBackend::TypeBox => {
+                let tb_literals = e
+                    .variants
+                    .iter()
+                    .map(|v| format!("Type.Literal({:?})", v.value))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let _ = writeln!(
+                    out,
+                    "export const {} = Type.Union([{}]);\n",
+                    schema_name, tb_literals
+                );
+            }
         }
     }
 
@@ -365,23 +454,52 @@ impl TypeScriptCodegen {
         }
         out.push_str(";\n\n");
 
-        if self.options.emit_zod {
-            let schema_name = format!("{}Schema", ts_name);
-            let _ = writeln!(
-                out,
-                "export const {} = z.discriminatedUnion(\"kind\", [",
-                schema_name
-            );
-            for branch in &u.branches {
-                let kind_name = to_ts_variant_name(&branch.variant_name);
-                let branch_zod = self.zod_expr_for_type(&branch.type_ref);
+        let schema_name = format!("{}Schema", ts_name);
+        match self.options.effective_backend() {
+            TypeScriptBackend::None => {}
+            TypeScriptBackend::Zod => {
                 let _ = writeln!(
                     out,
-                    "  z.object({{ kind: z.literal({:?}), value: {} }}),",
-                    kind_name, branch_zod
+                    "export const {} = z.discriminatedUnion(\"kind\", [",
+                    schema_name
                 );
+                for branch in &u.branches {
+                    let kind_name = to_ts_variant_name(&branch.variant_name);
+                    let branch_zod = self.zod_expr_for_type(&branch.type_ref);
+                    let _ = writeln!(
+                        out,
+                        "  z.object({{ kind: z.literal({:?}), value: {} }}),",
+                        kind_name, branch_zod
+                    );
+                }
+                out.push_str("]);\n\n");
             }
-            out.push_str("]);\n\n");
+            TypeScriptBackend::Valibot => {
+                let _ = writeln!(out, "export const {} = v.variant(\"kind\", [", schema_name);
+                for branch in &u.branches {
+                    let kind_name = to_ts_variant_name(&branch.variant_name);
+                    let branch_vali = self.valibot_expr_for_type(&branch.type_ref);
+                    let _ = writeln!(
+                        out,
+                        "  v.object({{ kind: v.literal({:?}), value: {} }}),",
+                        kind_name, branch_vali
+                    );
+                }
+                out.push_str("]);\n\n");
+            }
+            TypeScriptBackend::TypeBox => {
+                let _ = writeln!(out, "export const {} = Type.Union([", schema_name);
+                for branch in &u.branches {
+                    let kind_name = to_ts_variant_name(&branch.variant_name);
+                    let branch_tb = self.typebox_expr_for_type(&branch.type_ref);
+                    let _ = writeln!(
+                        out,
+                        "  Type.Object({{ kind: Type.Literal({:?}), value: {} }}),",
+                        kind_name, branch_tb
+                    );
+                }
+                out.push_str("]);\n\n");
+            }
         }
     }
 
@@ -442,8 +560,17 @@ impl TypeScriptCodegen {
 
         out.push_str("}\n\n");
 
-        if self.options.emit_zod {
-            self.emit_zod_struct(out, s, ts_name.as_str(), ir, recursive_types);
+        match self.options.effective_backend() {
+            TypeScriptBackend::None => {}
+            TypeScriptBackend::Zod => {
+                self.emit_zod_struct(out, s, ts_name.as_str(), ir, recursive_types);
+            }
+            TypeScriptBackend::Valibot => {
+                self.emit_valibot_struct(out, s, ts_name.as_str(), ir, recursive_types);
+            }
+            TypeScriptBackend::TypeBox => {
+                self.emit_typebox_struct(out, s, ts_name.as_str(), ir, recursive_types);
+            }
         }
     }
 
@@ -658,6 +785,152 @@ impl TypeScriptCodegen {
         }
     }
 
+    fn apply_facets_to_valibot(
+        &self,
+        expr: &mut String,
+        facets: &RestrictionFacets,
+        type_ref: &TypeRef,
+    ) {
+        let is_string = match type_ref {
+            TypeRef::Primitive(prim) => matches!(
+                prim,
+                PrimitiveType::String
+                    | PrimitiveType::NormalizedString
+                    | PrimitiveType::Token
+                    | PrimitiveType::Name
+                    | PrimitiveType::NCName
+                    | PrimitiveType::Language
+                    | PrimitiveType::AnyUri
+            ),
+            _ => false,
+        };
+
+        let is_num = match type_ref {
+            TypeRef::Primitive(prim) => matches!(
+                prim,
+                PrimitiveType::Byte
+                    | PrimitiveType::Short
+                    | PrimitiveType::Int
+                    | PrimitiveType::Integer
+                    | PrimitiveType::Long
+                    | PrimitiveType::Float
+                    | PrimitiveType::Double
+                    | PrimitiveType::Decimal
+            ),
+            _ => false,
+        };
+
+        let mut actions = Vec::new();
+        if is_string {
+            if let Some(min_len) = facets.min_length {
+                actions.push(format!("v.minLength({})", min_len));
+            }
+            if let Some(max_len) = facets.max_length {
+                actions.push(format!("v.maxLength({})", max_len));
+            }
+            if let Some(length) = facets.length {
+                actions.push(format!("v.length({})", length));
+            }
+            for pat in &facets.patterns {
+                actions.push(format!("v.regex(/{}/)", pat));
+            }
+        }
+        if is_num {
+            if let Some(ref min_inc) = facets.min_inclusive {
+                actions.push(format!("v.minValue({})", min_inc));
+            }
+            if let Some(ref max_inc) = facets.max_inclusive {
+                actions.push(format!("v.maxValue({})", max_inc));
+            }
+            if let Some(ref min_exc) = facets.min_exclusive {
+                actions.push(format!("v.minValue({} + 1)", min_exc));
+            }
+            if let Some(ref max_exc) = facets.max_exclusive {
+                actions.push(format!("v.maxValue({} - 1)", max_exc));
+            }
+        }
+
+        if !actions.is_empty() {
+            *expr = format!("v.pipe({}, {})", expr, actions.join(", "));
+        }
+    }
+
+    fn apply_facets_to_typebox(
+        &self,
+        expr: &mut String,
+        facets: &RestrictionFacets,
+        type_ref: &TypeRef,
+    ) {
+        let is_string = match type_ref {
+            TypeRef::Primitive(prim) => matches!(
+                prim,
+                PrimitiveType::String
+                    | PrimitiveType::NormalizedString
+                    | PrimitiveType::Token
+                    | PrimitiveType::Name
+                    | PrimitiveType::NCName
+                    | PrimitiveType::Language
+                    | PrimitiveType::AnyUri
+            ),
+            _ => false,
+        };
+
+        let is_num = match type_ref {
+            TypeRef::Primitive(prim) => matches!(
+                prim,
+                PrimitiveType::Byte
+                    | PrimitiveType::Short
+                    | PrimitiveType::Int
+                    | PrimitiveType::Integer
+                    | PrimitiveType::Long
+                    | PrimitiveType::Float
+                    | PrimitiveType::Double
+                    | PrimitiveType::Decimal
+            ),
+            _ => false,
+        };
+
+        let mut opts = Vec::new();
+        if is_string {
+            if let Some(min_len) = facets.min_length {
+                opts.push(format!("minLength: {}", min_len));
+            }
+            if let Some(max_len) = facets.max_length {
+                opts.push(format!("maxLength: {}", max_len));
+            }
+            if let Some(length) = facets.length {
+                opts.push(format!("minLength: {}, maxLength: {}", length, length));
+            }
+            for pat in &facets.patterns {
+                opts.push(format!("pattern: {:?}", pat));
+            }
+        }
+        if is_num {
+            if let Some(ref min_inc) = facets.min_inclusive {
+                opts.push(format!("minimum: {}", min_inc));
+            }
+            if let Some(ref max_inc) = facets.max_inclusive {
+                opts.push(format!("maximum: {}", max_inc));
+            }
+            if let Some(ref min_exc) = facets.min_exclusive {
+                opts.push(format!("exclusiveMinimum: {}", min_exc));
+            }
+            if let Some(ref max_exc) = facets.max_exclusive {
+                opts.push(format!("exclusiveMaximum: {}", max_exc));
+            }
+        }
+
+        if !opts.is_empty() {
+            let opts_str = format!("{{ {} }}", opts.join(", "));
+            if expr.ends_with("()") {
+                expr.truncate(expr.len() - 2);
+                expr.push('(');
+                expr.push_str(&opts_str);
+                expr.push(')');
+            }
+        }
+    }
+
     fn emit_docstring(&self, out: &mut String, doc: &str, indent: &str) {
         let clean = doc.trim();
         if clean.contains('\n') {
@@ -683,7 +956,7 @@ impl TypeScriptCodegen {
                 let target_type = self.context.map_type_ref(&element.type_ref);
                 if el_name != target_type {
                     let _ = writeln!(out, "export type {} = {};", el_name, target_type);
-                    if self.options.emit_zod {
+                    if self.options.effective_backend() != TypeScriptBackend::None {
                         let target_schema = format!("{}Schema", target_type);
                         let _ =
                             writeln!(out, "export const {}Schema = {};", el_name, target_schema);
@@ -691,6 +964,233 @@ impl TypeScriptCodegen {
                     declared_names.insert(el_name);
                 }
             }
+        }
+    }
+
+    fn emit_valibot_struct(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        ts_name: &str,
+        _ir: &SchemaIR,
+        recursive_types: &HashSet<QName>,
+    ) {
+        let schema_name = format!("{}Schema", ts_name);
+        let is_recursive = recursive_types.contains(&s.qname);
+
+        if is_recursive {
+            let _ = writeln!(
+                out,
+                "export const {}: v.GenericSchema<{}> = v.lazy(() => v.object({{",
+                schema_name, ts_name
+            );
+        } else {
+            let _ = writeln!(out, "export const {} = v.object({{", schema_name);
+        }
+
+        let mut seen_fields = HashSet::new();
+        for field in &s.fields {
+            let field_id = self.unique_field_name(&field.name, &mut seen_fields);
+            let is_optional = field.cardinality.is_optional();
+            let is_list = field.cardinality.is_list() || field.type_ref.is_list();
+
+            let mut expr = self.valibot_expr_for_type(&field.type_ref);
+
+            if let Some(ref facets) = field.facets {
+                self.apply_facets_to_valibot(&mut expr, facets, &field.type_ref);
+            }
+
+            if is_list {
+                expr = format!("v.array({})", expr);
+            }
+
+            if field.nillable {
+                expr = format!("v.nullable({})", expr);
+            }
+
+            if is_optional {
+                expr = format!("v.optional({})", expr);
+            }
+
+            let _ = writeln!(out, "  {}: {},", field_id, expr);
+        }
+
+        if is_recursive {
+            out.push_str("}));\n\n");
+        } else {
+            out.push_str("});\n\n");
+        }
+    }
+
+    fn valibot_expr_for_type(&self, type_ref: &TypeRef) -> String {
+        match type_ref {
+            TypeRef::Primitive(prim) => match prim {
+                PrimitiveType::Boolean => "v.boolean()".into(),
+                PrimitiveType::Float | PrimitiveType::Double | PrimitiveType::Decimal => {
+                    "v.number()".into()
+                }
+                PrimitiveType::Byte
+                | PrimitiveType::Short
+                | PrimitiveType::Int
+                | PrimitiveType::Integer
+                | PrimitiveType::Long
+                | PrimitiveType::UnsignedByte
+                | PrimitiveType::UnsignedShort
+                | PrimitiveType::UnsignedInt
+                | PrimitiveType::UnsignedLong
+                | PrimitiveType::PositiveInteger
+                | PrimitiveType::NegativeInteger
+                | PrimitiveType::NonPositiveInteger
+                | PrimitiveType::NonNegativeInteger => "v.pipe(v.number(), v.integer())".into(),
+                PrimitiveType::String
+                | PrimitiveType::NormalizedString
+                | PrimitiveType::Token
+                | PrimitiveType::Name
+                | PrimitiveType::NCName
+                | PrimitiveType::QName
+                | PrimitiveType::Language
+                | PrimitiveType::NMTOKEN
+                | PrimitiveType::NMTOKENS
+                | PrimitiveType::AnyUri
+                | PrimitiveType::Id
+                | PrimitiveType::IdRef
+                | PrimitiveType::IdRefs
+                | PrimitiveType::Entity
+                | PrimitiveType::Entities
+                | PrimitiveType::Date
+                | PrimitiveType::Time
+                | PrimitiveType::DateTime
+                | PrimitiveType::Duration
+                | PrimitiveType::GYear
+                | PrimitiveType::GYearMonth
+                | PrimitiveType::GMonth
+                | PrimitiveType::GMonthDay
+                | PrimitiveType::GDay => "v.string()".into(),
+                PrimitiveType::Base64Binary | PrimitiveType::HexBinary => {
+                    "v.instance(Uint8Array)".into()
+                }
+                PrimitiveType::AnyType | PrimitiveType::AnySimpleType => "v.unknown()".into(),
+            },
+            TypeRef::Named(qname) => format!("{}Schema", to_ts_type_name(&qname.local)),
+            TypeRef::Boxed(inner) => self.valibot_expr_for_type(inner),
+            TypeRef::List(inner) => format!("v.array({})", self.valibot_expr_for_type(inner)),
+        }
+    }
+
+    fn emit_typebox_struct(
+        &self,
+        out: &mut String,
+        s: &StructDef,
+        ts_name: &str,
+        _ir: &SchemaIR,
+        recursive_types: &HashSet<QName>,
+    ) {
+        let schema_name = format!("{}Schema", ts_name);
+        let is_recursive = recursive_types.contains(&s.qname);
+
+        if is_recursive {
+            let _ = writeln!(
+                out,
+                "export const {} = Type.Recursive(This => Type.Object({{",
+                schema_name
+            );
+        } else {
+            let _ = writeln!(out, "export const {} = Type.Object({{", schema_name);
+        }
+
+        let mut seen_fields = HashSet::new();
+        for field in &s.fields {
+            let field_id = self.unique_field_name(&field.name, &mut seen_fields);
+            let is_optional = field.cardinality.is_optional();
+            let is_list = field.cardinality.is_list() || field.type_ref.is_list();
+
+            let mut expr = if is_recursive
+                && (matches!(&field.type_ref, TypeRef::Named(q) if q == &s.qname)
+                    || matches!(&field.type_ref, TypeRef::Boxed(inner) if matches!(inner.as_ref(), TypeRef::Named(q) if q == &s.qname)))
+            {
+                "This".to_string()
+            } else {
+                self.typebox_expr_for_type(&field.type_ref)
+            };
+
+            if let Some(ref facets) = field.facets {
+                self.apply_facets_to_typebox(&mut expr, facets, &field.type_ref);
+            }
+
+            if is_list {
+                expr = format!("Type.Array({})", expr);
+            }
+
+            if field.nillable {
+                expr = format!("Type.Union([{}, Type.Null()])", expr);
+            }
+
+            if is_optional {
+                expr = format!("Type.Optional({})", expr);
+            }
+
+            let _ = writeln!(out, "  {}: {},", field_id, expr);
+        }
+
+        if is_recursive {
+            out.push_str("}));\n\n");
+        } else {
+            out.push_str("});\n\n");
+        }
+    }
+
+    fn typebox_expr_for_type(&self, type_ref: &TypeRef) -> String {
+        match type_ref {
+            TypeRef::Primitive(prim) => match prim {
+                PrimitiveType::Boolean => "Type.Boolean()".into(),
+                PrimitiveType::Float | PrimitiveType::Double | PrimitiveType::Decimal => {
+                    "Type.Number()".into()
+                }
+                PrimitiveType::Byte
+                | PrimitiveType::Short
+                | PrimitiveType::Int
+                | PrimitiveType::Integer
+                | PrimitiveType::Long
+                | PrimitiveType::UnsignedByte
+                | PrimitiveType::UnsignedShort
+                | PrimitiveType::UnsignedInt
+                | PrimitiveType::UnsignedLong
+                | PrimitiveType::PositiveInteger
+                | PrimitiveType::NegativeInteger
+                | PrimitiveType::NonPositiveInteger
+                | PrimitiveType::NonNegativeInteger => "Type.Integer()".into(),
+                PrimitiveType::String
+                | PrimitiveType::NormalizedString
+                | PrimitiveType::Token
+                | PrimitiveType::Name
+                | PrimitiveType::NCName
+                | PrimitiveType::QName
+                | PrimitiveType::Language
+                | PrimitiveType::NMTOKEN
+                | PrimitiveType::NMTOKENS
+                | PrimitiveType::AnyUri
+                | PrimitiveType::Id
+                | PrimitiveType::IdRef
+                | PrimitiveType::IdRefs
+                | PrimitiveType::Entity
+                | PrimitiveType::Entities
+                | PrimitiveType::Date
+                | PrimitiveType::Time
+                | PrimitiveType::DateTime
+                | PrimitiveType::Duration
+                | PrimitiveType::GYear
+                | PrimitiveType::GYearMonth
+                | PrimitiveType::GMonth
+                | PrimitiveType::GMonthDay
+                | PrimitiveType::GDay => "Type.String()".into(),
+                PrimitiveType::Base64Binary | PrimitiveType::HexBinary => {
+                    "Type.Uint8Array()".into()
+                }
+                PrimitiveType::AnyType | PrimitiveType::AnySimpleType => "Type.Unknown()".into(),
+            },
+            TypeRef::Named(qname) => format!("{}Schema", to_ts_type_name(&qname.local)),
+            TypeRef::Boxed(inner) => self.typebox_expr_for_type(inner),
+            TypeRef::List(inner) => format!("Type.Array({})", self.typebox_expr_for_type(inner)),
         }
     }
 

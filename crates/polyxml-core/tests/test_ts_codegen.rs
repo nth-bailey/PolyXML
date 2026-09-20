@@ -1,6 +1,6 @@
 use polyxml::codegen::typescript::{
-    to_ts_field_identifier, to_ts_type_name, to_ts_variant_name, TypeScriptCodegen,
-    TypeScriptOptions,
+    to_ts_field_identifier, to_ts_type_name, to_ts_variant_name, TypeScriptBackend,
+    TypeScriptCodegen, TypeScriptOptions,
 };
 use polyxml::ir::{
     Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets,
@@ -139,6 +139,7 @@ fn test_ts_interface_and_enum_codegen() {
     }));
 
     let options = TypeScriptOptions {
+        backend: TypeScriptBackend::None,
         emit_zod: false,
         use_interface: true,
         readonly_fields: false,
@@ -193,6 +194,7 @@ fn test_ts_discriminated_union_choice() {
     }));
 
     let options = TypeScriptOptions {
+        backend: TypeScriptBackend::None,
         emit_zod: false,
         use_interface: true,
         readonly_fields: true,
@@ -278,6 +280,7 @@ fn test_ts_zod_schema_generation() {
     }));
 
     let options = TypeScriptOptions {
+        backend: TypeScriptBackend::None,
         emit_zod: true,
         use_interface: true,
         readonly_fields: false,
@@ -344,6 +347,7 @@ fn test_ts_recursive_cycle_zod_lazy() {
     }));
 
     let options = TypeScriptOptions {
+        backend: TypeScriptBackend::None,
         emit_zod: true,
         use_interface: true,
         readonly_fields: false,
@@ -363,4 +367,241 @@ fn test_ts_recursive_cycle_zod_lazy() {
     );
     assert!(code.contains("children: z.array(TreeNodeSchema),"));
     assert!(code.contains("}));"));
+}
+
+#[test]
+fn test_ts_backend_from_str_loose() {
+    assert_eq!(
+        TypeScriptBackend::from_str_loose("none"),
+        Some(TypeScriptBackend::None)
+    );
+    assert_eq!(
+        TypeScriptBackend::from_str_loose("interfaces"),
+        Some(TypeScriptBackend::None)
+    );
+    assert_eq!(
+        TypeScriptBackend::from_str_loose("standard"),
+        Some(TypeScriptBackend::None)
+    );
+    assert_eq!(
+        TypeScriptBackend::from_str_loose("zod"),
+        Some(TypeScriptBackend::Zod)
+    );
+    assert_eq!(
+        TypeScriptBackend::from_str_loose("valibot"),
+        Some(TypeScriptBackend::Valibot)
+    );
+    assert_eq!(
+        TypeScriptBackend::from_str_loose("vali"),
+        Some(TypeScriptBackend::Valibot)
+    );
+    assert_eq!(
+        TypeScriptBackend::from_str_loose("typebox"),
+        Some(TypeScriptBackend::TypeBox)
+    );
+    assert_eq!(
+        TypeScriptBackend::from_str_loose("sinclair"),
+        Some(TypeScriptBackend::TypeBox)
+    );
+    assert_eq!(TypeScriptBackend::from_str_loose("unknown"), None);
+}
+
+#[test]
+fn test_ts_valibot_schema_generation() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/valibot");
+
+    let facets = RestrictionFacets {
+        min_length: Some(3),
+        max_length: Some(10),
+        patterns: vec!["^[A-Z0-9]+$".into()],
+        ..Default::default()
+    };
+
+    ir.add_type(TypeDef::Simple(Box::new(SimpleTypeDef {
+        qname: QName::new(Some("https://example.com/valibot"), "PostalCode"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        facets,
+        documentation: Some("Constrained postal code".into()),
+    })));
+
+    ir.add_type(TypeDef::Enum(EnumDef {
+        qname: QName::new(Some("https://example.com/valibot"), "Status"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        variants: vec![
+            EnumValue {
+                name: "active".into(),
+                value: "active".into(),
+                documentation: None,
+            },
+            EnumValue {
+                name: "inactive".into(),
+                value: "inactive".into(),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/valibot"), "Person"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "postalCode".into(),
+                xml_name: "postalCode".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Named(QName::new(
+                    Some("https://example.com/valibot"),
+                    "PostalCode",
+                )),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "status".into(),
+                xml_name: "status".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Named(QName::new(Some("https://example.com/valibot"), "Status")),
+                cardinality: Cardinality::optional_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: None,
+    }));
+
+    let options = TypeScriptOptions {
+        backend: TypeScriptBackend::Valibot,
+        emit_zod: false,
+        use_interface: true,
+        readonly_fields: false,
+        emit_root_aliases: true,
+    };
+    let codegen = TypeScriptCodegen::new(options);
+    let code = codegen.generate_module(&ir);
+
+    // Verify Valibot import
+    assert!(code.contains("import * as v from \"valibot\";"));
+
+    // Verify simple type facets with v.pipe
+    assert!(code.contains("export const PostalCodeSchema = v.pipe(v.string(), v.minLength(3), v.maxLength(10), v.regex(/^[A-Z0-9]+$/));"));
+
+    // Verify enum picklist
+    assert!(code.contains("export const StatusSchema = v.picklist([\"active\", \"inactive\"]);"));
+
+    // Verify struct schema
+    assert!(code.contains("export const PersonSchema = v.object({"));
+    assert!(code.contains("postalCode: PostalCodeSchema,"));
+    assert!(code.contains("status: v.optional(StatusSchema),"));
+}
+
+#[test]
+fn test_ts_typebox_schema_generation() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/typebox");
+
+    let facets = RestrictionFacets {
+        min_length: Some(2),
+        max_length: Some(8),
+        ..Default::default()
+    };
+
+    ir.add_type(TypeDef::Simple(Box::new(SimpleTypeDef {
+        qname: QName::new(Some("https://example.com/typebox"), "Code"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        facets,
+        documentation: None,
+    })));
+
+    ir.add_type(TypeDef::Enum(EnumDef {
+        qname: QName::new(Some("https://example.com/typebox"), "Role"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        variants: vec![
+            EnumValue {
+                name: "admin".into(),
+                value: "admin".into(),
+                documentation: None,
+            },
+            EnumValue {
+                name: "user".into(),
+                value: "user".into(),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/typebox"), "Account"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "code".into(),
+                xml_name: "code".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Named(QName::new(Some("https://example.com/typebox"), "Code")),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "role".into(),
+                xml_name: "role".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Named(QName::new(Some("https://example.com/typebox"), "Role")),
+                cardinality: Cardinality::optional_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: None,
+    }));
+
+    let options = TypeScriptOptions {
+        backend: TypeScriptBackend::TypeBox,
+        emit_zod: false,
+        use_interface: true,
+        readonly_fields: false,
+        emit_root_aliases: true,
+    };
+    let codegen = TypeScriptCodegen::new(options);
+    let code = codegen.generate_module(&ir);
+
+    // Verify TypeBox imports
+    assert!(code.contains("import { Type, Static } from \"@sinclair/typebox\";"));
+
+    // Verify TypeBox Code schema
+    assert!(code.contains("export const CodeSchema = Type.String({ minLength: 2, maxLength: 8 });"));
+
+    // Verify TypeBox enum
+    assert!(code.contains(
+        "export const RoleSchema = Type.Union([Type.Literal(\"admin\"), Type.Literal(\"user\")]);"
+    ));
+
+    // Verify TypeBox struct
+    assert!(code.contains("export const AccountSchema = Type.Object({"));
+    assert!(code.contains("code: CodeSchema,"));
+    assert!(code.contains("role: Type.Optional(RoleSchema),"));
 }

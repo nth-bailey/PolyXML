@@ -71,11 +71,14 @@ polyxml generate \
 |---|---|---|---|
 | **Target Language** | `-l`, `--lang` | Target language (`python`, `rust`, `cpp`, `java`, `typescript`, `go`, `csharp`). Can be specified multiple times. | Required |
 | **Output Directory** | `-o`, `--out` | Target directory for generated source files. | `.` |
-| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass` / `pydantic-v2` for Python; `standard` / `jackson` for Java; `standard` / `glaze` for C++). | Target default |
+| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic-v2` for Python; `standard`/`jackson` for Java; `standard`/`glaze` for C++; `none`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
 | **Compilation Mode** | `-m`, `--mode` | Target packaging mode (`header` or `modules` for C++). | Target default |
 | **Rust Zero-Copy** | `--zero-copy` | Use `Cow<'a, str>` string slices instead of owned `String`. | `true` |
+| **Rust rkyv** | `--rkyv` | Derive `rkyv::{Archive, Serialize, Deserialize}` for zero-copy wire format serialization. | `false` |
 | **Streaming Codecs**| `--codecs` | Emit inherent zero-copy streaming XML serializers and deserializers. | `true` |
-| **Zod Schemas** | `--zod` | Emit runtime Zod validation schemas for TypeScript. | `false` |
+| **Validation Schemas** | `--zod` | Emit runtime Zod validation schemas for TypeScript (equivalent to `--backend zod`). | `false` |
+| **C# Source-Gen** | `--source-gen` | Emit Native AOT compile-time `JsonSerializerContext` for C#. | `false` |
+| **C# Record Kind** | `--record-kind` | C# record representation (`class` or `struct`). | `class` |
 | **Package / Namespace** | `-p`, `--package` | Namespace or package name for Java, Go, C#, or C++. | Target default |
 | **Dry Run** | `--dry-run` | Parse and print generated output without writing to disk. | `false` |
 | **Format** | `--format` | Automatically format generated code using host toolchains (`ruff`, `cargo fmt`, `clang-format`, `gofmt`). | `true` |
@@ -110,6 +113,7 @@ target = "rust"
 output = "src/generated/rust"
 zero_copy = true
 codecs = true
+rkyv = true
 
 [[generate]]
 target = "java"
@@ -120,7 +124,7 @@ backend = "jackson"
 [[generate]]
 target = "typescript"
 output = "src/generated/ts"
-zod = true
+backend = "valibot"
 
 [[generate]]
 target = "cpp"
@@ -132,11 +136,14 @@ backend = "glaze"
 target = "go"
 output = "src/generated/go"
 package = "payments"
+backend = "sonic"
 
 [[generate]]
 target = "csharp"
 output = "src/generated/csharp"
 namespace = "Enterprise.Banking.Iso20022"
+source_gen = true
+record_kind = "struct"
 ```
 
 ---
