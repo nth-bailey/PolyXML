@@ -25,3 +25,17 @@ heck = "0.5"
 
 [dev-dependencies]
 tempfile = "3"
+
+[package.metadata.deb]
+maintainer = "Bailey Nguyen <bailey.tan.nguyen@gmail.com>"
+copyright = "2026 Bailey Nguyen <bailey.tan.nguyen@gmail.com>"
+extended-description = """\
+PolyXML is the high-performance polyglot XML schema compiler and ultra-fast
+streaming data-binding runtime. Compiles W3C XML Schemas across Rust, Python,
+C++20, Java 21+, TypeScript, Go, and C#."""
+depends = "$auto"
+section = "devel"
+priority = "optional"
+assets = [
+    ["target/release/polyxml", "usr/bin/polyxml", "755"],
+]

@@ -1,0 +1,116 @@
+name: Release CLI Binaries & Packages
+
+concurrency:
+  group: release-binaries-${{ github.ref_name || github.ref }}
+  cancel-in-progress: false
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.17.0)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-binaries:
+    name: Build Binary (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            use_cross: false
+            is_linux_x86: true
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            use_cross: true
+            is_linux_x86: false
+          - target: x86_64-apple-darwin
+            os: macos-13
+            use_cross: false
+            is_linux_x86: false
+          - target: aarch64-apple-darwin
+            os: macos-14
+            use_cross: false
+            is_linux_x86: false
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            use_cross: false
+            is_linux_x86: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Cross (if cross-compiling)
+        if: matrix.use_cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build CLI Binary
+        shell: bash
+        run: |
+          if [ "${{ matrix.use_cross }}" = "true" ]; then
+            cross build --release --target ${{ matrix.target }} -p polyxml-cli
+          else
+            cargo build --release --target ${{ matrix.target }} -p polyxml-cli
+          fi
+
+      - name: Package Unix Archive (tar.gz)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist
+          BIN_PATH="target/${{ matrix.target }}/release/polyxml"
+          if [ ! -f "$BIN_PATH" ]; then
+            BIN_PATH="target/release/polyxml"
+          fi
+          tar -czvf "dist/polyxml-${{ matrix.target }}.tar.gz" -C "$(dirname "$BIN_PATH")" polyxml
+
+      - name: Package Windows Archive (zip)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist
+          BIN_PATH="target/${{ matrix.target }}/release/polyxml.exe"
+          if [ ! -f "$BIN_PATH" ]; then
+            BIN_PATH="target/release/polyxml.exe"
+          fi
+          7z a "dist/polyxml-${{ matrix.target }}.zip" "$BIN_PATH"
+
+      - name: Build Debian (.deb) & RPM (.rpm) Packages (Linux x86_64)
+        if: matrix.is_linux_x86
+        shell: bash
+        run: |
+          cargo install cargo-deb || true
+          cargo install cargo-generate-rpm || true
+          
+          # Build .deb package
+          cargo deb -p polyxml-cli --output dist/
+          
+          # Build .rpm package
+          strip target/release/polyxml || true
+          cargo generate-rpm -p crates/polyxml-cli/Cargo.toml --output dist/ || echo "RPM generation skipped or completed"
+
+      - name: Upload Artifacts to GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

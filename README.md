@@ -51,6 +51,12 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 
 ## ⚡ Schema Compilation at a Glance
 
+Install the PolyXML compiler in seconds on Linux and macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nth-bailey/PolyXML/main/scripts/install.sh | bash
+```
+
 Compile any W3C XML Schema into strongly-typed code for all 7 languages in a single command:
 
 ```bash
@@ -414,6 +420,8 @@ Each repository features:
 | **Modern C++20 / C** | [Conan](conan/) / [vcpkg](packaging/vcpkg/) (`polyxml`) | `conan install` / `vcpkg install polyxml` | Header-Only C++20 & Native Lib | 🟢 Stable |
 | **C# / .NET 8+** | NuGet / Native | `dotnet add package PolyXML` | C# 12 Records & `System.Xml` | 🟢 Stable |
 | **macOS & Linux** | [Homebrew Tap](https://github.com/nth-bailey/homebrew-polyxml) | `brew install nth-bailey/polyxml/polyxml` | Native Headers & Dynamic Lib | 🟢 Stable |
+| **Universal Installer** | [GitHub Releases](https://github.com/nth-bailey/PolyXML/releases) | `curl -fsSL .../install.sh \| bash` | Pre-compiled Standalone Binary | 🟢 Stable |
+| **Debian & Fedora** | [GitHub Releases](https://github.com/nth-bailey/PolyXML/releases) | `dpkg -i *.deb` / `dnf install *.rpm` | Native `.deb` & `.rpm` Packages | 🟢 Stable |
 
 ---
 

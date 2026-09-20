@@ -240,6 +240,19 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
 
 === "Schema Compiler CLI"
 
+    ### 0. Install the CLI
+    ```bash
+    # Universal one-line installer (Linux / macOS)
+    curl -fsSL https://raw.githubusercontent.com/nth-bailey/PolyXML/main/scripts/install.sh | bash
+
+    # Or via Homebrew
+    brew install nth-bailey/polyxml/polyxml
+
+    # Or pre-built .deb / .rpm from GitHub Releases:
+    # sudo dpkg -i polyxml_amd64.deb
+    # sudo dnf install ./polyxml.rpm
+    ```
+
     ### 1. Compile Schema to Multiple Languages
     ```bash
     # Generate models for Python, Rust, and C# simultaneously

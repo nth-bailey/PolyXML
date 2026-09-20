@@ -8,9 +8,38 @@ Unified developer command-line interface and polyglot schema compiler toolchain 
 
 ## Installation
 
+### 1. Universal One-Line Installer (Linux & macOS)
+
 ```bash
-# From workspace root
-cargo install --path crates/polyxml-cli
+curl -fsSL https://raw.githubusercontent.com/nth-bailey/PolyXML/main/scripts/install.sh | bash
+```
+
+### 2. Direct Packages (Debian / Ubuntu & Fedora / RHEL)
+
+Download pre-built packages from [GitHub Releases](https://github.com/nth-bailey/PolyXML/releases):
+
+```bash
+# Debian / Ubuntu / Mint / Pop!_OS (.deb)
+sudo dpkg -i polyxml_amd64.deb
+
+# Fedora / RHEL / Rocky Linux / openSUSE (.rpm)
+sudo dnf install ./polyxml.x86_64.rpm
+```
+
+### 3. Homebrew (macOS & Linux)
+
+```bash
+brew install nth-bailey/polyxml/polyxml
+```
+
+### 4. Cargo / Cargo-Binstall
+
+```bash
+# Fast pre-compiled binary via binstall
+cargo binstall polyxml-cli
+
+# Or compile from source
+cargo install polyxml-cli
 ```
 
 ---
