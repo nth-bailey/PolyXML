@@ -148,3 +148,4 @@ Across more than 600 official test groups from Sun Microsystems, Microsoft, and 
 **Ready to modernize your XML infrastructure?**
 👉 **[Get Started with the 5-Minute Quickstart →](quickstart.md)**
 👉 **[Read the Schema Compiler & CLI Guide →](guides/compiler.md)**
+

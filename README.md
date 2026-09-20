@@ -1,29 +1,26 @@
 # PolyXML
 
 <p align="center">
-  <strong>The High-Performance, Polyglot XML Data-Binding Engine</strong>
+  <strong>The "protoc for XML" — Modern Polyglot Schema Compiler & Ultra-Fast Streaming Runtime</strong>
 </p>
 
 <p align="center">
   <a href="https://github.com/nth-bailey/PolyXML/actions"><img src="https://img.shields.io/github/actions/workflow/status/nth-bailey/PolyXML/ci.yml?branch=main&label=CI&logo=github" alt="CI"></a>
   <a href="https://nth-bailey.github.io/PolyXML/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg?logo=gitbook" alt="Docs"></a>
+  <a href="https://github.com/nth-bailey/polyxml-w3c-tests"><img src="https://img.shields.io/badge/W3C%20XSTS-99.8%25%20Passed-brightgreen.svg" alt="W3C XSTS Conformance"></a>
   <a href="https://github.com/nth-bailey/PolyXML/blob/main/crates/polyxml-python/pyproject.toml"><img src="https://img.shields.io/badge/coverage-100%25-brightgreen.svg?logo=pytest" alt="Coverage: 100%"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
-  <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white" alt="pre-commit"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
 </p>
 
 <p align="center">
   <a href="https://crates.io/crates/polyxml"><img src="https://img.shields.io/crates/v/polyxml.svg?logo=rust&label=crates.io" alt="crates.io: polyxml"></a>
-  <a href="https://crates.io/crates/polyxml-c"><img src="https://img.shields.io/crates/v/polyxml-c.svg?logo=rust&label=polyxml-c" alt="crates.io: polyxml-c"></a>
+  <a href="https://crates.io/crates/polyxml-cli"><img src="https://img.shields.io/crates/v/polyxml-cli.svg?logo=rust&label=polyxml-cli" alt="crates.io: polyxml-cli"></a>
   <a href="https://pypi.org/project/polyxml/"><img src="https://img.shields.io/pypi/v/polyxml.svg?logo=pypi&label=PyPI" alt="PyPI: polyxml"></a>
   <a href="https://www.npmjs.com/package/polyxml"><img src="https://img.shields.io/npm/v/polyxml.svg?logo=npm&color=CB3837&label=npm" alt="npm: polyxml"></a>
   <a href="https://central.sonatype.com/artifact/io.github.nth-bailey/polyxml"><img src="https://img.shields.io/maven-central/v/io.github.nth-bailey/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven" alt="Maven Central"></a>
   <a href="https://pkg.go.dev/github.com/nth-bailey/PolyXML/bindings/go"><img src="https://pkg.go.dev/badge/github.com/nth-bailey/PolyXML/bindings/go.svg" alt="Go Reference"></a>
   <a href="https://github.com/nth-bailey/homebrew-polyxml"><img src="https://img.shields.io/badge/Homebrew-polyxml-FBB040.svg?logo=homebrew&logoColor=black" alt="Homebrew"></a>
-  <a href="https://github.com/conan-io/conan-center-index/pull/30940"><img src="https://img.shields.io/badge/Conan-PR%20%2330940-004B87.svg?logo=conan" alt="ConanCenter PR"></a>
-  <a href="https://github.com/conda-forge/staged-recipes/pull/34791"><img src="https://img.shields.io/badge/conda--forge-PR%20%2334791-000000.svg?logo=conda-forge" alt="conda-forge PR"></a>
-  <a href="https://github.com/microsoft/vcpkg/pull/53866"><img src="https://img.shields.io/badge/vcpkg-PR%20%2353866-5C2D91.svg?logo=microsoft" alt="vcpkg PR"></a>
 </p>
 
 <p align="center">
@@ -41,13 +38,99 @@
 
 ## Overview
 
-**PolyXML** is a universal native XML engine engineered in Rust for ultra-fast, streaming XML serialization and deserialization. It bridges raw XML directly to strongly-typed data structures across modern language runtimes with **zero unnecessary allocations**.
+**PolyXML** is the next-generation polyglot XML schema compiler and ultra-fast streaming data-binding runtime built in safe Rust.
 
-While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critical industries—including **defense & aerospace (UCI)**, **finance (ISO 20022, FIXML)**, and **healthcare (HL7)**—continue to rely on XML. PolyXML eliminates the single-language silos and performance penalties of legacy XML data-binding tools by providing one optimized, native Rust core for all stacks.
+Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary serialization, **PolyXML brings modern software engineering to XML**:
+
+1. **🛠️ Polyglot Schema Compiler (`polyxml`)**: Ingests W3C XSD 1.0 and 1.1 schemas, resolves cyclic types with Tarjan's SCC algorithm, and compiles production-ready, strongly-typed data contracts across **7 modern ecosystems** simultaneously (**Python**, **Rust**, **C++**, **Java**, **TypeScript**, **Go**, and **C#**).
+2. **⚡ Ultra-Fast Streaming Runtime**: Direct-to-struct deserialization and serialization powered by `quick-xml` and `lexical-core`, executing **16x–38x faster than traditional tools** with **zero intermediate DOM allocations**.
+3. **🏛️ Official W3C XSTS Conformance Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests).
+4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
 
 ---
 
-## ⚡ Why PolyXML? (The Modern XML Paradigm)
+## ⚡ Schema Compilation at a Glance
+
+Compile any W3C XML Schema into strongly-typed code for all 7 languages in a single command:
+
+```bash
+# 1. Multi-target compilation in a single invocation
+polyxml generate \
+  --lang python --backend pydantic-v2 \
+  --lang rust --zero-copy --codecs \
+  --lang csharp --namespace Enterprise.Banking \
+  --lang java --package com.enterprise.banking \
+  --lang typescript --zod \
+  --lang go --package banking \
+  --lang cpp \
+  --out ./generated \
+  schemas/pain.001.001.09.xsd
+
+# 2. Or build an entire enterprise project declaratively
+polyxml build --config polyxml.toml
+```
+
+### Consume the Generated Models Instantly
+
+=== "Python 3.12+"
+```python
+# Generated by polyxml generate --lang python
+from generated.python import Customer
+import polyxml
+
+# 16x faster than xsdata with zero intermediate DOM overhead
+customer = polyxml.deserialize(xml_bytes, Customer)
+print(f"Customer: {customer.name}, Status: {customer.status}")
+
+# Serialize back to formatted XML
+xml_output = polyxml.serialize(customer, indent=2)
+```
+
+=== "Rust (Zero-Copy)"
+```rust
+// Generated by polyxml generate --lang rust --zero-copy --codecs
+use generated::rust::Customer;
+
+// Zero-copy deserialization: borrows text slices directly with Cow<'a, str>
+let customer = Customer::from_xml(xml_str)?;
+assert_eq!(customer.name.as_ref(), "Alice");
+
+// Stream back to XML
+let output_xml = customer.to_xml_string()?;
+```
+
+=== "C# 12 / .NET 8+"
+```csharp
+// Generated by polyxml generate --lang csharp
+using Enterprise.Banking;
+using System.Xml.Serialization;
+
+var serializer = new XmlSerializer(typeof(Customer));
+var customer = (Customer)serializer.Deserialize(new StringReader(xml))!;
+Console.WriteLine($"Customer {customer.Name} loaded.");
+```
+
+---
+
+## 🎯 Target Language Matrix
+
+PolyXML strictly generates code adhering to modern programming paradigms (2024–2026), eliminating legacy boilerplate:
+
+| Target Language | CLI Flag (`--lang`) | Generated Code Paradigm | Modern Features & Highlights |
+| :--- | :--- | :--- | :--- |
+| **Python 3.12+** | `python` | `@dataclass(slots=True)` & Pydantic v2 | PEP 695 type aliases (`type Sku = ...`), PEP 604 unions, restriction facet validation |
+| **Rust 2021/2024** | `rust` | Zero-copy `Cow<'a, str>` & Owned structs | Automatic Tarjan SCC recursive boxing (`Box<T>`), inherent streaming codecs |
+| **C++20 / C++23** | `cpp` | Modern value types & `std::variant` | C++20 concepts, `std::unique_ptr` cycle breaks, CMake/Meson export, zero Xerces |
+| **Java 21+** | `java` | Modern `record` & `sealed interface` | Exhaustive switch pattern matching, compact constructor facet validation, zero JNI |
+| **TypeScript 5+** | `typescript` | Interfaces & Discriminated Unions | Runtime Zod schemas, circular reference resolution via `z.lazy()`, `as const` enums |
+| **Go 1.22+** | `go` | Structs with `encoding/xml` tags | Custom `UnmarshalXML` choice mutual exclusivity validation, pointer cycle breaks |
+| **C# 12 / .NET 8+** | `csharp` | Records with Primary Constructors | Parameterless constructors for `XmlSerializer`, polymorphic choice records, `IValidatableObject` |
+
+👉 **[Read the Full Schema Compiler & CLI Guide →](docs/guides/compiler.md)**
+
+---
+
+## 🥊 Why PolyXML? (Old Way vs. PolyXML Way)
 
 | Feature | Legacy Toolchains (JAXB, CodeSynthesis, xsdata, xgen) | PolyXML Modern Approach |
 | :--- | :--- | :--- |
@@ -62,47 +145,36 @@ While modern web ecosystems shifted to JSON and Protocol Buffers, mission-critic
 
 ---
 
-## Architecture
+## 🏛️ Architecture
+
+PolyXML operates across two synchronized pipelines:
 
 ```
-                  ┌─────────────────────────────────────┐
-                  │          Raw XML Stream             │
-                  └──────────────────┬──────────────────┘
-                                     │
+                          COMPILER PIPELINE (polyxml CLI)
+  ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+  │ W3C XSD 1.0/1.1 │──────▶│  SchemaParser   │──────▶│   PolyXML-IR    │
+  │  Schema Files   │       │   (Pure Rust)   │       │(Normalized AST) │
+  └─────────────────┘       └─────────────────┘       └────────┬────────┘
+                                                               │ Tarjan SCC Cycle Breaks
+                                                               ▼
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                        7 Target Code Generators                     │
+  │   Python  │  Rust  │  C++20  │  Java 21  │  TypeScript  │  Go  │ C# │
+  └──────────────────────────────────┬──────────────────────────────────┘
+                                     │ Generates typed models & codecs
                                      ▼
-                  ┌─────────────────────────────────────┐
-                  │            polyxml-core             │
-                  │   - quick-xml event reader/writer   │
-                  │   - lexical-core scalar parser      │
-                  │   - Language-agnostic Schema IR     │
-                  │   - Zero-copy streaming state       │
-                  └─────────┬───────────────┬───────────┘
-                            │               │
-           ┌────────────────┼───────────────┼────────────────┐
-           ▼                ▼               ▼                ▼
-    ┌──────────────┐ ┌─────────────┐ ┌─────────────┐  ┌─────────────┐
-    │  Rust / Core │ │   Python    │ │  C++ & Go   │  │ Node / Wasm │
-    │ Direct Crate │ │ (PyO3 abi3) │ │(C-ABI / Cgo)│  │  (napi-rs)  │
-    └──────────────┘ └─────────────┘ └─────────────┘  └─────────────┘
+                          STREAMING RUNTIME PIPELINE
+  ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+  │  Raw XML Stream │──────▶│  polyxml-core   │──────▶│  Typed In-Memory│
+  │ (Files, Network)│       │quick-xml+lexical│       │     Objects     │
+  └─────────────────┘       └─────────────────┘       └─────────────────┘
 ```
 
 ---
 
-## Key Features
+## 🚀 Performance Benchmarks
 
-- **⚡ Blazing Fast**: Powered by `quick-xml` streaming event loop and `lexical-core` byte-slice parsing. Zero DOM intermediate allocations.
-- **🌊 Streaming Iterator**: Parse multi-gigabyte XML documents with $O(1)$ constant memory (<5 MB RAM) via `polyxml.iterparse()`.
-- **🔄 Bidirectional**: Full support for both **deserialization** (XML $\to$ typed models) and **serialization** (typed models $\to$ XML).
-- **📦 Native Binary Serialization**: Ultra-fast MessagePack binary encoding/decoding via `polyxml.dumps_binary()` and `polyxml.loads_binary()` for key-value stores (MDBX, LMDB, Redis) and IPC (up to 350,000+ objs/s).
-- **🌐 Polyglot by Design**: The core engine is 100% pure Rust with zero Python or language runtime dependencies, ready to be embedded anywhere.
-- **🛠️ Polyglot Schema Compiler (`polyxml`)**: Compile W3C XSD 1.0/1.1 schemas directly into modern Python, Rust, C++, Java, TypeScript, Go, and C# data models with cycle detection and streaming codecs.
-- **🎯 Full Schema Support**: Namespaces, attributes vs. elements, text nodes, `xsi:nil`, choice, lists, and ISO-8601 date/time scalar types.
-
----
-
-## 🚀 Performance & Benchmarks
-
-PolyXML is benchmarked against the Python and native XML ecosystems on standard, reproducible workloads ([full methodology & data](docs/benchmarks.md)).
+Measured on standard, reproducible workloads ([full methodology & reproduction steps](docs/benchmarks.md)).
 
 ### 1. Large Document Throughput (10,000 Catalog Items, 724 KB XML)
 
@@ -115,7 +187,7 @@ PolyXML is benchmarked against the Python and native XML ecosystems on standard,
 | `xmltodict` | Untyped Dict | C (`pyexpat`) | 56.6 ms | 12.5 MB/s | 79.0 ms | 4.8 MB |
 | `xsdata` | Typed Dataclass | Pure Python | 222.5 ms | 3.2 MB/s | 282.6 ms | 3.3 MB |
 
-> - **16.0x faster** deserialization & **38.7x faster** serialization than `xsdata` (standard typed dataclasses).
+> - **16.0x faster deserialization** & **38.7x faster serialization** than `xsdata`.
 > - **4.1x faster** than `xmltodict` while returning genuine typed dataclasses instead of untyped string dicts.
 > - **3.5x lower RAM** than Python's standard library `xml.etree.ElementTree`.
 
@@ -130,7 +202,7 @@ PolyXML is benchmarked against the Python and native XML ecosystems on standard,
 | `xmltodict` | Untyped Dict | 10.3 μs | 14.9 μs | 4.2x |
 | `xsdata` | Typed Dataclass | 43.0 μs | 45.0 μs | 1.0x (Ref) |
 
-Critical telemetry commands and sensor packets deserialize in **2.5 microseconds**, beating even C-based DOM parsers (`lxml` at 3.1 μs).
+Critical telemetry commands and sensor packets deserialize in **2.5 microseconds**, beating even raw C-based DOM parsers (`lxml` at 3.1 μs).
 
 ### 3. Key-Value Database & Binary IPC (10,000 Entities in MDBX)
 
@@ -145,184 +217,22 @@ When caching parsed models in transactional key-value databases (`libmdbx`, `LMD
 
 > - **7.9x faster serialization** and **3.2x faster transactional writes into real MDBX**.
 > - **53.9% smaller storage footprint** (252 B vs 547 B per entity).
-> - **Zero Loss XML Fidelity**: Losslessly preserves `XmlDate`, `XmlDateTime`, `XmlDuration`, `XmlTime`, `Decimal`, `QName`, `Enum`, `Path`, and Pydantic v2 models.
 
 ---
 
-## Language Ecosystem & Packages
+## 📊 W3C XML Schema Conformance Benchmark
 
-| Ecosystem / Language | Package / Registry | Installation | Interop Tech | Status |
-| :--- | :--- | :--- | :--- | :---: |
-| **Rust (Core)** | [![crates.io](https://img.shields.io/crates/v/polyxml.svg?logo=rust&label=crates.io)](https://crates.io/crates/polyxml) | `cargo add polyxml` | Native Zero-Copy | 🟢 Stable |
-| **Rust (C-ABI)** | [![crates.io](https://img.shields.io/crates/v/polyxml-c.svg?logo=rust&label=crates.io)](https://crates.io/crates/polyxml-c) | `cargo add polyxml-c` | C-ABI Shared Lib | 🟢 Stable |
-| **Python** | [![PyPI](https://img.shields.io/pypi/v/polyxml.svg?logo=pypi&label=PyPI)](https://pypi.org/project/polyxml/) | `pip install polyxml` | PyO3 (`abi3-py312`) | 🟢 Stable |
-| **TypeScript / Node** | [![npm](https://img.shields.io/npm/v/polyxml.svg?logo=npm&color=CB3837&label=npm)](https://www.npmjs.com/package/polyxml) | `npm install polyxml` | `napi-rs` Native Addon | 🟢 Stable |
-| **Java** | [![Maven Central](https://img.shields.io/maven-central/v/io.github.nth-bailey/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven)](https://central.sonatype.com/artifact/io.github.nth-bailey/polyxml) | `<artifactId>polyxml</artifactId>` | Java 22+ Panama FFI | 🟢 Stable |
-| **Go** | [![Go Reference](https://pkg.go.dev/badge/github.com/nth-bailey/PolyXML/bindings/go.svg)](https://pkg.go.dev/github.com/nth-bailey/PolyXML/bindings/go) | `go get github.com/nth-bailey/PolyXML/bindings/go` | Cgo (`polyxml.h`) | 🟢 Stable |
-| **Modern C++20 / C** | [Conan](conan/) / [vcpkg](packaging/vcpkg/) (`polyxml`) | `conan install` / `vcpkg install polyxml` | Header-Only C++20 & Native Lib | 🟢 Stable |
-| **C# / .NET 8+** | NuGet / Native | `dotnet add package PolyXML` | C# 12 Records & `System.Xml` | 🟢 Stable |
-| **macOS & Linux** | [Homebrew Tap](https://github.com/nth-bailey/homebrew-polyxml) | `brew install nth-bailey/polyxml/polyxml` | Native Headers & Dynamic Lib | 🟢 Stable |
+PolyXML is continuously benchmarked against the official **W3C XML Schema 1.0 & 1.1 Test Suite (XSTS)** using our dedicated test harness repository, **[polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests)**.
+
+- **Schema Compilation**: **635 / 636 groups passed (99.8%)**
+- **Instance Validation & Round-Trip**: **489 / 507 instances passed (96.4%)**
+- Zero regressions across Sun Microsystems, Microsoft, and NIST test suites.
 
 ---
 
-## Quickstart Examples
+## 🛠️ CLI Workspace Manifest (`polyxml.toml`)
 
-### Rust
-```rust
-use std::sync::Arc;
-use polyxml::schema::{ModelSchema, FieldSchema, FieldKind, ScalarType, ValueType};
-use polyxml::deserialize;
-
-let schema = ModelSchema::builder("User")
-    .field(FieldSchema::new("id", b"id", FieldKind::Attribute, ValueType::Scalar(ScalarType::Int)))
-    .field(FieldSchema::new("name", b"name", FieldKind::Element, ValueType::Scalar(ScalarType::String)))
-    .build();
-
-let xml = br#"<User id="42"><name>Alice</name></User>"#;
-let value = deserialize(xml, Arc::clone(&schema))?;
-```
-👉 **[Read the Full Rust Guide & Advanced Examples →](docs/guides/rust.md)**
-
-### Python
-```python
-from dataclasses import dataclass, field
-import polyxml
-
-@dataclass
-class Item:
-    id: int = field(metadata={"type": "Attribute"})
-    name: str = field(metadata={"type": "Element"})
-    price: float = field(metadata={"type": "Element"})
-
-# 1. Deserialize full XML into a typed Python dataclass
-item = polyxml.deserialize(b'<Item id="1"><name>Turbine</name><price>99.5</price></Item>', Item)
-
-# 2. Stream huge XML documents with O(1) constant memory (<5 MB RAM)
-for item in polyxml.iterparse(open("large_catalog.xml", "rb").read(), Item, tag="Item"):
-    print(item.name, item.price)
-
-# 3. Serialize model back to XML (with full W3C namespace & ns_map support)
-xml_bytes = polyxml.serialize(item, indent=2)
-
-# 4. Zero-GIL binary serialization for key-value databases & IPC
-bin_bytes = polyxml.dumps_binary(item)
-restored = polyxml.loads_binary(bin_bytes, Item)
-```
-👉 **[Read the Full Python (Dataclasses & Pydantic) Guide →](docs/guides/python.md)**
-
-### Modern C++20
-```cpp
-#include "polyxml.hpp"
-
-auto schema = polyxml::SchemaBuilder("Sensor")
-    .add_attribute("id", "id", POLYXML_SCALAR_INT)
-    .add_element("name", "name", POLYXML_SCALAR_STRING)
-    .build();
-
-auto val = polyxml::deserialize(R"(<Sensor id="101"><name>Gyro</name></Sensor>)", schema);
-std::string name = val.get("name")->as_string().value();
-```
-👉 **[Read the Full Modern C++20 Guide & Examples →](docs/guides/cpp.md)**
-
-### Go
-```go
-import "github.com/nth-bailey/PolyXML/bindings/go"
-
-builder, _ := polyxml.NewSchemaBuilder("Device")
-builder.AddField("id", "id", polyxml.FieldAttribute, polyxml.ScalarInt)
-builder.AddField("name", "name", polyxml.FieldElement, polyxml.ScalarString)
-schema, _ := builder.Build()
-
-val, err := polyxml.Deserialize(xmlBytes, schema)
-name, _ := val.GetField("name").GetString()
-```
-👉 **[Read the Full Go Guide & Struct Adapters →](docs/guides/go.md)**
-
-### TypeScript / Node.js
-```typescript
-import { deserialize, serialize } from 'polyxml';
-
-const schema = {
-  name: 'Item',
-  fields: [
-    { name: 'id', xmlName: 'id', kind: 'attribute', scalarType: 'int' },
-    { name: 'name', xmlName: 'name', kind: 'element', scalarType: 'string' }
-  ]
-};
-
-const obj = deserialize('<Item id="7"><name>Motor</name></Item>', schema);
-```
-👉 **[Read the Full TypeScript & Node.js Guide →](docs/guides/node.md)**
-
-### Java 22+ (Project Panama FFI)
-```java
-import io.polyxml.PolyXML;
-
-try (var schema = new PolyXML.SchemaBuilder("Sensor")
-        .addField("id", "id", PolyXML.FieldKind.ATTRIBUTE, PolyXML.ScalarType.INT)
-        .addField("name", "name", PolyXML.FieldKind.ELEMENT, PolyXML.ScalarType.STRING)
-        .build()) {
-
-    System.out.println("PolyXML Native Version: " + PolyXML.version());
-}
-```
-👉 **[Read the Full Java 22 Panama Guide →](docs/guides/java.md)**
-
-### C# 12 / .NET 8+
-```csharp
-using System.IO;
-using System.Xml.Serialization;
-
-// Record generated by `polyxml generate --lang csharp`
-var serializer = new XmlSerializer(typeof(Customer));
-using var reader = new StringReader(xml);
-var customer = (Customer)serializer.Deserialize(reader)!;
-```
-👉 **[Read the Full C# 12 / .NET 8+ Guide →](docs/guides/csharp.md)**
-
----
-
-## 🛠️ PolyXML Schema Compiler & Toolchain (`polyxml`)
-
-PolyXML includes a high-performance, polyglot schema compiler and CLI toolchain (`polyxml`) that transforms W3C XSD 1.0 and 1.1 schemas into strongly-typed data contracts and high-performance codecs across 7 modern programming languages.
-
-👉 **[Read the Full Schema Compiler & CLI Guide →](docs/guides/compiler.md)**
-
-### Target Language Matrix
-
-| Language | Flag (`--lang`) | Generated Code Paradigm | Key Features |
-| :--- | :--- | :--- | :--- |
-| **Python 3.12+** | `python` | `@dataclass` (stdlib) & Pydantic v2 | Full facet validation, regex patterns, zero-copy streaming codecs |
-| **Rust 2021/2024** | `rust` | Zero-copy `Cow<'a, str>` & Owned structs | Automatic Tarjan SCC recursive boxing (`Box<T>`), streaming serializers/deserializers |
-| **C++20 / C++23** | `cpp` | Modern value types & `std::variant` | C++20 concepts, cycle unique pointers, CMake/Meson export |
-| **Java 21+** | `java` | Modern `record` & `sealed interface` | Exhaustive pattern matching, Jakarta Bean Validation annotations |
-| **TypeScript 5+** | `typescript` | Type interfaces & discriminated unions | Runtime Zod schemas, circular reference resolution with `z.lazy()` |
-| **Go 1.22+** | `go` | Idiomatic structs with `encoding/xml` | Pointer cycle cuts, choice mutual-exclusivity custom unmarshalers |
-| **C# 12 / .NET 8+** | `csharp` | Modern `record` with primary constructors | `System.Xml.Serialization` attributes, polymorphic choice records, `IValidatableObject` validation |
-
-### CLI Usage
-
-```bash
-# Generate Python models with Pydantic v2 validation
-polyxml generate --lang python --backend pydantic-v2 --out ./generated/python schema.xsd
-
-# Generate zero-copy Rust models and high-performance codecs
-polyxml generate --lang rust --zero-copy --codecs --out ./generated/rust schema.xsd
-
-# Compile schema to all 7 targets simultaneously in a single invocation
-polyxml generate \
-  --lang python --lang rust --lang cpp --lang java \
-  --lang typescript --lang go --lang csharp \
-  --out ./generated schema.xsd
-
-# Declarative workspace build with polyxml.toml
-polyxml build --config polyxml.toml
-
-# Validate schema structure and cycle topology
-polyxml validate schemas/*.xsd
-```
-
-### Workspace Manifest (`polyxml.toml`)
+Manage multi-schema, multi-target enterprise projects with a declarative configuration file:
 
 ```toml
 [workspace]
@@ -351,6 +261,7 @@ package = "com.enterprise.banking.iso20022"
 [[generate]]
 target = "typescript"
 output = "src/generated/ts"
+zod = true
 
 [[generate]]
 target = "cpp"
@@ -367,33 +278,32 @@ output = "src/generated/csharp"
 namespace = "Enterprise.Banking.Iso20022"
 ```
 
-### 📊 W3C XML Schema Conformance
+---
 
-PolyXML is continuously benchmarked against the official **W3C XML Schema 1.0 & 1.1 Test Suite (XSTS)** using our dedicated test harness repository, **[polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests)**.
+## Language Ecosystem & Packages
 
-- **Schema Compilation**: **635 / 636 groups passed (99.8%)**
-- **Instance Validation & Round-Trip**: **489 / 507 instances passed (96.4%)**
-- Zero regressions across Sun Microsystems, Microsoft, and NIST test suites.
+| Ecosystem / Language | Package / Registry | Installation | Interop Tech | Status |
+| :--- | :--- | :--- | :--- | :---: |
+| **Rust (Core)** | [![crates.io](https://img.shields.io/crates/v/polyxml.svg?logo=rust&label=crates.io)](https://crates.io/crates/polyxml) | `cargo add polyxml` | Native Zero-Copy | 🟢 Stable |
+| **Rust (CLI)** | [![crates.io](https://img.shields.io/crates/v/polyxml-cli.svg?logo=rust&label=polyxml-cli)](https://crates.io/crates/polyxml-cli) | `cargo install polyxml-cli` | Native CLI Compiler | 🟢 Stable |
+| **Rust (C-ABI)** | [![crates.io](https://img.shields.io/crates/v/polyxml-c.svg?logo=rust&label=crates.io)](https://crates.io/crates/polyxml-c) | `cargo add polyxml-c` | C-ABI Shared Lib | 🟢 Stable |
+| **Python** | [![PyPI](https://img.shields.io/pypi/v/polyxml.svg?logo=pypi&label=PyPI)](https://pypi.org/project/polyxml/) | `pip install polyxml` | PyO3 (`abi3-py312`) | 🟢 Stable |
+| **TypeScript / Node** | [![npm](https://img.shields.io/npm/v/polyxml.svg?logo=npm&color=CB3837&label=npm)](https://www.npmjs.com/package/polyxml) | `npm install polyxml` | `napi-rs` Native Addon | 🟢 Stable |
+| **Java** | [![Maven Central](https://img.shields.io/maven-central/v/io.github.nth-bailey/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven)](https://central.sonatype.com/artifact/io.github.nth-bailey/polyxml) | `<artifactId>polyxml</artifactId>` | Java 22+ Panama FFI | 🟢 Stable |
+| **Go** | [![Go Reference](https://pkg.go.dev/badge/github.com/nth-bailey/PolyXML/bindings/go.svg)](https://pkg.go.dev/github.com/nth-bailey/PolyXML/bindings/go) | `go get github.com/nth-bailey/PolyXML/bindings/go` | Cgo (`polyxml.h`) | 🟢 Stable |
+| **Modern C++20 / C** | [Conan](conan/) / [vcpkg](packaging/vcpkg/) (`polyxml`) | `conan install` / `vcpkg install polyxml` | Header-Only C++20 & Native Lib | 🟢 Stable |
+| **C# / .NET 8+** | NuGet / Native | `dotnet add package PolyXML` | C# 12 Records & `System.Xml` | 🟢 Stable |
+| **macOS & Linux** | [Homebrew Tap](https://github.com/nth-bailey/homebrew-polyxml) | `brew install nth-bailey/polyxml/polyxml` | Native Headers & Dynamic Lib | 🟢 Stable |
 
 ---
 
-## Repository Structure
+## Documentation & Learning
 
-```
-PolyXML/
-├── Cargo.toml                  # Workspace manifest
-├── polyxml.toml                # PolyXML compiler project manifest
-├── crates/
-│   ├── polyxml-core/           # Pure Rust core streaming engine, XSD parser, IR, and 7-target codegen
-│   ├── polyxml-cli/            # Unified CLI compiler toolchain (`polyxml`)
-│   ├── polyxml-python/         # Python bindings (PyO3 + Maturin)
-│   ├── polyxml-c/              # Universal C-ABI shared library + polyxml.h
-│   └── polyxml-js/             # Node.js & TypeScript bindings (napi-rs)
-├── bindings/
-│   ├── cpp/                    # Header-only modern C++20 wrapper (polyxml.hpp)
-│   ├── go/                     # Go package using Cgo (polyxml.go)
-│   └── java/                   # Java 22+ Project Panama FFI (PolyXML.java)
-```
+- **[Multi-Language Quickstart](https://nth-bailey.github.io/PolyXML/quickstart/)**: 5-minute setup across all 7 target ecosystems.
+- **[Schema Compiler & CLI Guide](https://nth-bailey.github.io/PolyXML/guides/compiler/)**: Full reference for `polyxml generate`, `build`, `validate`, and `polyxml.toml`.
+- **[Why PolyXML? Architectural Breakdown](https://nth-bailey.github.io/PolyXML/why-polyxml/)**: Deep comparison against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
+- **[Architecture & Streaming Pipeline](https://nth-bailey.github.io/PolyXML/architecture/)**: Detailed breakdown of our zero-copy reader, frame stack, and Tarjan cycle-cutting.
+- **[Performance Benchmarks](https://nth-bailey.github.io/PolyXML/benchmarks/)**: Reproducible benchmarks and throughput charts.
 
 ---
 
