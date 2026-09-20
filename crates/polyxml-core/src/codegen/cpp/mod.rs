@@ -799,7 +799,12 @@ concept XmlModel = requires(T a) {{
             let target_type = self.context.map_type_ref(&elem.type_ref);
             if elem_alias != target_type {
                 if let Some(ref doc) = elem.documentation {
-                    writeln!(out, "/// {}", doc).unwrap();
+                    for line in doc.lines() {
+                        let trimmed = line.trim();
+                        if !trimmed.is_empty() {
+                            writeln!(out, "/// {}", trimmed).unwrap();
+                        }
+                    }
                 }
                 writeln!(out, "using {} = {};", elem_alias, target_type).unwrap();
             }

@@ -246,6 +246,29 @@ impl TypeScriptCodegen {
                     }
                 }
             }
+            for f in &s.fields {
+                if !f.is_cycle_cut {
+                    match &f.type_ref {
+                        TypeRef::Named(target_qname) => {
+                            if target_qname != &s.qname {
+                                if let Some(TypeDef::Struct(dep_struct)) = ir.types.get(target_qname) {
+                                    visit(dep_struct, ir, visiting, visited, ordered);
+                                }
+                            }
+                        }
+                        TypeRef::List(inner) | TypeRef::Boxed(inner) => {
+                            if let TypeRef::Named(target_qname) = inner.as_ref() {
+                                if target_qname != &s.qname {
+                                    if let Some(TypeDef::Struct(dep_struct)) = ir.types.get(target_qname) {
+                                        visit(dep_struct, ir, visiting, visited, ordered);
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
             visiting.remove(&s.qname);
             visited.insert(s.qname.clone());
             ordered.push(ir.types.get(&s.qname).unwrap());
