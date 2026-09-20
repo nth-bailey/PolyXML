@@ -64,4 +64,27 @@ impl PolyValue {
             _ => None,
         }
     }
+
+    /// Serialize this PolyValue into raw JSON bytes.
+    pub fn to_json(&self, indent: Option<usize>) -> crate::error::Result<Vec<u8>> {
+        let json_val = serde_json::Value::from(self);
+        match indent {
+            Some(spaces) if spaces > 0 => {
+                let indent_str = " ".repeat(spaces);
+                let formatter =
+                    serde_json::ser::PrettyFormatter::with_indent(indent_str.as_bytes());
+                let mut buf = Vec::new();
+                let mut ser = serde_json::Serializer::with_formatter(&mut buf, formatter);
+                serde::Serialize::serialize(&json_val, &mut ser)?;
+                Ok(buf)
+            }
+            _ => Ok(serde_json::to_vec(&json_val)?),
+        }
+    }
+
+    /// Deserialize raw JSON bytes into a dynamic PolyValue without a schema.
+    pub fn from_json(json_bytes: &[u8]) -> crate::error::Result<Self> {
+        let json_val: serde_json::Value = serde_json::from_slice(json_bytes)?;
+        Ok(PolyValue::from(json_val))
+    }
 }

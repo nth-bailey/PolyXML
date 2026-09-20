@@ -38,10 +38,16 @@ from polyxml._polyxml import (  # type: ignore[import-not-found]
     deserialize as _deserialize,
 )
 from polyxml._polyxml import (
+    deserialize_json as _deserialize_json,
+)
+from polyxml._polyxml import (
     iterparse as _iterparse,
 )
 from polyxml._polyxml import (
     serialize as _serialize,
+)
+from polyxml._polyxml import (
+    serialize_json as _serialize_json,
 )
 from polyxml._polyxml import (
     version as _version,
@@ -54,7 +60,8 @@ def _to_bytes(source: bytes | str | pathlib.Path | IO[bytes] | IO[str]) -> bytes
     if isinstance(source, bytes):
         return source
     if isinstance(source, str):
-        if source.lstrip().startswith("<"):
+        stripped = source.lstrip()
+        if stripped.startswith(("<", "{", "[")):
             return source.encode("utf-8")
         path = pathlib.Path(source)
         if path.is_file():
@@ -84,6 +91,28 @@ def deserialize[T](
         The deserialized model instance.
     """
     return _deserialize(_to_bytes(source), target_type)
+
+
+def deserialize_json[T](
+    source: bytes | str | pathlib.Path | IO[bytes] | IO[str], target_type: type[T]
+) -> T:
+    """Deserialize JSON bytes, string, file path, or stream into a typed model.
+
+    Args:
+        source: JSON content as raw bytes, string, Path, or file stream.
+        target_type: The target dataclass or model class.
+
+    Returns:
+        The deserialized model instance.
+    """
+    return _deserialize_json(_to_bytes(source), target_type)
+
+
+def loads_json[T](
+    source: bytes | str | pathlib.Path | IO[bytes] | IO[str], target_type: type[T]
+) -> T:
+    """Deserialize JSON bytes, string, file path, or stream into a typed model (alias for deserialize_json)."""
+    return deserialize_json(source, target_type)
 
 
 def iterparse[T](
@@ -126,6 +155,127 @@ def serialize(
         UTF-8 encoded XML bytes representing the model instance.
     """
     return _serialize(obj, indent=indent, namespaces=namespaces, ns_map=ns_map)
+
+
+def serialize_json(
+    obj: object,
+    *,
+    indent: int | None = None,
+    by_alias: bool = True,
+) -> bytes:
+    """Serialize a strongly-typed model instance into JSON bytes.
+
+    Args:
+        obj: Python dataclass or Pydantic model instance.
+        indent: Optional indentation size in spaces for pretty-printing.
+        by_alias: Whether to serialize fields using schema aliases (xml_name) or internal attribute names.
+
+    Returns:
+        UTF-8 encoded JSON bytes representing the model instance.
+    """
+    return _serialize_json(obj, indent=indent, by_alias=by_alias)
+
+
+def dumps_json(
+    obj: object,
+    *,
+    indent: int | None = None,
+    by_alias: bool = True,
+) -> str:
+    """Serialize a strongly-typed model instance into a JSON string.
+
+    Args:
+        obj: Python dataclass or Pydantic model instance.
+        indent: Optional indentation size in spaces for pretty-printing.
+        by_alias: Whether to serialize fields using schema aliases (xml_name) or internal attribute names.
+
+    Returns:
+        JSON string representing the model instance.
+    """
+    return serialize_json(obj, indent=indent, by_alias=by_alias).decode("utf-8")
+
+
+class JsonSerializer:
+    """Drop-in xsdata-compatible JSON serializer."""
+
+    def __init__(
+        self,
+        indent: int | None = None,
+        by_alias: bool = True,
+        **_kwargs: object,
+    ) -> None:
+        self.indent = indent
+        self.by_alias = by_alias
+
+    def render(self, obj: object) -> str:
+        """Render a model instance into a JSON string."""
+        return dumps_json(obj, indent=self.indent, by_alias=self.by_alias)
+
+
+class JsonParser:
+    """Drop-in xsdata-compatible JSON parser."""
+
+    def __init__(self, **_kwargs: object) -> None:
+        pass
+
+    def from_string[T](self, source: str, clazz: type[T]) -> T:
+        """Parse a JSON string into a model instance."""
+        return deserialize_json(source, clazz)
+
+    def from_bytes[T](self, source: bytes, clazz: type[T]) -> T:
+        """Parse JSON bytes into a model instance."""
+        return deserialize_json(source, clazz)
+
+    def parse[T](
+        self, source: bytes | str | pathlib.Path | IO[bytes] | IO[str], clazz: type[T]
+    ) -> T:
+        """Parse a JSON source into a model instance."""
+        return deserialize_json(source, clazz)
+
+
+class XmlSerializer:
+    """Drop-in xsdata-compatible XML serializer."""
+
+    def __init__(
+        self,
+        indent: int | None = None,
+        namespaces: bool | None = None,
+        ns_map: dict[str, str] | None = None,
+        **_kwargs: object,
+    ) -> None:
+        self.indent = indent
+        self.namespaces = namespaces
+        self.ns_map = ns_map
+
+    def render(self, obj: object) -> str:
+        """Render a model instance into an XML string."""
+        return serialize(
+            obj,
+            indent=self.indent,
+            namespaces=self.namespaces,
+            ns_map=self.ns_map,
+        ).decode("utf-8")
+
+
+class XmlParser:
+    """Drop-in xsdata-compatible XML parser."""
+
+    def __init__(self, **_kwargs: object) -> None:
+        pass
+
+    def from_string[T](self, source: str, clazz: type[T]) -> T:
+        """Parse an XML string into a model instance."""
+        return deserialize(source, clazz)
+
+    def from_bytes[T](self, source: bytes, clazz: type[T]) -> T:
+        """Parse XML bytes into a model instance."""
+        return deserialize(source, clazz)
+
+    def parse[T](
+        self, source: bytes | str | pathlib.Path | IO[bytes] | IO[str], clazz: type[T]
+    ) -> T:
+        """Parse an XML source into a model instance."""
+        return deserialize(source, clazz)
 
 
 try:
@@ -283,10 +433,18 @@ def loads_binary[T](data: bytes, target_type: type[T] | None = None) -> T | obje
 
 
 __all__ = [
+    "JsonParser",
+    "JsonSerializer",
+    "XmlParser",
+    "XmlSerializer",
     "__version__",
     "deserialize",
+    "deserialize_json",
     "dumps_binary",
+    "dumps_json",
     "iterparse",
     "loads_binary",
+    "loads_json",
     "serialize",
+    "serialize_json",
 ]

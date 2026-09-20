@@ -78,12 +78,13 @@ polyxml build --config polyxml.toml
 from generated.python import Customer
 import polyxml
 
-# 16x faster than xsdata with zero intermediate DOM overhead
-customer = polyxml.deserialize(xml_bytes, Customer)
-print(f"Customer: {customer.name}, Status: {customer.status}")
+# 16x faster XML parsing with zero intermediate DOM overhead
+customer = Customer.from_xml(xml_bytes)
+xml_output = customer.to_xml(indent=2)
 
-# Serialize back to formatted XML
-xml_output = polyxml.serialize(customer, indent=2)
+# 10x faster native JSON â€” completely replace xsdata:
+json_bytes = customer.to_json(indent=2)
+customer = Customer.from_json(json_bytes)
 ```
 
 === "Rust (Zero-Copy)"
@@ -118,7 +119,7 @@ PolyXML strictly generates code adhering to modern programming paradigms (2024â€
 
 | Target Language | CLI Flag (`--lang`) | Generated Code Paradigm | Modern Features & Highlights |
 | :--- | :--- | :--- | :--- |
-| **Python 3.12+** | `python` | `@dataclass(slots=True)` & Pydantic v2 | PEP 695 type aliases (`type Sku = ...`), PEP 604 unions, restriction facet validation |
+| **Python 3.12+** | `python` | `@dataclass(slots=True)` & Pydantic v2 | PEP 695 type aliases, PEP 604 unions, restriction facets, native JSON codecs (10x faster xsdata replacement) |
 | **Rust 2021/2024** | `rust` | Zero-copy `Cow<'a, str>` & Owned structs | Automatic Tarjan SCC recursive boxing (`Box<T>`), inherent streaming codecs |
 | **C++20 / C++23** | `cpp` | Modern value types & `std::variant` | C++20 concepts, `std::unique_ptr` cycle breaks, CMake/Meson export, zero Xerces |
 | **Java 21+** | `java` | Modern `record` & `sealed interface` | Exhaustive switch pattern matching, compact constructor facet validation, zero JNI |

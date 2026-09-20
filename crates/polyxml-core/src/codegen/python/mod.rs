@@ -529,7 +529,23 @@ impl PythonCodegen {
             out.push_str("    ) -> bytes:\n");
             out.push_str("        \"\"\"Serialize this model instance into XML bytes.\"\"\"\n");
             out.push_str("        import polyxml\n");
-            out.push_str("        return polyxml.serialize(self, indent=indent, namespaces=namespaces, ns_map=ns_map)\n");
+            out.push_str("        return polyxml.serialize(self, indent=indent, namespaces=namespaces, ns_map=ns_map)\n\n");
+            out.push_str("    @classmethod\n");
+            out.push_str("    def from_json(cls, data: bytes | str) -> Self:\n");
+            out.push_str("        \"\"\"Deserialize JSON bytes or string into this model.\"\"\"\n");
+            out.push_str("        import polyxml\n");
+            out.push_str("        return polyxml.deserialize_json(data, cls)\n\n");
+            out.push_str("    def to_json(\n");
+            out.push_str("        self,\n");
+            out.push_str("        *,\n");
+            out.push_str("        indent: int | None = None,\n");
+            out.push_str("        by_alias: bool = True,\n");
+            out.push_str("    ) -> bytes:\n");
+            out.push_str("        \"\"\"Serialize this model instance into JSON bytes.\"\"\"\n");
+            out.push_str("        import polyxml\n");
+            out.push_str(
+                "        return polyxml.serialize_json(self, indent=indent, by_alias=by_alias)\n",
+            );
             has_body = true;
         }
 
