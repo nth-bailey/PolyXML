@@ -1,3 +1,10 @@
+# [0.16.0](https://github.com/nth-bailey/PolyXML/compare/v0.15.0...v0.16.0) (2026-09-20)
+
+
+### Features
+
+* **codegen/cpp:** add C++20 Modules (--mode modules) and Glaze compile-time serde (--backend glaze) ([8c30bd3](https://github.com/nth-bailey/PolyXML/commit/8c30bd33ca71f3f46730502498f0fc9248124ae6)), closes [#44](https://github.com/nth-bailey/PolyXML/issues/44)
+
 # [0.15.0](https://github.com/nth-bailey/PolyXML/compare/v0.14.3...v0.15.0) (2026-09-20)
 
 
