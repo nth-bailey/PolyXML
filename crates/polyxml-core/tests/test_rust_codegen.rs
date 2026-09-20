@@ -495,7 +495,7 @@ fn test_rust_attribute_codec_loop_syntax() {
     });
     let code = codegen.generate_module(&ir);
     assert!(code.contains("for attr in start.attributes() {"));
-    assert!(code.contains("match std::str::from_utf8(attr.key.local_name().as_ref()).unwrap_or(\"\") {"));
+    assert!(code.contains("match attr.key.local_name().as_ref() {"));
     assert!(code.contains("\"version\" => {"));
 }
 
