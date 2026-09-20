@@ -1,3 +1,12 @@
+## [0.14.2](https://github.com/nth-bailey/PolyXML/compare/v0.14.1...v0.14.2) (2026-09-20)
+
+
+### Bug Fixes
+
+* **codegen:** topologically sort typescript schemas by field dependencies and fix multiline doc comments ([902a31e](https://github.com/nth-bailey/PolyXML/commit/902a31e98c7de92d95da83bc94a59bbd3914cafc))
+* **csharp:** add new keyword to Validate method on derived records to prevent CS0108 ([8533375](https://github.com/nth-bailey/PolyXML/commit/85333754f1efd617102c5f6052e22d6ab6cac1a4))
+* **rust:** correct quick-xml 0.42 string matching, FromStr result, and enum default derive ([ccbb0fa](https://github.com/nth-bailey/PolyXML/commit/ccbb0fac9f1e4fe20f3c17fbdea2ba55f7c95251))
+
 ## [0.14.1](https://github.com/nth-bailey/PolyXML/compare/v0.14.0...v0.14.1) (2026-09-20)
 
 
