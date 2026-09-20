@@ -243,3 +243,183 @@ int main() {
 2. **Use `std::string_view`**: The `polyxml::deserialize` function accepts `std::string_view`, allowing zero-copy parsing from network buffers, memory-mapped files (`mmap`), or string literals.
 3. **Avoid Copying String Values**: `val.get("field")->as_string()` returns `std::optional<std::string_view>`, pointing directly into the parsed token memory without heap string allocations.
 
+---
+
+## 7. C++20 Modules (`--mode modules`)
+
+PolyXML can emit standard **C++20 Module Interface Units (`.cppm`)** instead of traditional header files, eliminating redundant header parsing and reducing incremental build times by up to 80% across large enterprise codebases.
+
+### Generating Modules
+
+**CLI:**
+
+```bash
+polyxml generate \
+  --lang cpp \
+  --mode modules \
+  --package enterprise::telemetry \
+  --out src/modules \
+  schemas/telemetry.xsd
+```
+
+**`polyxml.toml`:**
+
+```toml
+[[generate]]
+target = "cpp"
+output = "src/modules"
+package = "enterprise::telemetry"
+mode = "modules" # or modules = true
+```
+
+### Module Structure
+
+The generated `telemetry.cppm` exports the module and its namespace directly:
+
+```cpp
+// Target: Modern C++20/C++23 Module Interface Unit
+module;
+
+#include <concepts>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <variant>
+#include <vector>
+
+export module telemetry;
+
+export namespace enterprise::telemetry {
+    struct DroneTelemetry {
+        std::int64_t drone_id;
+        double altitude_m;
+        bool armed;
+        bool operator==(const DroneTelemetry&) const = default;
+    };
+}
+```
+
+### CMake 3.28+ Integration
+
+```cmake
+cmake_minimum_required(VERSION 3.28)
+project(my_telemetry_app LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_library(telemetry_models)
+target_sources(telemetry_models
+    PUBLIC
+        FILE_SET CXX_MODULES FILES
+            src/modules/telemetry.cppm
+)
+
+add_executable(my_app src/main.cpp)
+target_link_libraries(my_app PRIVATE telemetry_models)
+```
+
+### Compiler Support
+
+- **GCC 14+**: `g++ -std=c++20 -fmodules-ts -c telemetry.cppm`
+- **Clang 17+**: `clang++ -std=c++20 --precompile telemetry.cppm -o telemetry.pcm`
+- **MSVC 2022 (17.4+)**: `cl /std:c++20 /interface /TP /c telemetry.cppm`
+
+---
+
+## 8. High-Throughput Glaze Serialization (`--backend glaze`)
+
+PolyXML provides compile-time reflection metadata for [Glaze](https://github.com/stephenberry/glaze), the fastest C++ JSON/XML serialization library achieving multi-GB/s throughput without runtime reflection or macros.
+
+### Generating Glaze Metadata
+
+**CLI:**
+
+```bash
+polyxml generate \
+  --lang cpp \
+  --backend glaze \
+  --package enterprise::crm \
+  --out src/generated \
+  schemas/crm.xsd
+```
+
+**`polyxml.toml`:**
+
+```toml
+[[generate]]
+target = "cpp"
+output = "src/generated"
+package = "enterprise::crm"
+backend = "glaze"
+```
+
+### Emitted `glz::meta` Specializations
+
+PolyXML automatically emits `#include <glaze/glaze.hpp>` and compile-time `glz::meta` specializations for all structs and enums:
+
+```cpp
+#include <glaze/glaze.hpp>
+
+namespace enterprise::crm {
+    enum class Status { Active, Suspended };
+    struct Customer {
+        std::string name;
+        Status status;
+        std::int32_t id;
+    };
+}
+
+// Glaze compile-time reflection metadata
+template <>
+struct glz::meta<enterprise::crm::Status> {
+    using T = enterprise::crm::Status;
+    static constexpr auto value = enumerate(
+        "active", T::Active,
+        "suspended", T::Suspended
+    );
+};
+
+template <>
+struct glz::meta<enterprise::crm::Customer> {
+    using T = enterprise::crm::Customer;
+    static constexpr auto value = object(
+        "name", &T::name,
+        "status", &T::status,
+        "id", &T::id
+    );
+};
+```
+
+### Consuming with Glaze
+
+```cpp
+#include "crm.hpp"
+#include <glaze/glaze.hpp>
+#include <iostream>
+
+int main() {
+    enterprise::crm::Customer customer{
+        .name = "Global Logistics Ltd",
+        .status = enterprise::crm::Status::Active,
+        .id = 42
+    };
+
+    // Fast serialize to JSON string (multi-GB/s)
+    std::string json;
+    glz::write_json(customer, json);
+    std::cout << "Serialized: " << json << "\n";
+
+    // Fast deserialize from JSON buffer
+    enterprise::crm::Customer parsed;
+    auto ec = glz::read_json(parsed, json);
+    if (!ec) {
+        std::cout << "Successfully parsed Customer ID: " << parsed.id << "\n";
+    }
+
+    return 0;
+}
+```
+

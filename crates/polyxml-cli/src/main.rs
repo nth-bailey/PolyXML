@@ -6,7 +6,7 @@ use std::process::{self, Command};
 
 use clap::{Args, Parser, Subcommand};
 use config::WorkspaceManifest;
-use polyxml::codegen::cpp::{CppCodegen, CppMode, CppOptions};
+use polyxml::codegen::cpp::{CppBackend, CppCodegen, CppMode, CppOptions};
 use polyxml::codegen::csharp::{CSharpCodegen, CSharpOptions, CSharpRecordKind};
 use polyxml::codegen::go::{GoCodegen, GoOptions};
 use polyxml::codegen::java::{JavaBackend, JavaCodegen, JavaOptions};
@@ -60,6 +60,10 @@ pub struct GenerateArgs {
     /// Package or namespace for generated code (e.g. 'com.example.models' for Java, 'polyxml::models' for C++)
     #[arg(short = 'p', long = "package", alias = "namespace", value_name = "PKG")]
     pub package: Option<String>,
+
+    /// Compilation or packaging mode (e.g. 'header' or 'modules' for C++)
+    #[arg(short = 'm', long = "mode", value_name = "MODE")]
+    pub mode: Option<String>,
 
     /// Zero-copy mode for Rust models (borrow Cow<'a, str> instead of owned String)
     #[arg(long = "zero-copy", default_missing_value = "true", num_args = 0..=1)]
@@ -223,6 +227,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         let emit_opts = TargetEmitOptions {
             backend: args.backend.as_deref(),
             package: args.package.as_deref(),
+            mode: args.mode.as_deref(),
             zero_copy: args.zero_copy,
             codecs: args.codecs,
             zod: args.zod,
@@ -303,9 +308,18 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
             target_dir.display()
         );
 
+        let mode_str = target.mode.as_deref().or_else(|| {
+            if target.modules.unwrap_or(false) {
+                Some("modules")
+            } else {
+                None
+            }
+        });
+
         let emit_opts = TargetEmitOptions {
             backend: target.backend.as_deref(),
             package: target.package.as_deref().or(target.namespace.as_deref()),
+            mode: mode_str,
             zero_copy: target.zero_copy,
             codecs: target.codecs,
             zod: target.zod,
@@ -400,6 +414,7 @@ fn report_schema_ir(ir: &SchemaIR) {
 pub struct TargetEmitOptions<'a> {
     pub backend: Option<&'a str>,
     pub package: Option<&'a str>,
+    pub mode: Option<&'a str>,
     pub zero_copy: Option<bool>,
     pub codecs: Option<bool>,
     pub zod: Option<bool>,
@@ -533,9 +548,20 @@ fn emit_target_code(
                 .map(|s| s.to_string_lossy())
                 .unwrap_or_else(|| "models".into());
 
+            let cpp_mode = opts
+                .mode
+                .and_then(CppMode::from_str_loose)
+                .unwrap_or(CppMode::HeaderOnly);
+
+            let cpp_backend = opts
+                .backend
+                .and_then(CppBackend::from_str_loose)
+                .unwrap_or(CppBackend::Standard);
+
             let options = CppOptions {
                 namespace: ns.to_string(),
-                mode: CppMode::HeaderOnly,
+                mode: cpp_mode,
+                backend: cpp_backend,
                 standard: "c++20".to_string(),
                 emit_equality_operators: true,
                 emit_enum_converters: true,

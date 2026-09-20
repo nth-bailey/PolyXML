@@ -3,8 +3,8 @@ use std::process::Command;
 use tempfile::tempdir;
 
 use polyxml::codegen::cpp::{
-    to_cpp_enum_variant, to_cpp_field_name, to_cpp_namespace, to_cpp_type_name, CppCodegen,
-    CppMode, CppOptions,
+    to_cpp_enum_variant, to_cpp_field_name, to_cpp_namespace, to_cpp_type_name, CppBackend,
+    CppCodegen, CppMode, CppOptions,
 };
 use polyxml::ir::{
     Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets,
@@ -154,6 +154,7 @@ fn test_cpp_struct_and_enum_codegen_compilation() {
     let options = CppOptions {
         namespace: "crm::models".to_string(),
         mode: CppMode::HeaderOnly,
+        backend: CppBackend::Standard,
         standard: "c++20".to_string(),
         emit_equality_operators: true,
         emit_enum_converters: true,
@@ -861,4 +862,141 @@ int main() {
         run_status.success(),
         "ISO 20022 test binary execution failed"
     );
+}
+
+#[test]
+fn test_cpp_mode_and_backend_from_str_loose() {
+    assert_eq!(CppMode::from_str_loose("header"), Some(CppMode::HeaderOnly));
+    assert_eq!(
+        CppMode::from_str_loose("header-only"),
+        Some(CppMode::HeaderOnly)
+    );
+    assert_eq!(CppMode::from_str_loose("hpp"), Some(CppMode::HeaderOnly));
+    assert_eq!(CppMode::from_str_loose("modules"), Some(CppMode::Module));
+    assert_eq!(CppMode::from_str_loose("module"), Some(CppMode::Module));
+    assert_eq!(CppMode::from_str_loose("cppm"), Some(CppMode::Module));
+    assert_eq!(CppMode::from_str_loose("unknown"), None);
+
+    assert_eq!(
+        CppBackend::from_str_loose("standard"),
+        Some(CppBackend::Standard)
+    );
+    assert_eq!(
+        CppBackend::from_str_loose("default"),
+        Some(CppBackend::Standard)
+    );
+    assert_eq!(CppBackend::from_str_loose("glaze"), Some(CppBackend::Glaze));
+    assert_eq!(CppBackend::from_str_loose("glz"), Some(CppBackend::Glaze));
+    assert_eq!(CppBackend::from_str_loose("unknown"), None);
+}
+
+#[test]
+fn test_cpp_glaze_backend_meta_generation() {
+    let mut ir = SchemaIR::new().with_target_namespace("https://example.com/shop");
+
+    // Enum
+    ir.add_type(TypeDef::Enum(EnumDef {
+        qname: QName::new(Some("https://example.com/shop"), "OrderStatus"),
+        base_type: TypeRef::Primitive(PrimitiveType::String),
+        variants: vec![
+            EnumValue {
+                name: "pending".into(),
+                value: "pending".into(),
+                documentation: None,
+            },
+            EnumValue {
+                name: "shipped".into(),
+                value: "shipped".into(),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+
+    // Struct
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::new(Some("https://example.com/shop"), "Order"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef {
+                name: "order_id".into(),
+                xml_name: "orderId".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Primitive(PrimitiveType::Int),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+            FieldDef {
+                name: "status".into(),
+                xml_name: "status".into(),
+                namespace: None,
+                kind: FieldKind::Element,
+                type_ref: TypeRef::Named(QName::new(
+                    Some("https://example.com/shop"),
+                    "OrderStatus",
+                )),
+                cardinality: Cardinality::required_one(),
+                nillable: false,
+                default_value: None,
+                fixed_value: None,
+                documentation: None,
+                facets: None,
+                is_cycle_cut: false,
+            },
+        ],
+        documentation: None,
+    }));
+
+    let options = CppOptions {
+        namespace: "shop".to_string(),
+        backend: CppBackend::Glaze,
+        ..Default::default()
+    };
+
+    let codegen = CppCodegen::new(options);
+    let header_code = codegen.generate_header(&ir);
+
+    // Includes Glaze header
+    assert!(header_code.contains("#include <glaze/glaze.hpp>"));
+
+    // Glaze enum reflection
+    assert!(header_code.contains("template <>"));
+    assert!(header_code.contains("struct glz::meta<shop::OrderStatus> {"));
+    assert!(header_code.contains("using T = shop::OrderStatus;"));
+    assert!(header_code.contains("static constexpr auto value = enumerate("));
+    assert!(header_code.contains("\"pending\", T::Pending,"));
+    assert!(header_code.contains("\"shipped\", T::Shipped"));
+
+    // Glaze struct reflection
+    assert!(header_code.contains("struct glz::meta<shop::Order> {"));
+    assert!(header_code.contains("using T = shop::Order;"));
+    assert!(header_code.contains("static constexpr auto value = object("));
+    assert!(header_code.contains("\"orderId\", &T::order_id,"));
+    assert!(header_code.contains("\"status\", &T::status"));
+}
+
+#[test]
+fn test_cpp_cmake_modules_file_set() {
+    let _ir = SchemaIR::new();
+
+    let options = CppOptions {
+        namespace: "telemetry".to_string(),
+        mode: CppMode::Module,
+        emit_cmake: true,
+        ..Default::default()
+    };
+
+    let codegen = CppCodegen::new(options);
+    let cmake = codegen.generate_cmake("telemetry");
+
+    assert!(cmake.contains("cmake_minimum_required(VERSION 3.28)"));
+    assert!(cmake.contains("FILE_SET CXX_MODULES FILES"));
+    assert!(cmake.contains("telemetry.cppm"));
 }

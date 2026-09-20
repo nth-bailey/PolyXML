@@ -20,6 +20,40 @@ pub enum CppMode {
     Module,
 }
 
+impl CppMode {
+    pub fn from_str_loose(s: &str) -> Option<Self> {
+        match s.to_lowercase().trim() {
+            "header" | "headeronly" | "header-only" | "headers" | "hpp" => Some(Self::HeaderOnly),
+            "module" | "modules" | "cppm" | "c++20-modules" => Some(Self::Module),
+            _ => None,
+        }
+    }
+}
+
+/// Target backend for C++ serialization/reflection metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum CppBackend {
+    /// Zero-dependency standard C++20 (default)
+    #[default]
+    Standard,
+    /// Glaze compile-time reflectionless serde (`glz::meta`)
+    Glaze,
+}
+
+impl CppBackend {
+    pub fn from_str_loose(s: &str) -> Option<Self> {
+        match s.to_lowercase().trim() {
+            "standard" | "std" | "default" | "none" => Some(Self::Standard),
+            "glaze" | "glz" => Some(Self::Glaze),
+            _ => None,
+        }
+    }
+
+    pub fn is_glaze(self) -> bool {
+        matches!(self, Self::Glaze)
+    }
+}
+
 /// Options configuring modern C++20/C++23 code generation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CppOptions {
@@ -27,6 +61,8 @@ pub struct CppOptions {
     pub namespace: String,
     /// Header-only (.hpp) or C++20 Module (.cppm) mode (default: HeaderOnly)
     pub mode: CppMode,
+    /// Target serialization and metadata backend (default: Standard)
+    pub backend: CppBackend,
     /// Standard language dialect (default: "c++20")
     pub standard: String,
     /// Emit C++20 defaulted equality operators `bool operator==(const T&) const = default;` (default: true)
@@ -48,6 +84,7 @@ impl Default for CppOptions {
         Self {
             namespace: "polyxml::generated".to_string(),
             mode: CppMode::HeaderOnly,
+            backend: CppBackend::Standard,
             standard: "c++20".to_string(),
             emit_equality_operators: true,
             emit_enum_converters: true,
@@ -229,6 +266,11 @@ impl CppCodegen {
         self.emit_root_aliases(&mut out, ir);
 
         writeln!(out, "\n}} // namespace {}", ns).unwrap();
+
+        if self.options.backend.is_glaze() {
+            self.emit_glaze_meta(&mut out, ir);
+        }
+
         out
     }
 
@@ -261,6 +303,11 @@ impl CppCodegen {
         self.emit_root_aliases(&mut out, ir);
 
         writeln!(out, "\n}} // namespace {}", ns).unwrap();
+
+        if self.options.backend.is_glaze() {
+            self.emit_glaze_meta(&mut out, ir);
+        }
+
         out
     }
 
@@ -314,8 +361,26 @@ impl CppCodegen {
     /// Generate CMakeLists.txt definition for integration via add_subdirectory or FetchContent.
     pub fn generate_cmake(&self, project_name: &str) -> String {
         let safe_name = AsSnakeCase(project_name).to_string();
-        format!(
-            r#"cmake_minimum_required(VERSION 3.20)
+        if self.options.mode == CppMode::Module {
+            format!(
+                r#"cmake_minimum_required(VERSION 3.28)
+project({safe_name}_models LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_library({safe_name})
+target_sources({safe_name}
+    PUBLIC
+        FILE_SET CXX_MODULES FILES
+            {safe_name}.cppm
+)
+target_compile_features({safe_name} PUBLIC cxx_std_20)
+"#
+            )
+        } else {
+            format!(
+                r#"cmake_minimum_required(VERSION 3.20)
 project({safe_name}_models LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -328,7 +393,8 @@ target_include_directories({safe_name} INTERFACE
 )
 target_compile_features({safe_name} INTERFACE cxx_std_20)
 "#
-        )
+            )
+        }
     }
 
     /// Generate standalone PolyXMLConfig.cmake for `find_package(PolyXML)`.
@@ -372,7 +438,93 @@ endif()
         writeln!(out, "#include <string>").unwrap();
         writeln!(out, "#include <string_view>").unwrap();
         writeln!(out, "#include <variant>").unwrap();
-        writeln!(out, "#include <vector>\n").unwrap();
+        writeln!(out, "#include <vector>").unwrap();
+
+        if self.options.backend.is_glaze() {
+            writeln!(out, "#include <glaze/glaze.hpp>").unwrap();
+        }
+        writeln!(out).unwrap();
+    }
+
+    fn emit_glaze_meta(&self, out: &mut String, ir: &SchemaIR) {
+        let ns = to_cpp_namespace(&self.options.namespace);
+        writeln!(out, "\n// Glaze compile-time reflection metadata\n").unwrap();
+
+        // 1. Enums
+        for type_def in ir.types.values() {
+            if let TypeDef::Enum(enum_def) = type_def {
+                let enum_name = to_cpp_type_name(&enum_def.qname.local);
+                let full_type = format!("{}::{}", ns, enum_name);
+                writeln!(out, "template <>").unwrap();
+                writeln!(out, "struct glz::meta<{}> {{", full_type).unwrap();
+                writeln!(out, "    using T = {};", full_type).unwrap();
+                if enum_def.variants.is_empty() {
+                    writeln!(out, "    static constexpr auto value = enumerate();").unwrap();
+                } else {
+                    writeln!(out, "    static constexpr auto value = enumerate(").unwrap();
+                    for (i, v) in enum_def.variants.iter().enumerate() {
+                        let var_name = to_cpp_enum_variant(&v.name);
+                        let comma = if i + 1 < enum_def.variants.len() {
+                            ","
+                        } else {
+                            ""
+                        };
+                        writeln!(out, "        {:?}, T::{}{}", v.value, var_name, comma).unwrap();
+                    }
+                    writeln!(out, "    );").unwrap();
+                }
+                writeln!(out, "}};\n").unwrap();
+            }
+        }
+
+        // 2. Structs
+        let sorted_qnames = self.topological_sort_types(ir);
+        for qname in sorted_qnames {
+            if let Some(TypeDef::Struct(s)) = ir.types.get(&qname) {
+                let struct_name = to_cpp_type_name(&s.qname.local);
+                let full_type = format!("{}::{}", ns, struct_name);
+                writeln!(out, "template <>").unwrap();
+                writeln!(out, "struct glz::meta<{}> {{", full_type).unwrap();
+                writeln!(out, "    using T = {};", full_type).unwrap();
+
+                let mut field_bindings = Vec::new();
+
+                // Check for simple_content_base "value"
+                if let Some(ref base_qname) = s.base_type {
+                    let has_value_field = s
+                        .fields
+                        .iter()
+                        .any(|f| f.name == "value" || f.kind == crate::ir::FieldKind::Text);
+                    if !has_value_field
+                        && (PrimitiveType::from_xsd_name(&base_qname.local).is_some()
+                            || matches!(ir.types.get(base_qname), Some(TypeDef::Simple(_))))
+                    {
+                        field_bindings.push(r#""value", &T::value"#.to_string());
+                    }
+                }
+
+                for f in &s.fields {
+                    let field_name = to_cpp_field_name(&f.name);
+                    field_bindings.push(format!("{:?}, &T::{}", f.xml_name, field_name));
+                }
+
+                if field_bindings.is_empty() {
+                    writeln!(out, "    static constexpr auto value = object();").unwrap();
+                } else {
+                    writeln!(out, "    static constexpr auto value = object(").unwrap();
+                    for (i, fb) in field_bindings.iter().enumerate() {
+                        let comma = if i + 1 < field_bindings.len() {
+                            ","
+                        } else {
+                            ""
+                        };
+                        writeln!(out, "        {}{}", fb, comma).unwrap();
+                    }
+                    writeln!(out, "    );").unwrap();
+                }
+                writeln!(out, "}};\n").unwrap();
+            }
+        }
     }
 
     fn emit_utilities(&self, out: &mut String) {

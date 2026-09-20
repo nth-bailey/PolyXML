@@ -700,6 +700,95 @@ int main() {
 }
 
 #[test]
+fn test_cli_cpp_modules_and_glaze() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("crm.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:enterprise:crm">
+            <xs:simpleType name="Status">
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="active"/>
+                    <xs:enumeration value="suspended"/>
+                </xs:restriction>
+            </xs:simpleType>
+            <xs:complexType name="Customer">
+                <xs:sequence>
+                    <xs:element name="name" type="xs:string"/>
+                    <xs:element name="status" type="Status"/>
+                </xs:sequence>
+                <xs:attribute name="id" type="xs:int" use="required"/>
+            </xs:complexType>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    // 1. Test --mode modules
+    let modules_out = dir.path().join("cpp_modules");
+    let bin = env!("CARGO_BIN_EXE_polyxml");
+    let output = Command::new(bin)
+        .args([
+            "generate",
+            "--lang",
+            "cpp",
+            "--mode",
+            "modules",
+            "--package",
+            "enterprise::crm",
+            "--out",
+            modules_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute cpp modules generate");
+
+    assert!(
+        output.status.success(),
+        "polyxml generate --mode modules failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let cppm_file = modules_out.join("crm.cppm");
+    assert!(cppm_file.exists(), "crm.cppm was not generated");
+    let cppm_code = fs::read_to_string(&cppm_file).unwrap();
+    assert!(cppm_code.contains("export module crm;"));
+    assert!(cppm_code.contains("export namespace enterprise::crm {"));
+    assert!(cppm_code.contains("struct Customer {"));
+
+    // 2. Test --backend glaze
+    let glaze_out = dir.path().join("cpp_glaze");
+    let output2 = Command::new(bin)
+        .args([
+            "generate",
+            "--lang",
+            "cpp",
+            "--backend",
+            "glaze",
+            "--package",
+            "enterprise::crm",
+            "--out",
+            glaze_out.to_str().unwrap(),
+            schema_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute cpp glaze generate");
+
+    assert!(
+        output2.status.success(),
+        "polyxml generate --backend glaze failed: {}",
+        String::from_utf8_lossy(&output2.stderr)
+    );
+    let hpp_file = glaze_out.join("crm.hpp");
+    assert!(hpp_file.exists(), "crm.hpp was not generated");
+    let hpp_code = fs::read_to_string(&hpp_file).unwrap();
+    assert!(hpp_code.contains("#include <glaze/glaze.hpp>"));
+    assert!(hpp_code.contains("struct glz::meta<enterprise::crm::Customer> {"));
+    assert!(hpp_code.contains("struct glz::meta<enterprise::crm::Status> {"));
+    assert!(hpp_code.contains("\"active\", T::Active"));
+    assert!(hpp_code.contains("\"name\", &T::name"));
+}
+
+#[test]
 fn test_cli_go_generation() {
     let dir = tempdir().unwrap();
     let schema_file = dir.path().join("crm.xsd");

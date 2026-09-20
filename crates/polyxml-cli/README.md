@@ -21,7 +21,7 @@ cargo install --path crates/polyxml-cli
 | :--- | :--- | :--- |
 | **Python** | `python` | Modern Python 3.12+ `@dataclass` or Pydantic v2 models, field constraints, zero-copy streaming codecs |
 | **Rust** | `rust` | Zero-copy `Cow<'a, str>` & owned structs, automatic recursive boxing (`Box<T>`), streaming serializers/deserializers |
-| **C++** | `cpp` | Modern C++20/C++23 value types, `std::variant` choice representations, concepts, CMake/Meson export |
+| **C++** | `cpp` | Modern C++20/C++23 value types, C++20 Modules (`--mode modules`), Glaze reflection (`--backend glaze`), CMake/Meson export |
 | **Java** | `java` | Java 21+ records, `sealed interface` choice models, Jackson XML/JSON annotations (`--backend jackson`) |
 | **TypeScript** | `typescript` | TypeScript 5+ interfaces, discriminated unions, Zod runtime validation schemas with `z.lazy()` recursion |
 | **Go** | `go` | Idiomatic Go 1.22+ structs with `encoding/xml` tags, pointer cycle breaking, choice mutual-exclusivity unmarshaling |
@@ -44,6 +44,9 @@ polyxml generate --lang python --backend pydantic-v2 --out ./generated/python sc
 
 # Generate Java 21 records with Enterprise Jackson annotations
 polyxml generate --lang java --backend jackson --package com.enterprise.banking --out ./generated/java schemas/order.xsd
+
+# Generate C++20 Modules with Glaze reflectionless serde
+polyxml generate --lang cpp --mode modules --backend glaze --package enterprise::crm --out ./generated/cpp schemas/order.xsd
 
 # Generate zero-copy Rust models with codecs
 polyxml generate --lang rust --zero-copy --codecs --out ./generated/rust schemas/order.xsd
@@ -116,6 +119,8 @@ output = "src/generated/ts"
 [[generate]]
 target = "cpp"
 output = "src/generated/cpp"
+mode = "modules"
+backend = "glaze"
 
 [[generate]]
 target = "go"

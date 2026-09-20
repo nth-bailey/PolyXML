@@ -71,7 +71,8 @@ polyxml generate \
 |---|---|---|---|
 | **Target Language** | `-l`, `--lang` | Target language (`python`, `rust`, `cpp`, `java`, `typescript`, `go`, `csharp`). Can be specified multiple times. | Required |
 | **Output Directory** | `-o`, `--out` | Target directory for generated source files. | `.` |
-| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass` / `pydantic-v2` for Python; `standard` / `jackson` for Java). | Target default |
+| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass` / `pydantic-v2` for Python; `standard` / `jackson` for Java; `standard` / `glaze` for C++). | Target default |
+| **Compilation Mode** | `-m`, `--mode` | Target packaging mode (`header` or `modules` for C++). | Target default |
 | **Rust Zero-Copy** | `--zero-copy` | Use `Cow<'a, str>` string slices instead of owned `String`. | `true` |
 | **Streaming Codecs**| `--codecs` | Emit inherent zero-copy streaming XML serializers and deserializers. | `true` |
 | **Zod Schemas** | `--zod` | Emit runtime Zod validation schemas for TypeScript. | `false` |
@@ -124,6 +125,8 @@ zod = true
 [[generate]]
 target = "cpp"
 output = "src/generated/cpp"
+mode = "modules"
+backend = "glaze"
 
 [[generate]]
 target = "go"

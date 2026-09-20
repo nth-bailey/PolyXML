@@ -60,6 +60,7 @@ pub struct TargetConfig {
     pub derive_traits: Option<Vec<String>>,
     pub box_cycles: Option<bool>,
     pub modules: Option<bool>,
+    pub mode: Option<String>,
     pub serializer: Option<String>,
     pub zod: Option<bool>,
 }
@@ -80,6 +81,7 @@ pub struct CodegenTargetConfig {
     pub derive_traits: Option<Vec<String>>,
     pub box_cycles: Option<bool>,
     pub modules: Option<bool>,
+    pub mode: Option<String>,
     pub serializer: Option<String>,
     pub zod: Option<bool>,
 }
@@ -136,6 +138,7 @@ impl WorkspaceManifest {
                         derive_traits: cfg.derive_traits.clone(),
                         box_cycles: cfg.box_cycles,
                         modules: cfg.modules,
+                        mode: cfg.mode.clone(),
                         serializer: cfg.serializer.clone(),
                         zod: cfg.zod,
                     });

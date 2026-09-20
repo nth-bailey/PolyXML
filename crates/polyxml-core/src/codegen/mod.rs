@@ -13,7 +13,7 @@ pub mod python;
 pub mod rust;
 pub mod typescript;
 
-pub use cpp::{CppCodegen, CppMode, CppOptions};
+pub use cpp::{CppBackend, CppCodegen, CppMode, CppOptions};
 pub use csharp::{CSharpCodegen, CSharpOptions, CSharpRecordKind};
 pub use go::{GoCodegen, GoOptions};
 pub use java::{JavaBackend, JavaCodegen, JavaOptions};
