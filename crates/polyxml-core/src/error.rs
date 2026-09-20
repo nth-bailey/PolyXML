@@ -49,6 +49,9 @@ pub enum PolyXmlError {
 
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
+
+    #[error("JSON error: {0}")]
+    JsonError(#[from] serde_json::Error),
 }
 
 pub type Result<T> = std::result::Result<T, PolyXmlError>;

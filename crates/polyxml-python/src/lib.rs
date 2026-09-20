@@ -891,6 +891,44 @@ fn serialize<'py>(
 }
 
 #[pyfunction]
+fn deserialize_json<'py>(
+    py: Python<'py>,
+    source: &[u8],
+    target_type: Bound<'py, PyType>,
+) -> PyResult<PyObject> {
+    let meta = get_or_create_schema_meta(&target_type)?;
+    let poly_val = polyxml::deserialize_json(source, Arc::clone(&meta.schema))
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+    let bound_cls = meta.py_cls.bind(py);
+    poly_value_to_py(
+        py,
+        &poly_val,
+        &ValueType::Nested(Arc::clone(&meta.schema)),
+        Some(bound_cls),
+        None,
+    )
+}
+
+#[pyfunction]
+#[pyo3(signature = (obj, indent=None, by_alias=None))]
+fn serialize_json<'py>(
+    py: Python<'py>,
+    obj: Bound<'py, PyAny>,
+    indent: Option<usize>,
+    by_alias: Option<bool>,
+) -> PyResult<Bound<'py, PyBytes>> {
+    let cls = obj.get_type();
+    let meta = get_or_create_schema_meta(&cls)?;
+
+    let poly_val = py_to_poly_value(py, &obj, &meta.schema, Some(&meta))?;
+    let bytes = polyxml::serialize_json(&poly_val, &meta.schema, indent, by_alias.unwrap_or(true))
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+    Ok(PyBytes::new(py, &bytes))
+}
+
+#[pyfunction]
 fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
@@ -899,8 +937,10 @@ fn version() -> &'static str {
 fn _polyxml(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<XmlIterator>()?;
     m.add_function(wrap_pyfunction!(deserialize, m)?)?;
+    m.add_function(wrap_pyfunction!(deserialize_json, m)?)?;
     m.add_function(wrap_pyfunction!(iterparse, m)?)?;
     m.add_function(wrap_pyfunction!(serialize, m)?)?;
+    m.add_function(wrap_pyfunction!(serialize_json, m)?)?;
     m.add_function(wrap_pyfunction!(version, m)?)?;
     Ok(())
 }

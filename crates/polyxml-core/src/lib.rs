@@ -2,6 +2,7 @@ pub mod codegen;
 pub mod converters;
 pub mod error;
 pub mod ir;
+pub mod json;
 pub mod parser;
 pub mod schema;
 pub mod schema_parser;
@@ -9,6 +10,7 @@ pub mod serializer;
 pub mod value;
 
 pub use error::{PolyXmlError, Result};
+pub use json::{deserialize_json, serialize_json};
 pub use parser::{XmlDeserializer, XmlItemStream};
 pub use schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
 pub use serializer::XmlSerializer;

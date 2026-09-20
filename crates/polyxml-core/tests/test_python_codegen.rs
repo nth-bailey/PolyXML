@@ -380,6 +380,11 @@ fn test_python_codecs_generation() {
     assert!(code_enabled.contains(
         "return polyxml.serialize(self, indent=indent, namespaces=namespaces, ns_map=ns_map)"
     ));
+    assert!(code_enabled.contains("def from_json(cls, data: bytes | str) -> Self:"));
+    assert!(code_enabled.contains("def to_json("));
+    assert!(code_enabled.contains("return polyxml.deserialize_json(data, cls)"));
+    assert!(code_enabled
+        .contains("return polyxml.serialize_json(self, indent=indent, by_alias=by_alias)"));
 
     // With codecs disabled
     let codegen_disabled = PythonCodegen::new(PythonOptions {
@@ -389,4 +394,6 @@ fn test_python_codecs_generation() {
     let code_disabled = codegen_disabled.generate_module(&ir);
     assert!(!code_disabled.contains("def from_xml("));
     assert!(!code_disabled.contains("def to_xml("));
+    assert!(!code_disabled.contains("def from_json("));
+    assert!(!code_disabled.contains("def to_json("));
 }

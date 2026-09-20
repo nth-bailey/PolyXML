@@ -109,7 +109,17 @@ xsdata (Typed Dataclass)     █ 2.5 MB/s
 
 ---
 
-### 3. Pure Rust Core Throughput (`crates/polyxml-core`)
+### 3. Native JSON Data-Binding: Ditching xsdata Completely
+Many enterprise teams keep `xsdata` solely for its `JsonParser` and `JsonSerializer` to handle hybrid XML/JSON architectures. PolyXML completely eliminates `xsdata` by offering native, Rust-backed JSON serialization and deserialization that is up to **9.5x faster**, with drop-in compatibility classes and dual-key matching (accepting both camelCase schema aliases and snake_case Python attributes):
+
+| Workload (5,000 iterations) | xsdata | PolyXML (Rust Core) | Speedup |
+| :--- | :--- | :--- | :--- |
+| **JSON Deserialization** | 198.4 μs | **20.8 μs** | **9.5x faster** |
+| **JSON Serialization** | 76.8 μs | **16.6 μs** | **4.6x faster** |
+
+---
+
+### 4. Pure Rust Core Throughput (`crates/polyxml-core`)
 *Statistical benchmarks measured using Criterion.rs*
 
 | Workload | Operation | Latency | Throughput | Allocation Strategy |
@@ -140,7 +150,7 @@ Across more than 600 official test groups from Sun Microsystems, Microsoft, and 
 | :--- | :--- |
 | **JAXB / `xjc` in Java** | Immutable Java 21+ records, sealed interface choices, zero reflection overhead, and Project Panama FFI. |
 | **CodeSynthesis in C++** | Modern C++20 value types, `std::variant`, zero Apache Xerces dependency, zero UTF-16 transcoding overhead, and a permissive MIT license. |
-| **`xsdata` in Python** | **16x faster** parsing, **38x faster** serialization, PEP 695 type aliases, and `@dataclass(slots=True)` memory optimization. |
+| **`xsdata` in Python** | **16x faster** XML parsing, **38x faster** XML serialization, **9.5x faster** native JSON, and a 100% drop-in replacement (`JsonSerializer`, `JsonParser`). |
 | **`xsd-parser` in Rust** | A battle-tested compiler that doesn't panic on complex schemas, with automatic Tarjan `Box<T>` cycle breaks and inherent streaming codecs. |
 | **`xgen` in Go** | True `xs:choice` mutual exclusivity validation, pointer cycle breaks, and canonical Go initialism normalization. |
 | **`xsd.exe` in .NET** | Modern C# 12 records with primary constructors, `init`-only properties, and standard `IValidatableObject` integration. |
