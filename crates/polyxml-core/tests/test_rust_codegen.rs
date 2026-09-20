@@ -134,6 +134,7 @@ fn test_rust_zero_copy_codegen() {
         emit_root_aliases: true,
         emit_codecs: false,
         emit_rkyv: false,
+        custom_header: None,
     });
 
     let code = codegen.generate_module(&ir);
@@ -185,6 +186,7 @@ fn test_rust_owned_codegen() {
         emit_root_aliases: true,
         emit_codecs: false,
         emit_rkyv: false,
+        custom_header: None,
     });
 
     let code = codegen.generate_module(&ir);

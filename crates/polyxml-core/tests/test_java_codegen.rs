@@ -158,6 +158,7 @@ fn test_java_records_and_enums_generation() {
         use_records: true,
         validate_facets: true,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
     let files = codegen.generate_files(&ir);
@@ -245,6 +246,7 @@ fn test_java_sealed_interface_choice() {
         use_records: true,
         validate_facets: true,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
     let files = codegen.generate_files(&ir);
@@ -298,6 +300,7 @@ fn test_java_module_container_class() {
         use_records: true,
         validate_facets: true,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
     let code = codegen.generate_module(&ir, "BankingModels");
@@ -407,6 +410,7 @@ fn test_java_jackson_backend_struct_annotations() {
         use_records: true,
         validate_facets: true,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
     let files = codegen.generate_files(&ir);
@@ -467,6 +471,7 @@ fn test_java_jackson_backend_enum_annotations() {
         use_records: true,
         validate_facets: true,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
     let files = codegen.generate_files(&ir);
@@ -514,6 +519,7 @@ fn test_java_jackson_backend_union_annotations() {
         use_records: true,
         validate_facets: true,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
     let files = codegen.generate_files(&ir);
@@ -555,6 +561,7 @@ fn test_java_jackson_backend_simple_type_annotations() {
         use_records: true,
         validate_facets: true,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = JavaCodegen::new(options);
     let files = codegen.generate_files(&ir);

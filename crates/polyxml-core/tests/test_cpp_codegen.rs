@@ -162,6 +162,7 @@ fn test_cpp_struct_and_enum_codegen_compilation() {
         emit_root_aliases: true,
         emit_cmake: false,
         emit_meson: false,
+        custom_header: None,
     };
 
     let codegen = CppCodegen::new(options);

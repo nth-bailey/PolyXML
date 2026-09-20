@@ -80,6 +80,7 @@ polyxml generate \
 | **C# Source-Gen** | `--source-gen` | Emit Native AOT compile-time `JsonSerializerContext` for C#. | `false` |
 | **C# Record Kind** | `--record-kind` | C# record representation (`class` or `struct`). | `class` |
 | **Package / Namespace** | `-p`, `--package` | Namespace or package name for Java, Go, C#, or C++. | Target default |
+| **Custom Header** | `--custom-header` | Custom comment, license, or linter directive text to prepend to generated files. | `None` |
 | **Dry Run** | `--dry-run` | Parse and print generated output without writing to disk. | `false` |
 | **Format** | `--format` | Automatically format generated code using host toolchains (`ruff`, `cargo fmt`, `clang-format`, `gofmt`). | `true` |
 
@@ -101,6 +102,7 @@ name = "enterprise-iso20022"
 schemas = ["schemas/iso20022/*.xsd"]
 include_dirs = ["schemas/common/"]
 output_base_dir = "./generated"
+custom_header = "// Copyright (c) 2026 Enterprise Corp. All rights reserved."
 
 [[generate]]
 target = "python"

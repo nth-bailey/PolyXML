@@ -349,6 +349,7 @@ name = "enterprise-data-pipeline"
 schemas = ["schemas/iso20022/*.xsd"]
 include_dirs = ["schemas/common/"]
 output_base_dir = "./generated"
+custom_header = "// Copyright (c) 2026 Enterprise Pipeline"
 
 [[generate]]
 target = "python"

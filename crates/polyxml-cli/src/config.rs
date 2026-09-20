@@ -40,6 +40,7 @@ pub struct WorkspaceSection {
     pub schemas: Vec<String>,
     pub include_dirs: Option<Vec<String>>,
     pub output_base_dir: Option<String>,
+    pub custom_header: Option<String>,
 }
 
 /// Target configuration from either `[[generate]]` or `[codegen.<target>]`.
@@ -66,6 +67,7 @@ pub struct TargetConfig {
     pub source_gen: Option<bool>,
     pub record_kind: Option<String>,
     pub rkyv: Option<bool>,
+    pub custom_header: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -90,6 +92,7 @@ pub struct CodegenTargetConfig {
     pub source_gen: Option<bool>,
     pub record_kind: Option<String>,
     pub rkyv: Option<bool>,
+    pub custom_header: Option<String>,
 }
 
 impl std::str::FromStr for WorkspaceManifest {
@@ -112,10 +115,19 @@ impl WorkspaceManifest {
     pub fn resolved_targets(&self) -> Vec<TargetConfig> {
         let mut targets = Vec::new();
 
+        let ws_header = self
+            .workspace
+            .as_ref()
+            .and_then(|w| w.custom_header.clone());
+
         // 1. Array of tables [[generate]]
         for gen in &self.generate {
             if gen.enabled.unwrap_or(true) {
-                targets.push(gen.clone());
+                let mut target = gen.clone();
+                if target.custom_header.is_none() {
+                    target.custom_header = ws_header.clone();
+                }
+                targets.push(target);
             }
         }
 
@@ -150,6 +162,7 @@ impl WorkspaceManifest {
                         source_gen: cfg.source_gen,
                         record_kind: cfg.record_kind.clone(),
                         rkyv: cfg.rkyv,
+                        custom_header: cfg.custom_header.clone().or_else(|| ws_header.clone()),
                     });
                 }
             }

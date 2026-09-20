@@ -144,6 +144,7 @@ fn test_ts_interface_and_enum_codegen() {
         use_interface: true,
         readonly_fields: false,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
     let code = codegen.generate_module(&ir);
@@ -199,6 +200,7 @@ fn test_ts_discriminated_union_choice() {
         use_interface: true,
         readonly_fields: true,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
     let code = codegen.generate_module(&ir);
@@ -285,6 +287,7 @@ fn test_ts_zod_schema_generation() {
         use_interface: true,
         readonly_fields: false,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
     let code = codegen.generate_module(&ir);
@@ -352,6 +355,7 @@ fn test_ts_recursive_cycle_zod_lazy() {
         use_interface: true,
         readonly_fields: false,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
     let code = codegen.generate_module(&ir);
@@ -488,6 +492,7 @@ fn test_ts_valibot_schema_generation() {
         use_interface: true,
         readonly_fields: false,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
     let code = codegen.generate_module(&ir);
@@ -585,6 +590,7 @@ fn test_ts_typebox_schema_generation() {
         use_interface: true,
         readonly_fields: false,
         emit_root_aliases: true,
+        custom_header: None,
     };
     let codegen = TypeScriptCodegen::new(options);
     let code = codegen.generate_module(&ir);

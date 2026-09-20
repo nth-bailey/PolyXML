@@ -163,6 +163,7 @@ fn test_go_struct_and_enum_generation() {
         validate_choice_exclusivity: true,
         validate_facets: true,
         emit_root_aliases: true,
+        custom_header: None,
     };
 
     let codegen = GoCodegen::new(options);
@@ -347,6 +348,7 @@ fn test_go_choice_mutual_exclusivity() {
         validate_choice_exclusivity: true,
         validate_facets: true,
         emit_root_aliases: true,
+        custom_header: None,
     };
 
     let codegen = GoCodegen::new(options);
