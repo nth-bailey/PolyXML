@@ -93,26 +93,72 @@ When contributing or refactoring, strictly maintain the following invariants:
   ruff check python/ tests/
   ```
 
+### Fast Codegen Testing & Multi-Target Verification
+
+PolyXML provides dedicated convenience scripts to dramatically accelerate compiler development:
+
+- **Fast Codegen Test Runner (`scripts/test_codegen.sh`)**:
+  Runs all 7 language codegen test suites, schema IR tests, and CLI integration tests in ~2 seconds (bypassing unrelated benchmarks/audio tests):
+  ```bash
+  ./scripts/test_codegen.sh
+  ```
+- **End-to-End Multi-Target Smoke Test (`scripts/verify_codegen.sh`)**:
+  Builds `polyxml` CLI and compiles a representative schema containing recursive types, enums, choices, and facets into all 7 target ecosystems and their backends:
+  ```bash
+  ./scripts/verify_codegen.sh
+  ```
+- **Version Parity Check & Bump (`scripts/sync_version.py`)**:
+  Checks or sets identical versions across all 5 manifests (`Cargo.toml`, `pyproject.toml`, `package.json`, `pom.xml`, `CMakeLists.txt`):
+  ```bash
+  ./scripts/sync_version.py --check
+  ./scripts/sync_version.py --set 0.17.0
+  ```
+- **Unified Dual-Language Quality Gate (`scripts/gate.sh`)**:
+  Runs fmt, clippy, workspace tests, maturin develop, ruff, and 100% pytest coverage:
+  ```bash
+  ./scripts/gate.sh
+  ```
+
 ---
 
-## 4. Verification Checklist
+## 4. Git Hooks & Automated Release Invariants
+
+1. **Pre-commit & Pre-push Hooks**:
+   - The repository installs git hooks that enforce version parity, `cargo fmt`, `ruff`, and `cargo check`.
+   - Never bypass hooks with `--no-verify` unless strictly instructed.
+2. **Automated CI Releases & Rebasing**:
+   - When a commit lands on `origin/main`, CI creates an automated release commit `chore(release): X.Y.Z [skip ci]`.
+   - Before pushing local changes, always run:
+     ```bash
+     git pull --rebase origin main
+     git push origin main
+     ```
+
+---
+
+## 5. Verification Checklist
 
 Before completing any task:
 
 1. **Rust Format**: Ensure `cargo fmt --check` passes with zero differences.
 2. **Rust Clippy**: Ensure `cargo clippy --workspace --all-targets -- -D warnings` produces 0 warnings.
-3. **Rust Tests**: Ensure `cargo test --workspace` passes cleanly.
+3. **Rust Tests**: Ensure `cargo test --workspace` passes cleanly (or `./scripts/test_codegen.sh` for codegen-only changes).
 4. **Python Tests & Coverage**: Ensure `pytest --cov=polyxml --cov-branch --cov-fail-under=100` passes with **100% coverage**.
 5. **Python Lint**: Ensure `ruff check python/ tests/` passes with 0 errors.
+6. **Multi-Target Smoke Verification**: Run `./scripts/verify_codegen.sh` when modifying schema compilation or CLI flags.
 
 ---
 
-## 5. Workspace Skills Maintenance
+## 6. Workspace Skills Maintenance
 
-Custom agent runbooks and procedures are stored as skills in `.agents/skills/<skill_name>/SKILL.md`.
+Custom agent runbooks and procedures are stored as skills in `.agents/skills/<skill_name>/SKILL.md`:
+
+- **`polyxml-codegen-workflow`**: Playbook for developing, refactoring, and verifying code generators across all 7 target languages (Rust, Python, C++, Java, TypeScript, Go, C#), plumbing options from core to CLI/manifest, and validating output.
+- **`polyxml-core-engine`**: High-performance streaming XML parser (`quick-xml`), zero-allocation conversions (`lexical-core`), and Tarjan SCC cycle-cutting architecture in `crates/polyxml-core`.
+- **`polyxml-abi3-workflow`**: Maturin develop, `abi3-py312` conformance audits, dual-language testing, and 100% statement/branch coverage.
 
 When working in this repository:
-1. **Consult & Use Skills**: When working on PyO3 ABI3 builds, memory profiling, or the pure Rust core engine, refer to the corresponding skill in `.agents/skills/`.
+1. **Consult & Use Skills**: When working on specific subsystems, refer to the corresponding skill in `.agents/skills/`.
 2. **Keep Skills Up to Date**: If you discover a bug, an undocumented toolchain requirement, or an improved workflow while working on a task, **you MUST update the relevant `SKILL.md`** so subsequent agents benefit from the fix.
 3. **Capture New Workflows**: When introducing a new complex, multi-step, or repeatable workflow, create a new skill directory in `.agents/skills/<skill_name>/SKILL.md` following standard frontmatter conventions.
 

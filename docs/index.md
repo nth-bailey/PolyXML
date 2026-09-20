@@ -76,12 +76,12 @@ flowchart LR
     IR --> TARJAN[Tarjan SCC Analysis<br/>Cycle Cutting & Boxing]
     TARJAN --> CLI[polyxml CLI]
     CLI --> PY[Python 3.12+<br/>dataclass & Pydantic v2]
-    CLI --> RS[Rust 2021/2024<br/>Zero-Copy & Owned]
-    CLI --> CPP2[C++20 / C++23<br/>Value Types & Concepts]
-    CLI --> JV[Java 21+<br/>Records & Sealed Interfaces]
-    CLI --> TS2[TypeScript 5+<br/>Interfaces & Zod Schemas]
-    CLI --> GO2[Go 1.22+<br/>Structs, xml & json tags]
-    CLI --> CS[C# 12 / .NET 8+<br/>Records, XmlSerializer & System.Text.Json]
+    CLI --> RS[Rust 2021/2024<br/>Zero-Copy, Owned & rkyv]
+    CLI --> CPP2[C++20 / C++23<br/>Modules & Glaze Serde]
+    CLI --> JV[Java 21+<br/>Records, Jackson & Sealed Interfaces]
+    CLI --> TS2[TypeScript 5+<br/>Zod, Valibot & TypeBox]
+    CLI --> GO2[Go 1.22+<br/>Structs, Sonic & EasyJSON]
+    CLI --> CS[C# 12 / .NET 8+<br/>Record Structs & Source Gen]
 ```
 
 Tested against the official **W3C XML Schema Test Suite (XSTS)** with **>99.8% schema compilation pass rate** and **>96% round-trip validation pass rate** via [polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests).

@@ -24,17 +24,17 @@ This skill documents the high-performance design patterns and strict constraints
 
 ## 2. Testing & Verification
 
-Run tests and clippy specifically against `polyxml-core`:
+Run tests and clippy specifically against `polyxml-core` (package name `polyxml`):
 
 ```bash
 # Run core crate unit tests
-cargo test -p polyxml-core
+cargo test -p polyxml
 
 # Check formatting
 cargo fmt --check
 
 # Strict warnings-as-errors clippy audit
-cargo clippy -p polyxml-core --all-targets -- -D warnings
+cargo clippy -p polyxml --all-targets -- -D warnings
 ```
 
 ## 3. Benchmarking Core Engine
@@ -42,5 +42,5 @@ cargo clippy -p polyxml-core --all-targets -- -D warnings
 To run benchmarks on the pure Rust engine against XML payloads:
 
 ```bash
-cargo bench -p polyxml-core
+cargo bench -p polyxml
 ```
