@@ -233,10 +233,10 @@ PolyXML strictly generates code adhering to modern programming paradigms (2024�
 | **Python 3.12+** | `python` | `@dataclass(slots=True)` & Pydantic v2 | PEP 695 type aliases, PEP 604 unions, restriction facets, native JSON codecs (10x faster xsdata replacement) |
 | **Rust 2021/2024** | `rust` | Zero-copy `Cow<'a, str>` & Owned structs | Automatic Tarjan SCC recursive boxing (`Box<T>`), inherent streaming codecs, rkyv zero-copy wire format (`--rkyv`) |
 | **C++20 / C++23** | `cpp` | Modern value types & `std::variant` | C++20 Modules (`--mode modules`), Glaze reflection (`--backend glaze`), CMake/Meson export |
-| **Java 21+** | `java` | Modern `record` & `sealed interface` | Exhaustive switch pattern matching, compact constructor facet validation, Jackson XML/JSON (`--backend jackson`) |
+| **Java 21+** | `java` | Modern `record` & `sealed interface`, or JavaBeans with `--style pojo` | Exhaustive switch pattern matching, compact constructor facet validation, fluent builders (`--builder`), zero-reflection StAX companion codecs (`--codec direct`), Jackson XML/JSON (`--backend jackson`) |
 | **TypeScript 5+** | `typescript` | Interfaces & Discriminated Unions | Runtime Zod, Valibot, or TypeBox validation backends (`--backend`), circular reference resolution, `as const` enums |
 | **Go 1.22+** | `go` | Structs with `encoding/xml` & `encoding/json` | Dual struct tags, reflectionless ByteDance Sonic & EasyJSON backends (`--backend`), choice exclusivity |
-| **C# 12 / .NET 8+** | `csharp` | Records (`class` or `struct`) | Compile-time source generation (`--source-gen`), record structs (`--record-kind struct`), `IValidatableObject` |
+| **C# 12 / .NET 8+** | `csharp` | Records (`class` or `struct`) or mutable classes (`--style class`) | Compile-time source generation (`--source-gen`), record structs (`--record-kind struct`), `IValidatableObject` |
 
 👉 **[Read the Full XSD-to-Code & CLI Guide →](docs/guides/compiler.md)**
 
@@ -251,7 +251,7 @@ PolyXML strictly generates code adhering to modern programming paradigms (2024�
 | **Micro-Telemetry Latency**| 44.5 μs per packet in Python (`xsdata`) | **3.2 μs** per packet (**13.9x speedup**, neck-and-neck with raw C DOM parsers) |
 | **Memory Footprint** | Intermediate DOM node trees inflate RAM by **10x–20x** | Monomorphized event streaming, zero intermediate DOM allocation |
 | **XML ↔ JSON Transcoding** | Brittle untyped dicts (`xmltodict`), slow Python loops, duplicate schemas | Zero-copy streaming CLI (`polyxml transcode`) & dual-format models across all targets |
-| **Generated Code Quality**| Pre-C++11 raw pointers, mutable JavaBeans with getters/setters | Immutable Java 21+ records, modern C++20 value types, C# 12 records |
+| **Generated Code Quality**| Pre-C++11 raw pointers; reflection-bound JavaBeans with no-arg constructors and discarded facets | Immutable Java 21+ records by default (opt-in JavaBeans + builders with facets and zero-reflection codecs), modern C++20 value types, C# 12 records |
 | **Licensing** | GPL v2 dual-licensing or per-seat commercial paywalls | **100% Permissive MIT License** (zero commercial royalties) |
 | **Security Posture (XXE & SSRF)** | Vulnerable by default to external entity resolution (e.g. `lxml`/`xsdata` CWE-611; requires manual `resolve_entities=False`) | **Structurally immune by design**: Pure-Rust streaming parser with no filesystem/network access; external DTD entities never resolved |
 
