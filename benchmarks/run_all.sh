@@ -31,7 +31,7 @@ if [ ! -f "${PYTHON_BIN}" ]; then
 fi
 
 echo "Installing benchmark requirements..."
-uv pip install -q -r "${SCRIPT_DIR}/requirements.txt" maturin
+uv pip install -q -r "${SCRIPT_DIR}/python/requirements.txt" maturin
 
 # 3. Build Rust Python extension in Release mode
 echo ""
@@ -49,17 +49,17 @@ cd "${ROOT_DIR}"
 echo ""
 echo "🐍 Running Python comparative benchmarks..."
 cd "${ROOT_DIR}"
-"${PYTHON_BIN}" -m benchmarks \
+"${PYTHON_BIN}" -m benchmarks.python \
     --workload all \
     --catalog-sizes 1000 10000 \
     --iterations 25 \
-    --output-md "${SCRIPT_DIR}/results.md" \
-    --output-json "${SCRIPT_DIR}/results.json"
+    --output-md "${SCRIPT_DIR}/python/results.md" \
+    --output-json "${SCRIPT_DIR}/python/results.json"
 
 echo ""
 echo "======================================================================"
 echo "✅ Benchmarking Complete!"
 echo "   - Rust reports: target/criterion/"
-echo "   - Python Markdown: benchmarks/results.md"
-echo "   - Python JSON: benchmarks/results.json"
+echo "   - Python Markdown: benchmarks/python/results.md"
+echo "   - Python JSON: benchmarks/python/results.json"
 echo "======================================================================"

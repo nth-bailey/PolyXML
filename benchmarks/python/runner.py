@@ -16,12 +16,12 @@ import polyxml
 from rich.console import Console
 from rich.table import Table
 
-from benchmarks.generators import (
+from benchmarks.python.generators import (
     generate_catalog_xml,
     generate_order_xml,
     generate_sensor_xml,
 )
-from benchmarks.models import (
+from benchmarks.python.models import (
     HAS_PXML,
     HAS_XSDATA,
     PolyCatalog,
@@ -68,7 +68,7 @@ except ImportError:
 try:
     import declxml as xml_decl
 
-    from benchmarks.models import (
+    from benchmarks.python.models import (
         DECLXML_CATALOG_PROC,
         DECLXML_ORDER_PROC,
         DECLXML_SENSOR_PROC,
@@ -85,7 +85,7 @@ if HAS_XSDATA:
     from xsdata.formats.dataclass.parsers import XmlParser as XsXmlParser
     from xsdata.formats.dataclass.serializers import XmlSerializer as XsXmlSerializer
 
-    from benchmarks.models import (
+    from benchmarks.python.models import (
         XsCatalog,
         XsCatalogItem,
         XsOrder,
@@ -94,7 +94,7 @@ if HAS_XSDATA:
     )
 
 if HAS_PXML:
-    from benchmarks.models import PxmlCatalog, PxmlSensor
+    from benchmarks.python.models import PxmlCatalog, PxmlSensor
 
 
 @dataclass

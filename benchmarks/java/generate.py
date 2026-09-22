@@ -1,7 +1,7 @@
 """Generate an identical, reproducible scalar schema for all benchmark backends."""
-from pathlib import Path
 import os
 import subprocess
+from pathlib import Path
 
 base = Path(__file__).resolve().parent
 repo = base.parent.parent

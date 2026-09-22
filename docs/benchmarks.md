@@ -7,7 +7,7 @@ description: Reproducible performance benchmarks comparing PolyXML against nativ
 
 PolyXML is engineered to process gigabytes of XML per second by leveraging Rust's zero-cost abstractions, `quick-xml` streaming events, and `lexical-core` numeric conversions.
 
-The repository includes a fully reusable, automated benchmark suite covering both pure Rust Criterion tests and Python comparative benchmarks.
+The repository includes fully reusable, automated benchmark suites covering the pure Rust Criterion tests, the Python comparative benchmarks, and the Java four-runtime JMH benchmarks.
 
 > 🚀 **Looking for architectural comparisons with legacy compilers?**
 > Check out **[Why PolyXML? (The Architecture of Modern XML)](why-polyxml.md)** for in-depth comparisons against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
@@ -114,5 +114,13 @@ cargo bench --bench core_benchmarks
 ### Run Python Comparative Benchmarks CLI
 
 ```bash
-python -m benchmarks --workload all --catalog-sizes 1000 10000 --iterations 25 --output-md benchmarks/results.md --output-json benchmarks/results.json
+python -m benchmarks.python --workload all --catalog-sizes 1000 10000 --iterations 25 --output-md benchmarks/python/results.md --output-json benchmarks/python/results.json
 ```
+
+### Run the Java Four-Runtime JMH Suite
+
+```bash
+mvn -f benchmarks/java/pom.xml clean package
+```
+
+See the [Java benchmark README](https://github.com/nth-bailey/PolyXML/tree/main/benchmarks/java) for the Panama profile, workload definitions, and interpretation caveats.
