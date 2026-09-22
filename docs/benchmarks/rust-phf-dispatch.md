@@ -190,8 +190,8 @@ file; section sizes via `size`/`size -A` on the example binary:
 | `phf` | 2.53–2.55 s | 2.75 s | 2 591 728 | 367 912 | 271 928 | 1 640 |
 | **Δ** | +0.02 s (noise) | +0.2 s one-time | **+1 088 (+0.04 %)** | **+144 (+0.04 %)** | +320 | −1 408 |
 
-**Large tiers (600 / 1500 elements): not measured — deferred to a
-follow-up issue.** The encounter, for the record:
+**Large tiers (600 / 1500 elements): not measured — deferred to
+#55.** The encounter, for the record:
 
 * Compiling the generated consumer crate at **600 *and* 1500 elements —
   both the `match` *and* the `phf` variant — exceeds ~3.2 GiB for a single
@@ -200,14 +200,14 @@ follow-up issue.** The encounter, for the record:
   host). Uncapped attempts swap-thrashed the host into freezing (two WSL
   restarts) before `scripts/memcap.sh` existed; every capped attempt since
   was kernel-OOM-killed *inside its own cgroup* with the host untouched —
-  exit 143, by design.
+  by design.
 * Because the memory blow-up hits **both variants at the same tier**, it
   scales with field count (type-checking/monomorphizing the 600- and
   1500-field `decode_xml` paths), **not** with `match`-arm count — so no
   `match`-vs-`phf` compile-memory conclusion can be drawn from it either
   way. Re-establishing the compile-time and `.text`/`.rodata` growth curves
   at these tiers needs a host where one `rustc` may safely use ≥ 4 GiB and
-  is tracked as a follow-up to this work.
+  is tracked in #55.
 
 Interpretation (small schema):
 
@@ -277,6 +277,6 @@ python3 scripts/gen_tag_dispatch_fixtures.py
 #    Run each build through scripts/memcap.sh: at 600 and 1500 elements
 #    EVERY variant's rustc needs >=3.2 GiB and will be OOM-killed at the
 #    default cap (by design — the host must stay responsive). Those tiers
-#    are deferred to a follow-up issue; the small-schema numbers above are
+#    are deferred to #55; the small-schema numbers above are
 #    the ones measured within the cap.
 ```

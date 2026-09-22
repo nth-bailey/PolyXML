@@ -312,12 +312,13 @@ derived types inherit their base's patterns at parse time):
   (exit 137) instead of freezing the host — uncapped 1500-element builds
   froze a 7.7-GiB WSL box repeatedly before this guard existed. Wrap
   measure/compile-size scripts per build step (own scope each) so one
-  OOM kill doesn't abort the rest; set `POLYXML_MEMCAP_LEVEL` is automatic,
+  OOM kill doesn't abort the rest; `POLYXML_MEMCAP_LEVEL` (nesting depth)
+  is set automatically so wrapped scripts can't re-exec in a loop, and
   `POLYXML_MEMCAP_DISABLE=1` opts out. Known datum: generated consumer
   crates at **600 and 1500 elements need >=3.2 GiB for a single `rustc`**
   (both the `match` and `phf` variants — it scales with field count, not
   match-arm count), so compile-time/size measurements at those tiers are
-  deferred to a follow-up issue and must not be retried uncapped on
+  deferred to #55 and must not be retried uncapped on
   8-GiB-class hosts.
 - Shared CLI options apply to every `--lang`, not just the preceding one. Use
   per-target manifest entries for heterogeneous configurations. Schema-less
