@@ -842,3 +842,117 @@ fn test_rust_extension_base_cycle_cut() {
     );
     assert_eq!(beta.matches("pub beta_field").count(), 1);
 }
+
+#[test]
+fn test_rust_simple_content_text_codec() {
+    let xsd = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="http://example.com/t"
+           targetNamespace="http://example.com/t"
+           elementFormDefault="qualified">
+    <xs:simpleType name="Code">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[A-Z]{2}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="Measurement">
+        <xs:simpleContent>
+            <xs:extension base="xs:double">
+                <xs:attribute name="unit" type="xs:string"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="Ticket">
+        <xs:simpleContent>
+            <xs:extension base="tns:Code">
+                <xs:attribute name="id" type="xs:int"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+</xs:schema>"#;
+
+    let ir = XsdParser::new()
+        .parse_str(xsd)
+        .expect("parse simpleContent schema");
+    let code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
+
+    // Numeric base: decode parses the element's text content into `value` and
+    // encode writes it back out. Before the fix, `value` was never assigned
+    // during decode, so every simpleContent instance failed with
+    // "Missing required field 'value'".
+    let measurement = section(&code, "impl<'a> Measurement");
+    for expected in [
+        "read_element_text(reader, start.local_name().as_ref())",
+        "var_value = Some(val)",
+        "BytesText::new(&self.value.to_string())",
+    ] {
+        assert!(
+            measurement.contains(expected),
+            "Measurement text codec missing {expected:?}:\n{measurement}"
+        );
+    }
+
+    // Patterned string base: the decoded text flows through the inherited
+    // facets (`validate_patterns`) before it is accepted.
+    let ticket = section(&code, "impl<'a> Ticket");
+    for expected in [
+        "read_element_text(reader, start.local_name().as_ref())",
+        "var_value = Some(text)",
+        "validate_patterns",
+    ] {
+        assert!(
+            ticket.contains(expected),
+            "Ticket text codec missing {expected:?}:\n{ticket}"
+        );
+    }
+}
+
+/// quick-xml splits text at entity references and CDATA (`a &amp; b` arrives as
+/// Text/GeneralRef/Text), so the reader must *accumulate* segments: the old
+/// last-wins helper kept only the final one, silently corrupting any element or
+/// simpleContent value containing an entity, char ref, or CDATA section.
+#[test]
+fn test_rust_read_element_text_accumulates_refs_and_cdata() {
+    let ir = XsdParser::new()
+        .parse_str(extension_xsd())
+        .expect("parse extension schema");
+
+    for zero_copy in [true, false] {
+        let code = RustCodegen::new(RustOptions {
+            zero_copy,
+            ..Default::default()
+        })
+        .generate_module(&ir);
+        let helper = section(&code, "fn read_element_text");
+        for expected in [
+            "Event::CData(c)",
+            "Event::GeneralRef(r)",
+            "r.is_char_ref()",
+            "r.resolve_char_ref()",
+            "resolve_xml_entity(r.as_ref())",
+        ] {
+            assert!(
+                helper.contains(expected),
+                "zero_copy={zero_copy} helper missing {expected:?}:\n{helper}"
+            );
+        }
+        // Segments append instead of overwriting the previous one.
+        if zero_copy {
+            assert!(
+                helper.contains("text.to_mut().push_str(&raw)"),
+                "zero_copy helper must append segments:\n{helper}"
+            );
+        } else {
+            assert!(
+                helper.contains("text.push_str(&unescaped)"),
+                "owned helper must append segments:\n{helper}"
+            );
+            assert!(
+                !helper.contains("text = unescaped.into_owned()"),
+                "last-wins overwrite resurfaced:\n{helper}"
+            );
+        }
+    }
+}

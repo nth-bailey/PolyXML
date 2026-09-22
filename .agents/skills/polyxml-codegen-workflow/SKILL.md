@@ -143,14 +143,34 @@ If external compilers are installed on the development machine, run the E2E veri
    tail because they `extends` instead. Backends with real inheritance (TS
    `extends`, Go embed, C++/C# `: Base`, Python `class Derived(Base)`) must
    NOT flatten — Python leans on `__dataclass_fields__` (see §11).
-7. **Known Gap (found 2026-09-22, unfixed)**: generated Rust codecs never
-   consume `FieldKind::Text` — only a `#[polyxml(text)]` label exists — so
-   simpleContent structs always fail `from_xml` with
-   `Missing required field 'value'` and `encode_xml` omits the text; Go, Java,
-   C++, and C# codecs do handle Text. When touching this area, verify with a
-   simpleContent XSD across all 7 backends. (The companion Java gap — plain
-   record mode dropping inherited fields — was fixed the same day: records
-   cannot `extends`, so `model_fields` now always inlines `flatten_fields`.)
+7. **simpleContent `FieldKind::Text` codecs (fixed 2026-09-22)**: generated
+   Rust codecs now consume `FieldKind::Text` — `emit_text_content_parse`
+   reads the element content via `read_element_text` and runs it through the
+   same scalar/facet path as elements (`var_value = Some(...)`; patterns from
+   the extension base are enforced via `validate_patterns`), and
+   `emit_text_content_serialize` writes the value between Start/End. Only
+   scalar-backed Text is emitted: a struct-typed value (`value: Measurement`)
+   stays a documented cross-backend gap pending issue #51 item 4 IR modeling.
+   The module allow-header includes `unused_assignments` because the text path
+   assigns its slot unconditionally. The companion Java gap — plain record
+   mode dropping inherited fields — was fixed the same day: records cannot
+   `extends`, so `model_fields` now always inlines `flatten_fields`.
+   Regression-locked by `test_rust_simple_content_text_codec` plus runtime
+   round-trips (numeric, patterned, string, bad-number rejection).
+8. **Text events arrive split — readers must accumulate**: quick-xml emits
+   `a &amp; b` as `Text("a ")` + `GeneralRef("amp")` + `Text(" b")` and CDATA
+   as its own event, so `read_element_text` (both `zero_copy` variants)
+   appends every segment and resolves refs exactly like
+   `parser.rs::append_general_ref` (char refs → `resolve_char_ref()`,
+   predefined → `escape::resolve_xml_entity()`, otherwise the raw name —
+   lenient, never an error). Never overwrite the accumulator per event (the
+   pre-fix last-wins helper silently dropped data) and never pair split-text
+   assembly with `trim_text(true)` — per-segment trimming eats spaces adjacent
+   to refs (`x &amp; y` → `x&y`); trim once on the assembled buffer (see
+   `transcoder.rs`, which now also unescapes attribute values and resolves
+   general refs instead of dropping them via `_ => {}`). Regression-locked by
+   `test_rust_read_element_text_accumulates_refs_and_cdata` and
+   `test_schemaless_preserves_refs_cdata_and_attr_entities`.
 
 ## 6. Java/C# Model Styles and Direct Java Codecs
 

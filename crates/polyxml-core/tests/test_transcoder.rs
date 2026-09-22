@@ -151,3 +151,33 @@ fn test_transcoder_errors() {
     let err = json_to_xml(b"{ not json }", None, None, None, None, None).unwrap_err();
     assert!(err.to_string().contains("Invalid JSON"));
 }
+
+/// quick-xml splits text at entity references (Text/GeneralRef/Text) and reports
+/// CDATA as its own event. The transcoder used to fall through to `_ => {}` for
+/// general refs (dropping them) and left attribute entities raw, corrupting
+/// xml -> json -> xml round trips.
+#[test]
+fn test_schemaless_preserves_refs_cdata_and_attr_entities() {
+    let xml = br#"<root><a>x &amp; y</a><b><![CDATA[raw & <text>]]></b><c>&#65;&#x42;</c><d name="A &amp; B"/></root>"#;
+    let json_bytes = xml_to_json(xml, None, None, true).expect("xml_to_json");
+    let json_str = String::from_utf8(json_bytes).unwrap();
+
+    for expected in [
+        "\"a\":\"x & y\"",
+        "\"b\":\"raw & <text>\"",
+        "\"c\":\"AB\"",
+        "\"@name\":\"A & B\"",
+    ] {
+        assert!(
+            json_str.contains(expected),
+            "missing {expected} in:\n{json_str}"
+        );
+    }
+
+    let roundtrip =
+        json_to_xml(json_str.as_bytes(), None, None, None, None, None).expect("json_to_xml");
+    let rt = String::from_utf8(roundtrip).unwrap();
+    for expected in ["x &amp; y", "A &amp; B"] {
+        assert!(rt.contains(expected), "roundtrip lost {expected} in:\n{rt}");
+    }
+}

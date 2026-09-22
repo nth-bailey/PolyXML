@@ -17,10 +17,15 @@ This skill documents the high-performance design patterns and strict constraints
    - Never import `pyo3`, Python runtime types, or Python C-API dependencies in this crate.
 2. **Streaming Event Model**:
    - Avoid building DOM trees in memory during parsing.
-   - Stream tokens using `quick-xml::events::Event` (`Event::Start`, `Event::End`, `Event::Text`, `Event::Empty`).
+   - Stream tokens using `quick-xml::events::Event` (`Event::Start`, `Event::End`, `Event::Text`, `Event::Empty`, `Event::CData`, `Event::GeneralRef`).
 3. **Zero Intermediate Allocations**:
    - Parse integers, floats, and booleans directly from raw byte slices `&[u8]` using `lexical_core::parse` and custom byte parsers.
    - Use `smallvec::SmallVec` for small, bounded collections of attributes or namespace declarations on the stack.
+4. **Complete Event Coverage in Read Loops** (found 2026-09-22):
+   - quick-xml SPLITS character data: `a &amp; b` arrives as `Text` + `GeneralRef` + `Text`, and CDATA is its own event. Any accumulating loop (`parser.rs`, `transcoder.rs`, generated codecs) must handle `Text`/`CData`/`GeneralRef` or content silently vanishes.
+   - Resolve refs leniently like `parser.rs::append_general_ref`: `is_char_ref()`/`resolve_char_ref()` for `&#NN;`/`&#xNN;`, `escape::resolve_xml_entity()` for `amp`/`lt`/`gt`/`quot`/`apos`, else push the raw name (never error — a document the core accepts must not fail in generated code).
+   - Never enable `trim_text` on a reader that assembles split text: per-segment trimming loses spaces around refs (`x &amp; y` → `x&y`). Trim the assembled buffer once at element end (the transcoder `End` arm).
+   - Attribute values arrive raw too — always `escape::unescape` them (`parse_attributes`, the transcoder's Start/Empty attr arms).
 
 ## 2. Testing & Verification
 
@@ -63,7 +68,9 @@ Key mechanisms (regression-locked in `crates/polyxml-core/tests/test_issue51_aud
    `complexType`/`simpleType` is extracted as a uniquely named top-level type
    (`unique_type_name`) — its fields must never leak into the parent struct.
 4. **simpleContent**: `<xs:extension>` emits a `Text` field named `value`
-   carrying the extension base type.
+   carrying the extension base type (decoded/encoded by generated Rust codecs
+   via `emit_text_content_parse`/`emit_text_content_serialize` since
+   2026-09-22).
 5. **Pattern inheritance**: derived simple types append their base type's
    patterns (AND semantics) via `inherit_pattern_facets`; enum facet
    inheritance is intentionally skipped (`EnumDef` has no facets).
