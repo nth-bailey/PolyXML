@@ -33,6 +33,13 @@ POJO builders copy their list containers; nested objects remain shared. Record b
 use the canonical constructor and its facet checks. When builders or direct codecs
 are enabled, records flatten inherited fields into their components. POJO setters enforce
 supported facets, but a no-argument constructor permits a partially populated object.
+
+On schemas where most fields are optional and empty, POJO construction is cheaper
+than record construction: every empty optional still allocates an `Optional`
+component in the record's canonical constructor. The JMH suite measured POJO reads
+at roughly 1.8–2.3× record reads on its sparse 80-field message (73 fields empty);
+dense messages narrow the gap. Choose the representation for its ergonomics and
+benchmark your own schema before optimizing for this.
 This is not full XSD validation. The Jackson backend annotates fields explicitly and
 disables automatic bean-property discovery to avoid duplicate properties after XML
 names are converted to Java identifiers. It requires Jackson 2.x XML/annotations;
