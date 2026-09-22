@@ -128,28 +128,29 @@ If external compilers are installed on the development machine, run the E2E veri
 5. **Never Derive Type Identifiers from `qname.local` Directly**: all named-type
    identifiers must flow through the language's `type_ident` helper (see
    section 7) so cross-namespace collisions stay disambiguated.
-6. **`xsd:extension` Base-Field Flattening (Rust)**: Rust has no struct
-   inheritance, so `codegen/rust/mod.rs::flatten_fields(s, ir)` must inline the
-   whole base chain (root first, cycle-cut on revisit, most-derived declaration
-   of a schema name shadows inherited duplicates so the simpleContent `value`
-   field stays singular). It is required at EVERY field-iteration site:
-   `compute_types_with_lifetime`, `emit_struct`, the `has_patterns` probe, and
-   the decode `field_metas` build — `encode_xml`/`validate_patterns` follow
-   `field_metas` automatically. Missing the lifetime site emits `Cow<'a, str>`
-   in a struct without `<'a>` (generated code fails to compile); missing codec
-   sites silently drops inherited data. Backends with real inheritance (TS
+6. **`xsd:extension` Base-Field Flattening (Rust + Java records)**: targets
+   without inheritance must inline the base chain via the shared
+   `codegen/mod.rs::flatten_fields(s, ir)` (root first, cycle-cut on revisit,
+   most-derived declaration of a schema name shadows inherited duplicates so
+   the simpleContent `value` field stays singular). For Rust it is required at
+   EVERY field-iteration site: `compute_types_with_lifetime`, `emit_struct`,
+   the `has_patterns` probe, and the decode `field_metas` build —
+   `encode_xml`/`validate_patterns` follow `field_metas` automatically.
+   Missing the lifetime site emits `Cow<'a, str>` in a struct without `<'a>`
+   (generated code fails to compile); missing codec sites silently drops
+   inherited data. Java's `model_fields` returns the flattened list for every
+   mode — records declare it as components, classes re-slice the own-fields
+   tail because they `extends` instead. Backends with real inheritance (TS
    `extends`, Go embed, C++/C# `: Base`, Python `class Derived(Base)`) must
    NOT flatten — Python leans on `__dataclass_fields__` (see §11).
-7. **Known Extension/Text Gaps (found 2026-09-22, unfixed)**: Java record
-   mode (the default `--style record`) bypasses the `model_fields` base walk
-   via the `use_records && !emit_builder && !emit_direct_codec` guard in
-   `java/models.rs`, so derived records drop inherited fields (records cannot
-   `extends`, so they need flattening like Rust). Separately, generated Rust
-   codecs never consume `FieldKind::Text` — only a `#[polyxml(text)]` label
-   exists — so simpleContent structs always fail `from_xml` with
+7. **Known Gap (found 2026-09-22, unfixed)**: generated Rust codecs never
+   consume `FieldKind::Text` — only a `#[polyxml(text)]` label exists — so
+   simpleContent structs always fail `from_xml` with
    `Missing required field 'value'` and `encode_xml` omits the text; Go, Java,
-   C++, and C# codecs do handle Text. When touching either area, verify with a
-   two-level extension XSD plus a simpleContent XSD across all 7 backends.
+   C++, and C# codecs do handle Text. When touching this area, verify with a
+   simpleContent XSD across all 7 backends. (The companion Java gap — plain
+   record mode dropping inherited fields — was fixed the same day: records
+   cannot `extends`, so `model_fields` now always inlines `flatten_fields`.)
 
 ## 6. Java/C# Model Styles and Direct Java Codecs
 

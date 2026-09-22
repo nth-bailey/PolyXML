@@ -883,3 +883,163 @@ public class Main {{ public static void main(String[] args) throws Exception {{
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// xsd:extension in plain record mode (the default): records cannot `extends`,
+// so inherited fields must be inlined as components. Previously only the
+// builder/direct-codec modes ran the base walk, silently dropping inherited
+// fields from the default record output.
+// ---------------------------------------------------------------------------
+
+/// Slice one record's component header from `record Name(` through `) {`.
+fn record_header<'a>(code: &'a str, name: &str) -> &'a str {
+    let marker = format!("record {name}(");
+    let start = code
+        .find(&marker)
+        .unwrap_or_else(|| panic!("expected {marker:?} in:\n{code}"));
+    let rest = &code[start..];
+    let end = rest
+        .find(") {")
+        .unwrap_or_else(|| panic!("unterminated record {name}:\n{code}"));
+    &rest[..end + 3]
+}
+
+fn extension_schema() -> &'static str {
+    r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="urn:jx" xmlns:t="urn:jx" elementFormDefault="qualified">
+        <xs:complexType name="Base">
+            <xs:attribute name="id" type="xs:int" use="required"/>
+        </xs:complexType>
+        <xs:complexType name="Message">
+            <xs:complexContent>
+                <xs:extension base="t:Base">
+                    <xs:sequence>
+                        <xs:element name="text" type="xs:string"/>
+                        <xs:element name="count" type="xs:int" minOccurs="0"/>
+                    </xs:sequence>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
+        <xs:complexType name="Measurement">
+            <xs:simpleContent>
+                <xs:extension base="xs:decimal">
+                    <xs:attribute name="unit" type="xs:string"/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
+        <xs:complexType name="PreciseMeasurement">
+            <xs:simpleContent>
+                <xs:extension base="t:Measurement">
+                    <xs:attribute name="precision" type="xs:int"/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
+    </xs:schema>"#
+}
+
+#[test]
+fn test_java_plain_record_inlines_base_fields() {
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(extension_schema())
+        .expect("parse extension schema");
+    // Defaults: use_records=true with no builder and no direct codec — the
+    // mode that used to bypass the base walk entirely.
+    let generator = JavaCodegen::new(JavaOptions {
+        package_name: String::new(),
+        ..Default::default()
+    });
+    let models = generator.generate_module(&ir, "Models");
+
+    let message = record_header(&models, "Message");
+    assert!(
+        message.contains("int id"),
+        "record Message dropped the inherited id attribute:\n{message}"
+    );
+    assert!(
+        message.contains("String text"),
+        "own text missing:\n{message}"
+    );
+    assert!(message.contains("count"), "own count missing:\n{message}");
+    let id_at = message.find("int id").expect("id");
+    let text_at = message.find("String text").expect("text");
+    assert!(
+        id_at < text_at,
+        "base components must precede derived ones:\n{message}"
+    );
+
+    // simpleContent chain: `unit` inherited, `value` present exactly once —
+    // a suffixed duplicate would still match the " value" prefix below.
+    let derived = record_header(&models, "PreciseMeasurement");
+    assert!(
+        derived.contains("unit"),
+        "record PreciseMeasurement dropped the inherited unit attribute:\n{derived}"
+    );
+    assert!(
+        derived.contains("precision"),
+        "own precision missing:\n{derived}"
+    );
+    assert_eq!(
+        derived.matches(" value").count(),
+        1,
+        "`value` must be shadowed by the derived declaration, not duplicated:\n{derived}"
+    );
+}
+
+#[test]
+fn test_java_plain_record_extension_javac_execute() {
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(extension_schema())
+        .expect("parse extension schema");
+    let generator = JavaCodegen::new(JavaOptions {
+        package_name: String::new(),
+        ..Default::default()
+    });
+    let dir = tempdir().unwrap();
+    fs::write(
+        dir.path().join("Models.java"),
+        generator.generate_module(&ir, "Models"),
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("Main.java"),
+        r#"import java.util.Optional;
+public class Main {
+    public static void main(String[] args) {
+        var m = new Models.Message(5, "hello", Optional.of(3));
+        if (m.id() != 5) throw new AssertionError("inherited id attribute lost");
+        if (!m.text().equals("hello")) throw new AssertionError("own text lost");
+        if (m.count().orElse(-1) != 3) throw new AssertionError("own count lost");
+        var p = new Models.PreciseMeasurement(
+            Optional.of("km"),
+            new Models.Measurement(new java.math.BigDecimal("2.5"), Optional.empty()),
+            Optional.of(3));
+        if (!p.unit().orElse("").equals("km")) throw new AssertionError("inherited unit lost");
+        if (p.precision().orElse(-1) != 3) throw new AssertionError("own precision lost");
+    }
+}"#,
+    )
+    .unwrap();
+    if Command::new("javac").arg("-version").output().is_err() {
+        return;
+    }
+    let result = Command::new("javac")
+        .current_dir(dir.path())
+        .args(["Models.java", "Main.java"])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let result = Command::new("java")
+        .current_dir(dir.path())
+        .args(["-cp", ".", "Main"])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}

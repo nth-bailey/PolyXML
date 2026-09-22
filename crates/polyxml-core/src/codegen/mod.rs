@@ -22,7 +22,7 @@ pub use python::{PythonBackend, PythonCodegen, PythonOptions};
 pub use rust::{RustCodegen, RustOptions};
 pub use typescript::{TypeScriptBackend, TypeScriptCodegen, TypeScriptOptions};
 
-use crate::ir::{PrimitiveType, QName, SchemaIR, TypeRef};
+use crate::ir::{FieldDef, PrimitiveType, QName, SchemaIR, StructDef, TypeRef};
 
 #[derive(Debug, Error)]
 pub enum CodegenError {
@@ -628,4 +628,59 @@ pub(crate) fn patterned_simple<'a>(
         TypeRef::Boxed(inner) | TypeRef::List(inner) => patterned_simple(inner, ir),
         _ => None,
     }
+}
+
+/// Flattened field list for a struct: every field inherited through its
+/// `xsd:extension` base chain (root first), followed by the struct's own
+/// fields. Backends whose targets cannot represent the base chain directly —
+/// Rust structs and Java records have no inheritance — must emit this exact
+/// list; declaration, name allocation, and both codec directions must agree
+/// on it or derived types silently drop inherited data.
+///
+/// When a derived type re-declares a field whose schema name matches an
+/// inherited one (the `simpleContent` value field, for instance), the
+/// most-derived declaration wins and the inherited duplicate is skipped, so
+/// flattening never introduces suffixed `value2`-style duplicates. A base
+/// chain that revisits a type is cut at the revisit.
+pub(crate) fn flatten_fields<'a>(s: &'a StructDef, ir: &'a SchemaIR) -> Vec<&'a FieldDef> {
+    fn collect_bases<'a>(
+        s: &'a StructDef,
+        ir: &'a SchemaIR,
+        seen: &mut HashSet<QName>,
+        out: &mut Vec<&'a StructDef>,
+    ) {
+        if !seen.insert(s.qname.clone()) {
+            return;
+        }
+        if let Some(crate::ir::TypeDef::Struct(base)) =
+            s.base_type.as_ref().and_then(|q| ir.types.get(q))
+        {
+            collect_bases(base, ir, seen, out);
+            out.push(base);
+        }
+    }
+
+    let mut bases = Vec::new();
+    collect_bases(s, ir, &mut HashSet::new(), &mut bases);
+    if bases.is_empty() {
+        return s.fields.iter().collect();
+    }
+
+    // Claim schema names leaf-to-root so the most-derived declaration of a
+    // name shadows any inherited duplicate. Names are claimed per struct, not
+    // per field, so an attribute and an element sharing a name inside one
+    // struct are both preserved.
+    let mut claimed: HashSet<&str> = HashSet::new();
+    let mut groups: Vec<Vec<&FieldDef>> = Vec::new();
+    for st in std::iter::once(s).chain(bases.iter().rev().copied()) {
+        let group: Vec<&FieldDef> = st
+            .fields
+            .iter()
+            .filter(|f| !claimed.contains(f.name.as_str()))
+            .collect();
+        claimed.extend(group.iter().map(|f| f.name.as_str()));
+        groups.push(group);
+    }
+    groups.reverse();
+    groups.into_iter().flatten().collect()
 }
