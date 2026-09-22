@@ -62,7 +62,9 @@ try (var input = java.nio.file.Files.newInputStream(path)) {
 ```
 
 The stream overloads create and close their StAX reader/writer and leave ownership of
-the supplied stream with the caller. For reuse inside a larger stream, pass an
+the supplied stream with the caller. Their `XMLInputFactory`/`XMLOutputFactory` are
+cached in a per-thread field, so repeated calls do not repeat StAX provider lookup or
+security-property setup. For reuse inside a larger stream, pass an
 `XMLStreamReader` positioned at a start element or an `XMLStreamWriter`. Reading leaves
 the cursor at the matching end element. The writer overload accepting `local` and `ns`
 selects a particular root element when a type has multiple XML roots. Otherwise, the

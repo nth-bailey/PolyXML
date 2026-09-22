@@ -84,17 +84,25 @@ impl JavaCodegen {
             .find(|e| e.type_ref == TypeRef::Named(def.qname().clone()))
             .map(|e| &e.qname)
             .unwrap_or(def.qname());
-        let _ = writeln!(
-            out,
-            r#"    public static {name} readXml(InputStream input) throws XMLStreamException {{
+        out.push_str(
+            r#"    private static final ThreadLocal<XMLInputFactory> READER_FACTORY = ThreadLocal.withInitial(() -> {
         XMLInputFactory factory = XMLInputFactory.newFactory();
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         factory.setProperty("javax.xml.stream.isSupportingExternalEntities", false);
-        XMLStreamReader reader = factory.createXMLStreamReader(input);
+        return factory;
+    });
+    private static final ThreadLocal<XMLOutputFactory> WRITER_FACTORY =
+        ThreadLocal.withInitial(XMLOutputFactory::newFactory);
+"#,
+        );
+        let _ = writeln!(
+            out,
+            r#"    public static {name} readXml(InputStream input) throws XMLStreamException {{
+        XMLStreamReader reader = READER_FACTORY.get().createXMLStreamReader(input);
         try {{ return readXml(reader); }} finally {{ reader.close(); }}
     }}
     public static void writeXml({name} value, OutputStream output) throws XMLStreamException {{
-        XMLStreamWriter writer = XMLOutputFactory.newFactory().createXMLStreamWriter(output, "UTF-8");
+        XMLStreamWriter writer = WRITER_FACTORY.get().createXMLStreamWriter(output, "UTF-8");
         try {{ writeXml(value, writer); writer.flush(); }} finally {{ writer.close(); }}
     }}
     public static void writeXml({name} value, XMLStreamWriter writer) throws XMLStreamException {{

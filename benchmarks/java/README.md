@@ -57,9 +57,12 @@ annotation processing did not run. Use a clean build when switching the Panama p
   messages/s, or by total input bytes / 1,000,000 for input MB/s. Divide allocation
   bytes/op by `batchSize` for allocation per message. Output sizes can differ.
 - Read benchmarks include parsing and model construction. Write benchmarks use
-  preconstructed equivalent values and include output-buffer allocation. Direct
-  stream overloads create StAX factories per call; callers can instead reuse
-  configured factories and use the reader/writer overloads.
+  preconstructed equivalent values and include output-buffer allocation. The
+  generated stream overloads cache their StAX factories per thread, so
+  `directRead`/`directWrite` do not repeat provider lookup; `directReadReuse`
+  and `directWriteReuse` additionally share one factory across calls and create
+  only the reader/writer, which is the pattern for embedding a document in a
+  larger stream or reusing configured factories.
 - Mutation benchmarks parse, change status, and serialize; POJOs use one setter,
   records reconstruct all 80 components. They include the whole pipeline, not only
   the assignment. Native mutation is excluded because the binding has no setter API.
