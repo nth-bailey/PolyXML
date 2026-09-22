@@ -256,3 +256,58 @@ derived types inherit their base's patterns at parse time):
 - Color diagnostics respect `NO_COLOR`. When checking terminal color in a PTY,
   unset `NO_COLOR` in the test subprocess and use a color-capable `TERM`; test
   the opt-out separately. This development environment sets `NO_COLOR=1`.
+
+## 10. Pattern OR/AND Semantics & Enforcement (issue #54)
+
+W3C XSD combines `xs:pattern` two ways: multiple patterns **within one
+`<xs:restriction>` are OR'd**; patterns inherited **across derivation steps are
+AND'd**. The IR keeps `RestrictionFacets.patterns: Vec<String>` flat — the
+parser encodes each restriction's alternatives as ONE regex group:
+
+- `schema_parser` collapses `patterns.len() > 1` per restriction into
+  `(alt1)|(alt2)` (a singleton stays verbatim), then inheritance prepends/appends
+  each derived step's entry. Downstream code just ANDs the flat list — each
+  entry is already an OR-group. **Never** AND the pre-collapse alternatives.
+- Round-trip tests must serialize `RestrictionFacets`, not the whole
+  `SchemaIR`: `SchemaIR.types` is a `BTreeMap<QName, _>` and serde_json rejects
+  struct map keys ("key must be a string"). This is pre-existing and unrelated
+  to facets.
+
+Shared helpers in `codegen/mod.rs` (use them; don't re-derive):
+
+- `primitive_base(ty, ir)` — resolves a simple alias chain to its primitive,
+  cycle-safe. Patterned simple types must emit their **primitive** base (e.g.
+  `std::string`, not the alias) so validators/codecs operate on real scalars.
+- `patterned_simple(ty, ir)` — the patterned `SimpleTypeDef` behind a field
+  type, unwrapping `Boxed`/`List`.
+
+Per-language enforcement (all gated so unpatterned schemas stay byte-identical):
+
+- **Rust**: free `validate_{Type}_patterns(&str)` fns with `OnceLock<Regex>`
+  per pattern; structs gain `validate_patterns()` called from `from_xml`/
+  `to_xml`, attributes/text/empty-element paths call the free fn directly.
+- **Go**: `Validate() error` on patterned aliases (+ `UnmarshalText`/
+  `MarshalText` for string bases so `encoding/xml` enforces on read/write);
+  struct `Validate` recurses into fields, lists, and pointers. Imports
+  `regexp`/`fmt` only when patterns exist.
+- **C++**: free `validate_{Type}_patterns(std::string_view)` with function-local
+  `static const std::regex`; struct `validate()` calls it. **Inline field
+  expressions into the call** — binding `const auto& value = <field>;`
+  self-references when the field is named `value` (range-for over a member named
+  `value` is fine). `#include <regex>` is conditional on `ir`.
+- **Java**: `Pattern.compile(p).matcher(v).find()` (search semantics —
+  `Pattern.matches` anchors and is wrong for XSD); direct codecs resolve
+  patterned aliases through `primitive_base`.
+- **C#**: `Regex.IsMatch` **without** `^...$` anchors (XSD patterns are
+  unanchored searches); escape `\` before `"` in the pattern string.
+- **TypeScript**: one pattern → `pattern:` option (zod/valibot) or single
+  `Type.String({pattern})`; multiple → `AfterValidator`-equivalent AND via
+  `_polyxml_patterns` (Python) / `Type.Intersect([...])` (TypeBox — duplicating
+  the `pattern:` key silently kept only one). Escape `/` inside regex literals.
+
+Execution tests live in `crates/polyxml-core/tests/test_pattern_codegen.rs`
+(wired into `scripts/test_codegen.sh`): they **run** generated Go/C++/Rust/
+Python/Java/C# validators against values matching only one alternative, values
+satisfying two restriction steps, and reject lists/optionals carrying a bad
+element. The TS leg needs `POLYXML_TS_TEST_MODULES` pointing at a node_modules
+with `zod@3 valibot@1 @sinclair/typebox@0.34 typescript@5` and skips otherwise.

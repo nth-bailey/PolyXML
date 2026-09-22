@@ -598,3 +598,34 @@ fn generic_keywords() -> &'static HashSet<&'static str> {
             .collect()
     })
 }
+
+/// Resolve a simple alias to its underlying primitive without looping on cycles.
+pub(crate) fn primitive_base<'a>(ty: &'a TypeRef, ir: &'a SchemaIR) -> &'a TypeRef {
+    let mut current = ty;
+    let mut visited = HashSet::new();
+    while let TypeRef::Named(q) = current {
+        if !visited.insert(q) {
+            break;
+        }
+        match ir.types.get(q) {
+            Some(crate::ir::TypeDef::Simple(s)) => current = &s.base_type,
+            _ => break,
+        }
+    }
+    current
+}
+
+/// Patterned simple types referenced by fields, including list/boxed wrappers.
+pub(crate) fn patterned_simple<'a>(
+    ty: &TypeRef,
+    ir: &'a SchemaIR,
+) -> Option<&'a crate::ir::SimpleTypeDef> {
+    match ty {
+        TypeRef::Named(q) => match ir.types.get(q) {
+            Some(crate::ir::TypeDef::Simple(s)) if !s.facets.patterns.is_empty() => Some(s),
+            _ => None,
+        },
+        TypeRef::Boxed(inner) | TypeRef::List(inner) => patterned_simple(inner, ir),
+        _ => None,
+    }
+}

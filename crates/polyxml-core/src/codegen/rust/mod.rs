@@ -437,6 +437,16 @@ impl RustCodegen {
         } else {
             let _ = writeln!(out, "pub type {} = {};", type_name, base_type);
         }
+
+        if !s.facets.patterns.is_empty() {
+            let _ = writeln!(out, "pub fn validate_{}_patterns(value: &str) -> std::result::Result<(), &'static str> {{", type_name);
+            for (i, pattern) in s.facets.patterns.iter().enumerate() {
+                let _ = writeln!(out, "    static PATTERN_{}: std::sync::OnceLock<std::result::Result<regex::Regex, regex::Error>> = std::sync::OnceLock::new();", i);
+                let _ = writeln!(out, "    let pattern = PATTERN_{}.get_or_init(|| regex::Regex::new({:?})).as_ref().map_err(|_| \"unsupported pattern syntax\")?;", i, pattern);
+                out.push_str("    if !pattern.is_match(value) { return Err(\"pattern constraint failed\"); }\n");
+            }
+            out.push_str("    Ok(())\n}\n");
+        }
     }
 
     fn emit_enum(&self, out: &mut String, e: &EnumDef) {
@@ -998,6 +1008,10 @@ impl RustCodegen {
         types_with_lifetime: &HashSet<QName>,
         ir: &SchemaIR,
     ) {
+        let has_patterns = s
+            .fields
+            .iter()
+            .any(|f| super::patterned_simple(&f.type_ref, ir).is_some());
         let struct_name = type_ident(&s.qname);
         let needs_lifetime = types_with_lifetime.contains(&s.qname);
 
@@ -1204,7 +1218,11 @@ impl RustCodegen {
             out.push_str("        }\n");
         }
 
-        out.push_str("\n        Ok(Self {\n");
+        if has_patterns {
+            out.push_str("\n        let value = Self {\n");
+        } else {
+            out.push_str("\n        Ok(Self {\n");
+        }
         for meta in &field_metas {
             let is_list = meta.field.cardinality.is_list() || meta.field.type_ref.is_list();
             let is_optional = meta.field.cardinality.is_optional() || meta.field.nillable;
@@ -1223,7 +1241,11 @@ impl RustCodegen {
                 );
             }
         }
-        out.push_str("        })\n");
+        if has_patterns {
+            out.push_str("        };\n        value.validate_patterns()?;\n        Ok(value)\n");
+        } else {
+            out.push_str("        })\n");
+        }
         out.push_str("    }\n\n");
 
         out.push_str("    pub fn decode_xml_empty(start: &BytesStart<'_>) -> Result<Self> {\n");
@@ -1250,7 +1272,11 @@ impl RustCodegen {
             out.push_str("        }\n");
         }
 
-        out.push_str("\n        Ok(Self {\n");
+        if has_patterns {
+            out.push_str("\n        let value = Self {\n");
+        } else {
+            out.push_str("\n        Ok(Self {\n");
+        }
         for meta in &field_metas {
             let is_list = meta.field.cardinality.is_list() || meta.field.type_ref.is_list();
             let is_optional = meta.field.cardinality.is_optional() || meta.field.nillable;
@@ -1295,7 +1321,11 @@ impl RustCodegen {
                 );
             }
         }
-        out.push_str("        })\n");
+        if has_patterns {
+            out.push_str("        };\n        value.validate_patterns()?;\n        Ok(value)\n");
+        } else {
+            out.push_str("        })\n");
+        }
         out.push_str("    }\n\n");
 
         out.push_str("    pub fn to_xml(&self) -> Result<Vec<u8>> {\n");
@@ -1340,7 +1370,41 @@ impl RustCodegen {
             out.push_str("    }\n\n");
         }
 
+        if has_patterns {
+            out.push_str("    pub fn validate_patterns(&self) -> Result<()> {\n");
+            for meta in &field_metas {
+                let f = &meta.field;
+                if super::patterned_simple(&f.type_ref, ir).is_none() {
+                    continue;
+                }
+                if f.cardinality.is_list() || f.type_ref.is_list() {
+                    let _ = writeln!(out, "        for value in &self.{} {{", meta.rust_name);
+                    self.emit_pattern_check(out, f, "&value.to_string()", ir);
+                    out.push_str("        }\n");
+                } else if f.cardinality.is_optional() || f.nillable {
+                    let _ = writeln!(
+                        out,
+                        "        if let Some(value) = &self.{} {{",
+                        meta.rust_name
+                    );
+                    self.emit_pattern_check(out, f, "&value.to_string()", ir);
+                    out.push_str("        }\n");
+                } else {
+                    self.emit_pattern_check(
+                        out,
+                        f,
+                        &format!("&self.{}.to_string()", meta.rust_name),
+                        ir,
+                    );
+                }
+            }
+
+            out.push_str("        Ok(())\n    }\n");
+        }
         out.push_str("    pub fn encode_xml<W: std::io::Write>(&self, writer: &mut Writer<W>, tag_name: Option<&str>) -> Result<()> {\n");
+        if has_patterns {
+            out.push_str("        self.validate_patterns()?;\n");
+        }
         let _ = writeln!(
             out,
             "        let tag = tag_name.unwrap_or(\"{}\");",
@@ -1365,6 +1429,12 @@ impl RustCodegen {
         out.push_str("}\n");
     }
 
+    fn emit_pattern_check(&self, out: &mut String, field: &FieldDef, value: &str, ir: &SchemaIR) {
+        if let Some(simple) = super::patterned_simple(&field.type_ref, ir) {
+            let _ = writeln!(out, "        validate_{}_patterns({}).map_err(|message| PolyXmlError::FacetViolation {{ field: {:?}.into(), expected: message.into(), actual: ({}).to_string() }})?;", type_ident(&simple.qname), value, field.name, value);
+        }
+    }
+
     fn emit_attr_parse(&self, out: &mut String, field: &FieldDef, rust_name: &str, ir: &SchemaIR) {
         if self.field_is_string(&field.type_ref, ir) {
             out.push_str("                    let s = attr.value.as_ref();\n");
@@ -1375,6 +1445,7 @@ impl RustCodegen {
             out.push_str("                        Cow::Owned(s) => Cow::Owned(s),\n");
             out.push_str("                    };\n");
             self.emit_facet_checks(out, field, "val");
+            self.emit_pattern_check(out, field, "&val", ir);
             if self.options.zero_copy {
                 let _ = writeln!(out, "                    var_{} = Some(val);", rust_name);
             } else {
@@ -1426,6 +1497,7 @@ impl RustCodegen {
                 field.xml_name
             );
             self.emit_facet_checks(out, field, "text");
+            self.emit_pattern_check(out, field, "&text", ir);
             if is_list {
                 let _ = writeln!(out, "                        var_{}.push(text);", rust_name);
             } else {
@@ -1532,6 +1604,7 @@ impl RustCodegen {
         let is_boxed = field.is_cycle_cut || field.type_ref.is_boxed();
 
         if self.field_is_string(&field.type_ref, ir) {
+            self.emit_pattern_check(out, field, "\"\"", ir);
             if self.options.zero_copy {
                 if is_list {
                     let _ = writeln!(

@@ -219,7 +219,13 @@ impl TypeScriptCodegen {
         let ordered = self.order_types(ir);
         for type_def in ordered {
             match type_def {
-                TypeDef::Simple(s) => self.emit_simple_type(&mut out, s),
+                TypeDef::Simple(s) => {
+                    let mut simple = s.clone();
+                    if !simple.facets.patterns.is_empty() {
+                        simple.base_type = super::primitive_base(&simple.base_type, ir).clone();
+                    }
+                    self.emit_simple_type(&mut out, &simple)
+                }
                 TypeDef::Enum(e) => self.emit_enum(&mut out, e),
                 TypeDef::Union(u) => self.emit_union(&mut out, u),
                 TypeDef::Struct(s) => self.emit_struct(&mut out, s, ir, &recursive_types),
@@ -851,7 +857,7 @@ impl TypeScriptCodegen {
                 actions.push(format!("v.length({})", length));
             }
             for pat in &facets.patterns {
-                actions.push(format!("v.regex(/{}/)", pat));
+                actions.push(format!("v.regex(/{}/)", pat.replace('/', "\\/")));
             }
         }
         if is_num {
@@ -920,8 +926,8 @@ impl TypeScriptCodegen {
             if let Some(length) = facets.length {
                 opts.push(format!("minLength: {}, maxLength: {}", length, length));
             }
-            for pat in &facets.patterns {
-                opts.push(format!("pattern: {:?}", pat));
+            if facets.patterns.len() == 1 {
+                opts.push(format!("pattern: {:?}", facets.patterns[0]));
             }
         }
         if is_num {
@@ -947,6 +953,14 @@ impl TypeScriptCodegen {
                 expr.push_str(&opts_str);
                 expr.push(')');
             }
+        }
+        if is_string && facets.patterns.len() > 1 {
+            let schemas = facets
+                .patterns
+                .iter()
+                .map(|p| format!("Type.String({{ pattern: {:?} }})", p))
+                .collect::<Vec<_>>();
+            *expr = format!("Type.Intersect([{}, {}])", expr, schemas.join(", "));
         }
     }
 

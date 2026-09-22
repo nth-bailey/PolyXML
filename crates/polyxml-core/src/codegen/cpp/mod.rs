@@ -274,7 +274,7 @@ impl CppCodegen {
         writeln!(out, "// Target: Modern C++20/C++23 (Header-Only)").unwrap();
         writeln!(out, "#pragma once\n").unwrap();
 
-        self.emit_includes(&mut out);
+        self.emit_includes(&mut out, ir);
 
         let ns = to_cpp_namespace(&self.options.namespace);
         writeln!(out, "namespace {} {{\n", ns).unwrap();
@@ -312,7 +312,7 @@ impl CppCodegen {
         writeln!(out, "// Target: Modern C++20/C++23 Module Interface Unit").unwrap();
         writeln!(out, "module;\n").unwrap();
 
-        self.emit_includes(&mut out);
+        self.emit_includes(&mut out, ir);
 
         let mod_id = if module_name.is_empty() {
             "polyxml.models"
@@ -457,7 +457,19 @@ endif()
         )
     }
 
-    fn emit_includes(&self, out: &mut String) {
+    fn emit_includes(&self, out: &mut String, ir: &SchemaIR) {
+        if self.options.validate_facets
+            && ir.types.values().any(|t| match t {
+                TypeDef::Simple(s) => !s.facets.patterns.is_empty(),
+                TypeDef::Struct(s) => s
+                    .fields
+                    .iter()
+                    .any(|f| f.facets.as_ref().is_some_and(|f| !f.patterns.is_empty())),
+                _ => false,
+            })
+        {
+            writeln!(out, "#include <regex>").unwrap();
+        }
         writeln!(out, "#include <concepts>").unwrap();
         writeln!(out, "#include <cstdint>").unwrap();
         writeln!(out, "#include <memory>").unwrap();
@@ -601,7 +613,7 @@ concept XmlModel = requires(T a) {{
         // Emit simple type aliases first
         for type_def in ir.types.values() {
             if let TypeDef::Simple(simple) = type_def {
-                self.emit_simple_type(out, simple);
+                self.emit_simple_type(out, simple, ir);
             }
         }
 
@@ -626,15 +638,27 @@ concept XmlModel = requires(T a) {{
         }
     }
 
-    fn emit_simple_type(&self, out: &mut String, simple: &SimpleTypeDef) {
+    fn emit_simple_type(&self, out: &mut String, simple: &SimpleTypeDef, ir: &SchemaIR) {
         if let Some(ref doc) = simple.documentation {
             for line in doc.lines() {
                 writeln!(out, "/// {}", line).unwrap();
             }
         }
         let type_name = type_ident(&simple.qname);
-        let base_type = self.context.map_type_ref(&simple.base_type);
+        let base = if simple.facets.patterns.is_empty() {
+            &simple.base_type
+        } else {
+            super::primitive_base(&simple.base_type, ir)
+        };
+        let base_type = self.context.map_type_ref(base);
         writeln!(out, "using {} = {};\n", type_name, base_type).unwrap();
+        if self.options.validate_facets && !simple.facets.patterns.is_empty() {
+            writeln!(out, "[[nodiscard]] inline bool validate_{}_patterns(std::string_view value) noexcept {{\n    try {{", type_name).unwrap();
+            for (i, pattern) in simple.facets.patterns.iter().enumerate() {
+                writeln!(out, "        static const std::regex pattern_{}({:?});\n        if (!std::regex_search(value.begin(), value.end(), pattern_{})) return false;", i, pattern, i).unwrap();
+            }
+            writeln!(out, "        return true;\n    }} catch (const std::regex_error&) {{ return false; }}\n}}\n").unwrap();
+        }
     }
 
     fn emit_enum(&self, out: &mut String, enum_def: &EnumDef) {
@@ -833,7 +857,7 @@ concept XmlModel = requires(T a) {{
         }
 
         if self.options.validate_facets {
-            self.emit_struct_validator(out, s);
+            self.emit_struct_validator(out, s, ir);
         }
 
         writeln!(out, "}};\n").unwrap();
@@ -905,11 +929,39 @@ concept XmlModel = requires(T a) {{
         }
     }
 
-    fn emit_struct_validator(&self, out: &mut String, s: &StructDef) {
+    fn emit_struct_validator(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
         writeln!(out, "\n    [[nodiscard]] bool validate() const noexcept {{").unwrap();
 
         let mut has_checks = false;
         for f in &s.fields {
+            if let Some(simple) = super::patterned_simple(&f.type_ref, ir) {
+                let field = to_cpp_field_name(&f.name);
+                let name = type_ident(&simple.qname);
+                let is_string = self
+                    .context
+                    .map_type_ref(super::primitive_base(&simple.base_type, ir))
+                    == "std::string";
+                let render = |target: String| {
+                    if is_string {
+                        target
+                    } else {
+                        format!("std::to_string({target})")
+                    }
+                };
+                if f.cardinality.is_list() || f.type_ref.is_list() {
+                    writeln!(out, "        for (const auto& value : {}) {{ if (!validate_{}_patterns({})) return false; }}", field, name, render("value".into())).unwrap();
+                } else if f.cardinality.is_optional() || f.nillable {
+                    writeln!(out, "        if ({}.has_value()) {{ if (!validate_{}_patterns({})) return false; }}", field, name, render(format!("*{}", field))).unwrap();
+                } else {
+                    writeln!(
+                        out,
+                        "        if (!validate_{}_patterns({})) return false;",
+                        name,
+                        render(field.clone())
+                    )
+                    .unwrap();
+                }
+            }
             if let Some(ref facets) = f.facets {
                 let field_name = to_cpp_field_name(&f.name);
                 let is_opt = f.cardinality.is_optional() || f.nillable;
@@ -943,6 +995,9 @@ concept XmlModel = requires(T a) {{
         target: &str,
         indent: &str,
     ) {
+        for pattern in &facets.patterns {
+            writeln!(out, "{}try {{ static const std::regex pattern({:?}); if (!std::regex_search({}, pattern)) return false; }} catch (const std::regex_error&) {{ return false; }}", indent, pattern, target).unwrap();
+        }
         if let Some(min_len) = facets.min_length {
             writeln!(
                 out,

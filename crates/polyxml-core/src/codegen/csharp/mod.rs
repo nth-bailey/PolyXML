@@ -299,7 +299,11 @@ impl CSharpCodegen {
             if let TypeDef::Enum(e) = def {
                 self.emit_enum(&mut out, e, indent);
             } else if let TypeDef::Simple(s) = def {
-                self.emit_simple(&mut out, s, indent);
+                let mut simple = s.clone();
+                if !simple.facets.patterns.is_empty() {
+                    simple.base_type = super::primitive_base(&simple.base_type, ir).clone();
+                }
+                self.emit_simple(&mut out, &simple, indent);
             }
         }
 
@@ -902,10 +906,10 @@ impl CSharpCodegen {
             .unwrap();
         }
         for pattern in &facets.patterns {
-            let escaped = pattern.replace('"', "\\\"");
+            let escaped = pattern.replace('\\', "\\\\").replace('"', "\\\"");
             writeln!(
                 out,
-                "{}if (!Regex.IsMatch({}.ToString() ?? \"\", \"^{}$\")) yield return new ValidationResult(\"{} does not match pattern {}\", [nameof({})]);",
+                "{}if (!Regex.IsMatch({}.ToString() ?? \"\", \"{}\")) yield return new ValidationResult(\"{} does not match pattern {}\", [nameof({})]);",
                 indent, target, escaped, target, escaped, target
             )
             .unwrap();

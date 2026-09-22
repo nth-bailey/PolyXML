@@ -394,7 +394,13 @@ impl JavaCodegen {
             }
             TypeDef::Simple(s) => {
                 let name = type_ident(&s.qname);
-                self.emit_simple(&mut out, s, &name, indent);
+                {
+                    let mut simple = s.clone();
+                    if !simple.facets.patterns.is_empty() {
+                        simple.base_type = super::primitive_base(&simple.base_type, ir).clone();
+                    }
+                    self.emit_simple(&mut out, &simple, &name, indent);
+                }
                 name
             }
         };
@@ -829,7 +835,7 @@ impl JavaCodegen {
                 }
                 for pat in &facets.patterns {
                     checks.push(format!(
-                        "{}.ifPresent(v -> {{ if (!Pattern.matches({:?}, v)) throw new IllegalArgumentException(\"{} does not match pattern: \" + {:?}); }});",
+                        "{}.ifPresent(v -> {{ if (!Pattern.compile({:?}).matcher(v).find()) throw new IllegalArgumentException(\"{} does not match pattern: \" + {:?}); }});",
                         var_name, pat, var_name, pat
                     ));
                 }
@@ -858,7 +864,7 @@ impl JavaCodegen {
                 }
                 for pat in &facets.patterns {
                     checks.push(format!(
-                        "if (!Pattern.matches({:?}, {})) throw new IllegalArgumentException(\"{} does not match pattern: \" + {:?});",
+                        "if (!Pattern.compile({:?}).matcher({}).find()) throw new IllegalArgumentException(\"{} does not match pattern: \" + {:?});",
                         pat, var_name, var_name, pat
                     ));
                 }

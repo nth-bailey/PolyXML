@@ -53,7 +53,14 @@ impl JavaCodegen {
                         }
                     }
                 }
-                TypeDef::Simple(s) => check_type(&s.base_type, ir)?,
+                TypeDef::Simple(s) => check_type(
+                    if s.facets.patterns.is_empty() {
+                        &s.base_type
+                    } else {
+                        crate::codegen::primitive_base(&s.base_type, ir)
+                    },
+                    ir,
+                )?,
                 TypeDef::Union(u) => {
                     for b in &u.branches {
                         check_type(&b.type_ref, ir)?;
@@ -151,7 +158,15 @@ impl JavaCodegen {
         match def {
             TypeDef::Struct(s) => self.emit_read_struct(&mut out, s, ir),
             TypeDef::Simple(s) => {
-                let expr = self.parse_scalar(&s.base_type, "reader.getElementText()", ir);
+                let expr = self.parse_scalar(
+                    if s.facets.patterns.is_empty() {
+                        &s.base_type
+                    } else {
+                        crate::codegen::primitive_base(&s.base_type, ir)
+                    },
+                    "reader.getElementText()",
+                    ir,
+                );
                 let _ = writeln!(out, "            return new {name}({expr});");
             }
             TypeDef::Enum(_) => {
@@ -186,7 +201,15 @@ impl JavaCodegen {
                 } else {
                     "value.getValue()"
                 };
-                let expr = self.format_scalar(&s.base_type, access, ir);
+                let expr = self.format_scalar(
+                    if s.facets.patterns.is_empty() {
+                        &s.base_type
+                    } else {
+                        crate::codegen::primitive_base(&s.base_type, ir)
+                    },
+                    access,
+                    ir,
+                );
                 let _ = writeln!(out, "        writer.writeCharacters({expr});");
             }
             TypeDef::Union(u) => {
@@ -432,7 +455,15 @@ impl JavaCodegen {
                 Some(TypeDef::Simple(s)) => format!(
                     "new {}({})",
                     type_ident(q),
-                    self.parse_scalar(&s.base_type, raw, ir)
+                    self.parse_scalar(
+                        if s.facets.patterns.is_empty() {
+                            &s.base_type
+                        } else {
+                            crate::codegen::primitive_base(&s.base_type, ir)
+                        },
+                        raw,
+                        ir
+                    )
                 ),
                 _ => "null".into(),
             },
@@ -468,7 +499,7 @@ impl JavaCodegen {
             TypeRef::List(t)=>format!("{value}.stream().map(item -> {}).collect(java.util.stream.Collectors.joining(\" \"))",self.format_scalar(t,"item",ir)),
             TypeRef::Named(q)=>match ir.types.get(q) {
                 Some(TypeDef::Enum(_))=>format!("{value}.getValue()"),
-                Some(TypeDef::Simple(s))=>self.format_scalar(&s.base_type,&format!("{value}.{}",if self.options.use_records {"value()"}else{"getValue()"}),ir),
+                Some(TypeDef::Simple(s))=>self.format_scalar(if s.facets.patterns.is_empty() { &s.base_type } else { crate::codegen::primitive_base(&s.base_type, ir) },&format!("{value}.{}",if self.options.use_records {"value()"}else{"getValue()"}),ir),
                 _=>format!("String.valueOf({value})"),
             },
             TypeRef::Primitive(PrimitiveType::Base64Binary)=>format!("java.util.Base64.getEncoder().encodeToString({value})"),

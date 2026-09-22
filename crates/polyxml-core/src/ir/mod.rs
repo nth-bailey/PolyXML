@@ -249,6 +249,9 @@ pub struct RestrictionFacets {
     pub min_length: Option<usize>,
     pub max_length: Option<usize>,
     pub length: Option<usize>,
+    /// AND-combined derivation steps. Each entry is one regex, with alternatives
+    /// from the same restriction normalized to `(first)|(second)` (OR).
+    /// A singleton restriction retains its original regex verbatim.
     pub patterns: Vec<String>,
     pub enumerations: Vec<String>,
     pub white_space: Option<String>,
