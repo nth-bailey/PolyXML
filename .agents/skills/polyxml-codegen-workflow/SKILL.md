@@ -287,8 +287,38 @@ derived types inherit their base's patterns at parse time):
   `--zero-copy=false --feature zero-copy` is still rejected as a contradiction.
 - Defaults remain unchanged, including C# record classes, Rust zero-copy, and
   Python slots/kw-only. Expose only implemented styles/features. The issue's
-  future examples (phf, aot, Python plain class, C# mutable struct) are not yet
+  future examples (aot, Python plain class, C# mutable struct) are not yet
   generator capabilities.
+- Rust features today: `zero-copy`, `rkyv`, `phf`. `--feature phf` (issue #49)
+  emits a per-struct `__{Struct}ElementId` enum plus a
+  `__{STRUCT}_ELEMENT_DISPATCH: ::phf::Map<&'static str, ...>` static built with
+  `phf_codegen`, and routes both `Event::Start` and `Event::Empty` child arms
+  through `.get(e.local_name().as_ref())`; union branch tags all map to one
+  variant. Default (feature off) output must stay byte-identical — lock both
+  directions in the codegen test (`test_rust_phf_dispatch_emission`). Attr,
+  union, and enum-value `match` sites are intentionally left as `match`.
+  Consuming crates need `phf = "0.14"`. Benchmarks/docs live in
+  `benches/tag_dispatch.rs` (regenerate fixtures via
+  `scripts/gen_tag_dispatch_fixtures.py`) and
+  `docs/benchmarks/rust-phf-dispatch.md`; hardware counters on hosts without
+  the `perf` binary go through `scripts/perf_stat.sh` (`perf_event_open`).
+- **Cap heavy builds/benches with `scripts/memcap.sh`.** Benchmark entry
+  points (`benchmarks/run_all.sh`, `benchmarks/cli/benchmark.sh`,
+  `scripts/perf_stat.sh`) already re-exec through it; ad-hoc
+  `cargo bench`/`--release` builds of large generated crates should be
+  wrapped too. It caps the tree at `POLYXML_MEMCAP_PCT` (default 60%) of
+  available RAM in a systemd scope (`MemorySwapMax=0`, `ulimit -v`
+  fallback): an over-limit build gets OOM-killed inside its cgroup
+  (exit 137) instead of freezing the host — uncapped 1500-element builds
+  froze a 7.7-GiB WSL box repeatedly before this guard existed. Wrap
+  measure/compile-size scripts per build step (own scope each) so one
+  OOM kill doesn't abort the rest; set `POLYXML_MEMCAP_LEVEL` is automatic,
+  `POLYXML_MEMCAP_DISABLE=1` opts out. Known datum: generated consumer
+  crates at **600 and 1500 elements need >=3.2 GiB for a single `rustc`**
+  (both the `match` and `phf` variants — it scales with field count, not
+  match-arm count), so compile-time/size measurements at those tiers are
+  deferred to a follow-up issue and must not be retried uncapped on
+  8-GiB-class hosts.
 - Shared CLI options apply to every `--lang`, not just the preceding one. Use
   per-target manifest entries for heterogeneous configurations. Schema-less
   `generate` must not silently ignore generation overrides.

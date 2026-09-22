@@ -57,10 +57,11 @@ EOF
 
 echo -e "${BLUE}==> Testing code generation across all 7 target ecosystems...${NC}"
 
-# 1. Rust (zero-copy + rkyv)
-echo -n "  • Rust (--feature zero-copy,rkyv)... "
-"${POLYXML_BIN}" generate --lang rust --feature zero-copy,rkyv --out "${TMP_DIR}/rs" "${SCHEMA_FILE}" >/dev/null
+# 1. Rust (zero-copy + rkyv + perfect-hash dispatch)
+echo -n "  • Rust (--feature zero-copy,rkyv,phf)... "
+"${POLYXML_BIN}" generate --lang rust --feature zero-copy,rkyv,phf --out "${TMP_DIR}/rs" "${SCHEMA_FILE}" >/dev/null
 test -f "${TMP_DIR}/rs/test_schema.rs"
+grep -q "ELEMENT_DISPATCH" "${TMP_DIR}/rs/test_schema.rs"
 echo -e "${GREEN}OK${NC}"
 
 # 2. Python (dataclass & pydantic)

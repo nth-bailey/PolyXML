@@ -23,6 +23,7 @@ pub(crate) fn target_options(target: &config::TargetConfig) -> TargetEmitOptions
         builder: None,
         codec: None,
         rkyv: None,
+        phf: None,
         custom_header: target.custom_header.as_deref(),
     }
 }
@@ -100,7 +101,7 @@ impl<'a> TargetEmitOptions<'a> {
             return Err(invalid("slots and kw_only are Python-only options."));
         }
         let supported_features: &[&str] = match target {
-            "rust" => &["zero-copy", "rkyv"],
+            "rust" => &["zero-copy", "rkyv", "phf"],
             "java" => &["builder", "direct-codec"],
             "python" => &["slots", "kw-only"],
             _ => &[],
@@ -112,6 +113,7 @@ impl<'a> TargetEmitOptions<'a> {
             let option = match feature.as_str() {
                 "zero-copy" => &mut self.zero_copy,
                 "rkyv" => &mut self.rkyv,
+                "phf" => &mut self.phf,
                 "builder" => &mut self.builder,
                 "slots" => &mut self.slots,
                 "kw-only" => &mut self.kw_only,

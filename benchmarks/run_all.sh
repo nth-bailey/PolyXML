@@ -8,6 +8,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Cap the whole run at POLYXML_MEMCAP_PCT (default 60%) of available RAM via
+# scripts/memcap.sh: release builds + Criterion can exhaust small hosts and
+# freeze them. The LEVEL guard makes the re-exec idempotent (no loop) on
+# hosts without a systemd user manager; POLYXML_MEMCAP_DISABLE=1 opts out.
+if [ -z "${POLYXML_MEMCAP_LEVEL:-}" ]; then
+    exec "${ROOT_DIR}/scripts/memcap.sh" "${BASH_SOURCE[0]}" "$@"
+fi
+
 echo "======================================================================"
 echo "⚡ PolyXML Performance & Benchmarking Suite"
 echo "======================================================================"

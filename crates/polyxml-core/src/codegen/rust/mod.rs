@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Write as FmtWrite;
 
 use heck::{AsPascalCase, AsSnakeCase};
@@ -30,6 +30,10 @@ pub struct RustOptions {
     pub emit_codecs: bool,
     /// Derive rkyv::{Archive, Serialize, Deserialize} zero-copy wire format serialization (default: false).
     pub emit_rkyv: bool,
+    /// Emit compile-time perfect-hash (phf) element-tag dispatch instead of a
+    /// string `match` (default: false). Generated crates must depend on `phf`.
+    #[serde(default)]
+    pub phf: bool,
     /// Custom header text to prepend to generated files (default: None).
     pub custom_header: Option<String>,
 }
@@ -44,6 +48,7 @@ impl Default for RustOptions {
             emit_root_aliases: true,
             emit_codecs: true,
             emit_rkyv: false,
+            phf: false,
             custom_header: None,
         }
     }
@@ -1056,6 +1061,72 @@ impl RustCodegen {
             format!("impl {}", struct_name)
         };
 
+        // --feature phf: emit a module-level perfect-hash dispatch table (enum
+        // + static, built with phf_codegen) ahead of the impl and route both
+        // child-event match sites through it. Fully gated so default output
+        // stays byte-identical.
+        let phf_enum_name = format!("__{}ElementId", struct_name);
+        let phf_static_name = format!("__{}_ELEMENT_DISPATCH", struct_name.to_uppercase());
+        let mut phf_arms: Vec<(String, String, Vec<String>)> = Vec::new();
+        if self.options.phf {
+            let mut seen_fields = HashSet::new();
+            let mut seen_variants = HashSet::new();
+            for field in flatten_fields(s, ir) {
+                // Uniquify over EVERY field (attrs/text included) so names stay
+                // in lockstep with field_metas and struct-field emission; a
+                // non-element sharing a name with a later element must still
+                // consume its slot or dispatch lookups miss and fall back to a
+                // bare-string arm inside the Option match (won't compile).
+                let rust_name = self.unique_rust_field_name(&field.name, &mut seen_fields);
+                if field.kind != FieldKind::Element {
+                    continue;
+                }
+                let tags: Vec<String> = match self.resolve_union_def(&field.type_ref, ir) {
+                    Some(u) => u.branches.iter().map(|b| b.xml_name.clone()).collect(),
+                    None => vec![field.xml_name.clone()],
+                };
+                let base_variant = to_rust_variant_identifier(rust_name.trim_start_matches("r#"));
+                let mut variant = base_variant.clone();
+                let mut n = 2;
+                while !seen_variants.insert(variant.clone()) {
+                    variant = format!("{}{}", base_variant, n);
+                    n += 1;
+                }
+                phf_arms.push((rust_name, variant, tags));
+            }
+            if !phf_arms.is_empty() {
+                out.push('\n');
+                let _ = writeln!(
+                    out,
+                    "/// Perfect-hash element dispatch id for `{struct_name}` (`--feature phf`)."
+                );
+                out.push_str("#[derive(Clone, Copy)]\n");
+                let _ = writeln!(out, "enum {} {{", phf_enum_name);
+                for (_, variant, _) in &phf_arms {
+                    let _ = writeln!(out, "    {},", variant);
+                }
+                out.push_str("}\n\n");
+                let mut map = phf_codegen::Map::new();
+                for (_, variant, tags) in &phf_arms {
+                    for tag in tags {
+                        map.entry(tag.as_str(), format!("{}::{}", phf_enum_name, variant));
+                    }
+                }
+                let _ = writeln!(
+                    out,
+                    "static {}: ::phf::Map<&'static str, {}> = {};",
+                    phf_static_name,
+                    phf_enum_name,
+                    map.build()
+                );
+                out.push('\n');
+            }
+        }
+        let phf_variant_of: HashMap<&str, &str> = phf_arms
+            .iter()
+            .map(|(rust_name, variant, _)| (rust_name.as_str(), variant.as_str()))
+            .collect();
+
         out.push('\n');
         let _ = writeln!(out, "{} {{", impl_header);
 
@@ -1154,7 +1225,17 @@ impl RustCodegen {
         if !elem_fields.is_empty() {
             out.push_str("\n        loop {\n");
             out.push_str("            match reader.read_event()? {\n");
-            out.push_str("                Event::Start(e) => match e.local_name().as_ref() {\n");
+            if phf_variant_of.is_empty() {
+                out.push_str(
+                    "                Event::Start(e) => match e.local_name().as_ref() {\n",
+                );
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                Event::Start(e) => match {}.get(e.local_name().as_ref()) {{",
+                    phf_static_name
+                );
+            }
 
             for meta in &elem_fields {
                 if let Some(union_def) = self.resolve_union_def(&meta.field.type_ref, ir) {
@@ -1163,7 +1244,16 @@ impl RustCodegen {
                         .iter()
                         .map(|b| format!("\"{}\"", b.xml_name))
                         .collect();
-                    let _ = writeln!(out, "                    {} => {{", branch_tags.join(" | "));
+                    if let Some(variant) = phf_variant_of.get(meta.rust_name.as_str()) {
+                        let _ = writeln!(
+                            out,
+                            "                    Some(&{}::{}) => {{",
+                            phf_enum_name, variant
+                        );
+                    } else {
+                        let _ =
+                            writeln!(out, "                    {} => {{", branch_tags.join(" | "));
+                    }
                     let union_name = type_ident(&union_def.qname);
                     let _ = writeln!(
                         out,
@@ -1186,7 +1276,16 @@ impl RustCodegen {
                     }
                     out.push_str("                    }\n");
                 } else {
-                    let _ = writeln!(out, "                    \"{}\" => {{", meta.field.xml_name);
+                    if let Some(variant) = phf_variant_of.get(meta.rust_name.as_str()) {
+                        let _ = writeln!(
+                            out,
+                            "                    Some(&{}::{}) => {{",
+                            phf_enum_name, variant
+                        );
+                    } else {
+                        let _ =
+                            writeln!(out, "                    \"{}\" => {{", meta.field.xml_name);
+                    }
                     self.emit_element_parse(
                         out,
                         &meta.field,
@@ -1203,7 +1302,17 @@ impl RustCodegen {
             out.push_str("                    }\n");
             out.push_str("                },\n");
 
-            out.push_str("                Event::Empty(e) => match e.local_name().as_ref() {\n");
+            if phf_variant_of.is_empty() {
+                out.push_str(
+                    "                Event::Empty(e) => match e.local_name().as_ref() {\n",
+                );
+            } else {
+                let _ = writeln!(
+                    out,
+                    "                Event::Empty(e) => match {}.get(e.local_name().as_ref()) {{",
+                    phf_static_name
+                );
+            }
             for meta in &elem_fields {
                 if let Some(union_def) = self.resolve_union_def(&meta.field.type_ref, ir) {
                     let branch_tags: Vec<_> = union_def
@@ -1211,7 +1320,16 @@ impl RustCodegen {
                         .iter()
                         .map(|b| format!("\"{}\"", b.xml_name))
                         .collect();
-                    let _ = writeln!(out, "                    {} => {{", branch_tags.join(" | "));
+                    if let Some(variant) = phf_variant_of.get(meta.rust_name.as_str()) {
+                        let _ = writeln!(
+                            out,
+                            "                    Some(&{}::{}) => {{",
+                            phf_enum_name, variant
+                        );
+                    } else {
+                        let _ =
+                            writeln!(out, "                    {} => {{", branch_tags.join(" | "));
+                    }
                     let union_name = type_ident(&union_def.qname);
                     let _ = writeln!(
                         out,
@@ -1234,7 +1352,16 @@ impl RustCodegen {
                     }
                     out.push_str("                    }\n");
                 } else {
-                    let _ = writeln!(out, "                    \"{}\" => {{", meta.field.xml_name);
+                    if let Some(variant) = phf_variant_of.get(meta.rust_name.as_str()) {
+                        let _ = writeln!(
+                            out,
+                            "                    Some(&{}::{}) => {{",
+                            phf_enum_name, variant
+                        );
+                    } else {
+                        let _ =
+                            writeln!(out, "                    \"{}\" => {{", meta.field.xml_name);
+                    }
                     self.emit_empty_element_parse(
                         out,
                         &meta.field,

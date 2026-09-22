@@ -2,7 +2,13 @@
 # Measure fresh-process CLI startup and argument validation with hyperfine.
 set -euo pipefail
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+self="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")"
 cd "$repo_root"
+# Release builds + hyperfine under a RAM cap (see scripts/memcap.sh); the
+# LEVEL guard makes the re-exec idempotent. POLYXML_MEMCAP_DISABLE=1 opts out.
+if [ -z "${POLYXML_MEMCAP_LEVEL:-}" ]; then
+    exec "$repo_root/scripts/memcap.sh" "$self" "$@"
+fi
 command -v hyperfine >/dev/null || { echo 'Install hyperfine to run this benchmark.' >&2; exit 1; }
 cargo build --release -p polyxml-cli
 scratch_dir=$(mktemp -d)

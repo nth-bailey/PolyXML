@@ -1431,6 +1431,51 @@ fn test_cli_rust_rkyv_feature() {
 }
 
 #[test]
+fn test_cli_rust_phf_feature() {
+    let dir = tempdir().unwrap();
+    let schema_file = dir.path().join("event.xsd");
+    fs::write(
+        &schema_file,
+        r#"<?xml version="1.0"?>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:events">
+            <xs:complexType name="Event">
+                <xs:sequence>
+                    <xs:element name="Id" type="xs:long"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:schema>"#,
+    )
+    .unwrap();
+
+    let out_dir = dir.path().join("rust_out");
+    let status = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args([
+            "generate",
+            schema_file.to_str().unwrap(),
+            "--lang",
+            "rust",
+            "--feature",
+            "phf",
+            "-o",
+            out_dir.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute generate with phf");
+    assert!(status.success());
+
+    let rs_content = fs::read_to_string(out_dir.join("event.rs")).unwrap();
+    assert!(rs_content.contains("enum __EventElementId"));
+    assert!(
+        rs_content.contains(
+            "static __EVENT_ELEMENT_DISPATCH: ::phf::Map<&'static str, __EventElementId>"
+        ),
+        "phf dispatch table missing:\n{rs_content}"
+    );
+    assert!(rs_content.contains("(\"Id\", __EventElementId::Id)"));
+    assert!(rs_content.contains("Some(&__EventElementId::Id) => {"));
+}
+
+#[test]
 fn test_cli_build_polyxml_manifest_with_new_features() {
     let dir = tempdir().unwrap();
     let schema_file = dir.path().join("model.xsd");
@@ -1750,7 +1795,10 @@ fn unified_options_fail_before_schema_io_including_dry_run() {
             vec!["--lang", "python", "--feature", "rkyv"],
             "feature 'rkyv'",
         ),
-        (vec!["--lang", "rust", "--feature", "phf"], "feature 'phf'"),
+        (
+            vec!["--lang", "rust", "--feature", "builder"],
+            "feature 'builder'",
+        ),
         (
             vec![
                 "--lang",
@@ -2040,7 +2088,7 @@ fn completion_candidates_follow_target_validation() {
         (
             "feature",
             vec!["generate", "--lang", "rust"],
-            vec!["zero-copy", "rkyv"],
+            vec!["zero-copy", "rkyv", "phf"],
         ),
         ("feature", vec!["generate", "--backend=pydantic"], vec![]),
         (

@@ -20,12 +20,18 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 minijinja = { version = "2.8", features = ["builtins"] }
 heck = "0.5"
+phf_codegen = "0.14.0"
 
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
+phf = { version = "0.14.0", features = ["macros"] }
 pretty_assertions = "1.4"
 tempfile = "3"
 
 [[bench]]
 name = "core_benchmarks"
+harness = false
+
+[[bench]]
+name = "tag_dispatch"
 harness = false

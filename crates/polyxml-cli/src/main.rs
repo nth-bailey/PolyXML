@@ -265,6 +265,7 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         builder: None,
         codec: None,
         rkyv: None,
+        phf: None,
         custom_header: args.custom_header.as_deref(),
     };
     let resolved_options = languages
@@ -482,6 +483,7 @@ pub struct TargetEmitOptions<'a> {
     pub builder: Option<bool>,
     pub codec: Option<&'a str>,
     pub rkyv: Option<bool>,
+    pub phf: Option<bool>,
     pub custom_header: Option<&'a str>,
 }
 
@@ -540,6 +542,7 @@ fn emit_target_code(
                 emit_root_aliases: true,
                 emit_codecs: opts.codecs.unwrap_or(true),
                 emit_rkyv: opts.rkyv.unwrap_or(false),
+                phf: opts.phf.unwrap_or(false),
                 custom_header: opts.custom_header.map(|s| s.to_string()),
             };
 

@@ -149,6 +149,7 @@ fn test_rust_zero_copy_codegen() {
         emit_root_aliases: true,
         emit_codecs: false,
         emit_rkyv: false,
+        phf: false,
         custom_header: None,
     });
 
@@ -201,6 +202,7 @@ fn test_rust_owned_codegen() {
         emit_root_aliases: true,
         emit_codecs: false,
         emit_rkyv: false,
+        phf: false,
         custom_header: None,
     });
 
@@ -955,4 +957,176 @@ fn test_rust_read_element_text_accumulates_refs_and_cdata() {
             );
         }
     }
+}
+
+/// `--feature phf` swaps both child-event match sites for a phf_codegen-built
+/// perfect-hash table plus a per-struct id enum; the default must stay a plain
+/// string `match` (preserve-defaults invariant).
+#[test]
+fn test_rust_phf_dispatch_emission() {
+    let ir = XsdParser::new()
+        .parse_str(extension_xsd())
+        .expect("parse extension schema");
+    let code = RustCodegen::new(RustOptions {
+        phf: true,
+        ..Default::default()
+    })
+    .generate_module(&ir);
+
+    // Per-struct id enum + phf_codegen table ahead of each impl.
+    let base_enum = section(&code, "enum __BaseElementId");
+    assert!(base_enum.contains("Label,"), "{base_enum}");
+    assert!(code.contains(
+        "static __BASE_ELEMENT_DISPATCH: ::phf::Map<&'static str, __BaseElementId> = ::phf::Map {"
+    ));
+    assert!(code.contains("(\"label\", __BaseElementId::Label)"));
+
+    // Inherited element fields land in the derived struct's table too.
+    assert!(code.contains(
+        "static __LEAF_ELEMENT_DISPATCH: ::phf::Map<&'static str, __LeafElementId> = ::phf::Map {"
+    ));
+    assert!(code.contains("(\"rank\", __LeafElementId::Rank)"));
+    assert!(code.contains("(\"note\", __LeafElementId::Note)"));
+
+    // Both event sites route through the table: 3 structs x (Start + Empty).
+    assert_eq!(code.matches(".get(e.local_name().as_ref())").count(), 6);
+    assert!(code.contains("Some(&__BaseElementId::Label) => {"));
+    assert!(code.contains("Some(&__LeafElementId::Note) => {"));
+
+    // Default output is untouched by the feature.
+    let default_code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
+    assert!(!default_code.contains("ELEMENT_DISPATCH"));
+    assert!(!default_code.contains("::phf::"));
+    assert!(default_code.contains("Event::Start(e) => match e.local_name().as_ref() {"));
+}
+
+/// Union-typed fields group every branch tag onto ONE dispatch variant.
+#[test]
+fn test_rust_phf_dispatch_union_groups_branch_tags() {
+    let mut ir = SchemaIR::new();
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("Card"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![FieldDef::new(
+            "number",
+            "number",
+            FieldKind::Element,
+            TypeRef::Primitive(PrimitiveType::String),
+        )],
+        documentation: None,
+    }));
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("Cash"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![FieldDef::new(
+            "amount",
+            "amount",
+            FieldKind::Element,
+            TypeRef::Primitive(PrimitiveType::Decimal),
+        )],
+        documentation: None,
+    }));
+    ir.add_type(TypeDef::Union(UnionDef {
+        qname: QName::local("PaymentMethod"),
+        branches: vec![
+            UnionBranch {
+                variant_name: "Card".into(),
+                xml_name: "card".into(),
+                namespace: None,
+                type_ref: TypeRef::Named(QName::local("Card")),
+                documentation: None,
+            },
+            UnionBranch {
+                variant_name: "Cash".into(),
+                xml_name: "cash".into(),
+                namespace: None,
+                type_ref: TypeRef::Named(QName::local("Cash")),
+                documentation: None,
+            },
+        ],
+        documentation: None,
+    }));
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("Order"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![FieldDef::new(
+            "method",
+            "method",
+            FieldKind::Element,
+            TypeRef::Named(QName::local("PaymentMethod")),
+        )],
+        documentation: None,
+    }));
+
+    let code = RustCodegen::new(RustOptions {
+        phf: true,
+        ..Default::default()
+    })
+    .generate_module(&ir);
+
+    assert!(code.contains("(\"card\", __OrderElementId::Method)"));
+    assert!(code.contains("(\"cash\", __OrderElementId::Method)"));
+    assert_eq!(
+        code.matches("Some(&__OrderElementId::Method) => {").count(),
+        2
+    );
+}
+
+/// Attribute and element sharing one XML name: the element's rust name
+/// uniquifies to `code_2` everywhere (struct decl, `var_` bindings, dispatch
+/// table entry, and match arm must all agree — a bare-string arm inside the
+/// `Option` scrutinee would not compile).
+#[test]
+fn test_rust_phf_dispatch_uniquifies_like_field_metas() {
+    let mut ir = SchemaIR::new();
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: QName::local("Collision"),
+        base_type: None,
+        is_abstract: false,
+        fields: vec![
+            FieldDef::new(
+                "code",
+                "code",
+                FieldKind::Attribute,
+                TypeRef::Primitive(PrimitiveType::String),
+            ),
+            FieldDef::new(
+                "code",
+                "code",
+                FieldKind::Element,
+                TypeRef::Primitive(PrimitiveType::String),
+            ),
+        ],
+        documentation: None,
+    }));
+
+    let code = RustCodegen::new(RustOptions {
+        phf: true,
+        ..Default::default()
+    })
+    .generate_module(&ir);
+
+    assert!(
+        code.contains("pub code_2:"),
+        "element code_2 missing from struct:\n{code}"
+    );
+    assert!(
+        code.contains("(\"code\", __CollisionElementId::Code2)"),
+        "table entry not keyed on the uniquified name:\n{code}"
+    );
+    assert!(
+        code.contains("Some(&__CollisionElementId::Code2) => {"),
+        "arm missing or mismatched with the table:\n{code}"
+    );
+    let start = code
+        .find("Event::Start(e) => match __COLLISION_ELEMENT_DISPATCH")
+        .expect("phf scrutinee missing");
+    assert!(
+        !code[start..].contains("                    \"code\" => {"),
+        "bare-string arm leaked into the Option match:\n{code}"
+    );
 }

@@ -106,6 +106,7 @@ pub fn candidates(kind: &str, words: &[String]) -> Vec<String> {
         "feature" => &[
             "zero-copy",
             "rkyv",
+            "phf",
             "builder",
             "direct-codec",
             "slots",
