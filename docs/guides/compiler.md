@@ -79,6 +79,9 @@ polyxml generate \
 | **Validation Schemas** | `--zod` | Emit runtime Zod validation schemas for TypeScript (equivalent to `--backend zod`). | `false` |
 | **C# Source-Gen** | `--source-gen` | Emit Native AOT compile-time `JsonSerializerContext` for C#. | `false` |
 | **C# Record Kind** | `--record-kind` | C# record representation (`class` or `struct`). | `class` |
+| **Model Style (Java/C#)** | `--style` | Model representation: `record` (default), `pojo` for JavaBeans (alias `class`), or `class` for mutable C# classes. | `record` |
+| **Java Builders** | `--builder` | Emit fluent `Type.builder()...build()` factories for Java models (records and POJOs alike). | `false` |
+| **Java Codec** | `--codec` | Java XML binding: `annotation` (default) or `direct`, which adds reflection-free StAX companion `TypeCodec` classes. Rejects wildcards, `xs:anyType`, and runtime `xsi:type` dispatch. | `annotation` |
 | **Package / Namespace** | `-p`, `--package` | Namespace or package name for Java, Go, C#, or C++. | Target default |
 | **Custom Header** | `--custom-header` | Custom comment, license, or linter directive text to prepend to generated files. | `None` |
 | **Dry Run** | `--dry-run` | Parse and print generated output without writing to disk. | `false` |
@@ -122,6 +125,9 @@ target = "java"
 output = "src/generated/java"
 package = "com.enterprise.banking.iso20022"
 backend = "jackson"
+# style = "pojo"        # record (default) | pojo (JavaBeans, alias class)
+# builder = true         # fluent Java builders
+# codec = "direct"       # reflection-free StAX companion codecs
 
 [[generate]]
 target = "typescript"
