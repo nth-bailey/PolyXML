@@ -4,11 +4,29 @@ use std::fmt::Write as FmtWrite;
 use heck::{AsPascalCase, AsShoutySnakeCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
-use crate::codegen::{sanitize_keyword, LanguageContext};
+use crate::codegen::{
+    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+};
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef,
     StructDef, TypeDef, TypeRef, UnionDef,
 };
+
+/// Module-level helper emitted when a simple type carries multiple pattern
+/// facets: pydantic's `Field(pattern=...)` keeps only a single regex, so
+/// AND-combined patterns are enforced through an `AfterValidator` wrapping
+/// this factory instead (issue #51 item 8).
+const PATTERN_VALIDATOR_HELPER: &str = r#"def _polyxml_patterns(*patterns: str):
+    _compiled = tuple(re.compile(p) for p in patterns)
+
+    def _validate(value: str) -> str:
+        for regex in _compiled:
+            if regex.search(value) is None:
+                raise ValueError(f"string_pattern_mismatch: {regex.pattern!r}")
+        return value
+
+    return _validate
+"#;
 
 /// Target backend for Python code emission.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -122,7 +140,7 @@ impl LanguageContext for PythonLanguageContext {
     fn map_type_ref(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => self.map_primitive(*prim).to_string(),
-            TypeRef::Named(qname) => AsPascalCase(&qname.local).to_string(),
+            TypeRef::Named(qname) => type_ident(qname),
             TypeRef::Boxed(inner) => self.map_type_ref(inner),
             TypeRef::List(inner) => format!("list[{}]", self.map_type_ref(inner)),
         }
@@ -190,6 +208,12 @@ pub struct PythonCodegen {
     context: PythonLanguageContext,
 }
 
+/// Emitted Python identifier for a named type, disambiguated across
+/// namespaces for the IR currently being generated (issue #51 item 3).
+fn type_ident(q: &QName) -> String {
+    lookup_type_name(q, || AsPascalCase(&q.local).to_string())
+}
+
 impl PythonCodegen {
     pub fn new(options: PythonOptions) -> Self {
         Self {
@@ -199,6 +223,9 @@ impl PythonCodegen {
     }
 
     pub fn generate_module(&self, ir: &SchemaIR) -> String {
+        set_type_name_map(build_type_name_map(ir, |local| {
+            AsPascalCase(local).to_string()
+        }));
         let mut out = String::new();
 
         if let Some(ref header) = self.options.custom_header {
@@ -224,6 +251,11 @@ impl PythonCodegen {
         out.push_str("from __future__ import annotations\n\n");
 
         self.emit_imports(&mut out, ir);
+
+        if self.needs_pattern_validator(ir) {
+            out.push('\n');
+            out.push_str(PATTERN_VALIDATOR_HELPER);
+        }
 
         // Sort types topologically (base types before derived types)
         let sorted_types = self.order_types(ir);
@@ -298,6 +330,9 @@ impl PythonCodegen {
         if has_enums {
             out.push_str("from enum import StrEnum\n");
         }
+        if self.needs_pattern_validator(ir) {
+            out.push_str("import re\n");
+        }
         let mut typing_imports = Vec::new();
         if has_annotated {
             typing_imports.push("Annotated");
@@ -308,10 +343,19 @@ impl PythonCodegen {
         if !typing_imports.is_empty() {
             let _ = writeln!(out, "from typing import {}", typing_imports.join(", "));
         }
+        let av_import = if self.needs_pattern_validator(ir) {
+            "AfterValidator, "
+        } else {
+            ""
+        };
         if self.options.backend == PythonBackend::Pydantic && has_structs {
-            out.push_str("from pydantic import BaseModel, ConfigDict, Field\n");
+            let _ = writeln!(
+                out,
+                "from pydantic import {}BaseModel, ConfigDict, Field",
+                av_import
+            );
         } else if self.options.backend == PythonBackend::Pydantic && has_annotated && !has_structs {
-            out.push_str("from pydantic import Field\n");
+            let _ = writeln!(out, "from pydantic import {}Field", av_import);
         }
     }
 
@@ -373,7 +417,7 @@ impl PythonCodegen {
     }
 
     fn emit_simple_type(&self, out: &mut String, s: &SimpleTypeDef) {
-        let type_name = AsPascalCase(&s.qname.local).to_string();
+        let type_name = type_ident(&s.qname);
         let base_type = self.context.map_type_ref(&s.base_type);
 
         if let Some(ref doc) = s.documentation {
@@ -382,11 +426,20 @@ impl PythonCodegen {
 
         if self.options.backend == PythonBackend::Pydantic && !s.facets.is_empty() {
             let facet_args = self.format_pydantic_facets(&s.facets);
-            if !facet_args.is_empty() {
+            let after = self.pattern_after_validator(&s.facets);
+            if !facet_args.is_empty() || after.is_some() {
+                let mut annotations = vec![base_type.clone()];
+                if !facet_args.is_empty() {
+                    annotations.push(format!("Field({facet_args})"));
+                }
+                if let Some(av) = after {
+                    annotations.push(av);
+                }
                 let _ = writeln!(
                     out,
-                    "type {} = Annotated[{}, Field({})]",
-                    type_name, base_type, facet_args
+                    "type {} = Annotated[{}]",
+                    type_name,
+                    annotations.join(", ")
                 );
                 return;
             }
@@ -396,7 +449,7 @@ impl PythonCodegen {
     }
 
     fn emit_enum(&self, out: &mut String, e: &EnumDef) {
-        let enum_name = AsPascalCase(&e.qname.local).to_string();
+        let enum_name = type_ident(&e.qname);
         let _ = writeln!(out, "class {}(StrEnum):", enum_name);
 
         if let Some(ref doc) = e.documentation {
@@ -428,7 +481,7 @@ impl PythonCodegen {
     }
 
     fn emit_union(&self, out: &mut String, u: &UnionDef) {
-        let union_name = AsPascalCase(&u.qname.local).to_string();
+        let union_name = type_ident(&u.qname);
 
         if let Some(ref doc) = u.documentation {
             let _ = writeln!(out, "# {}", doc.trim());
@@ -449,7 +502,7 @@ impl PythonCodegen {
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
-        let class_name = AsPascalCase(&s.qname.local).to_string();
+        let class_name = type_ident(&s.qname);
 
         let struct_base = s
             .base_type
@@ -461,7 +514,7 @@ impl PythonCodegen {
                     false
                 }
             })
-            .map(|b| AsPascalCase(&b.local).to_string());
+            .map(type_ident);
 
         match self.options.backend {
             PythonBackend::Dataclass => {
@@ -777,6 +830,34 @@ impl PythonCodegen {
         }
     }
 
+    /// True when any simple type carries multiple pattern facets, requiring
+    /// the module-level `_polyxml_patterns` validator helper (pydantic only —
+    /// `Field(pattern=...)` can hold a single regex).
+    fn needs_pattern_validator(&self, ir: &SchemaIR) -> bool {
+        self.options.backend == PythonBackend::Pydantic
+            && ir
+                .types
+                .values()
+                .any(|td| matches!(td, TypeDef::Simple(s) if s.facets.patterns.len() > 1))
+    }
+
+    /// Pydantic keeps only one `pattern` constraint, so multiple patterns are
+    /// AND-combined through an `AfterValidator` over the shared helper.
+    fn pattern_after_validator(&self, facets: &RestrictionFacets) -> Option<String> {
+        if facets.patterns.len() <= 1 {
+            return None;
+        }
+        let pats: Vec<String> = facets
+            .patterns
+            .iter()
+            .map(|p| format!("r\"{p}\""))
+            .collect();
+        Some(format!(
+            "AfterValidator(_polyxml_patterns({}))",
+            pats.join(", ")
+        ))
+    }
+
     fn format_pydantic_facets(&self, facets: &RestrictionFacets) -> String {
         let mut clauses = Vec::new();
 
@@ -811,7 +892,7 @@ impl PythonCodegen {
     fn emit_root_aliases(&self, out: &mut String, ir: &SchemaIR) {
         let mut declared_names = BTreeSet::new();
         for td in ir.types.values() {
-            declared_names.insert(AsPascalCase(&td.qname().local).to_string());
+            declared_names.insert(type_ident(td.qname()));
         }
 
         for element in ir.elements.values() {

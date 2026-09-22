@@ -4,7 +4,9 @@ use std::fmt::Write as FmtWrite;
 use heck::{AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
-use crate::codegen::{sanitize_keyword, LanguageContext};
+use crate::codegen::{
+    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+};
 use crate::ir::{
     EnumDef, FieldDef, FieldKind, PrimitiveType, QName, SchemaIR, SimpleTypeDef, StructDef,
     TypeDef, TypeRef, UnionDef,
@@ -130,7 +132,7 @@ impl LanguageContext for RustLanguageContext {
     fn map_type_ref(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => self.map_primitive(*prim).to_string(),
-            TypeRef::Named(qname) => AsPascalCase(&qname.local).to_string(),
+            TypeRef::Named(qname) => type_ident(qname),
             TypeRef::Boxed(inner) => format!("Box<{}>", self.map_type_ref(inner)),
             TypeRef::List(inner) => format!("Vec<{}>", self.map_type_ref(inner)),
         }
@@ -193,6 +195,12 @@ pub struct RustCodegen {
     context: RustLanguageContext,
 }
 
+/// Emitted Rust identifier for a named type, disambiguated across
+/// namespaces for the IR currently being generated (issue #51 item 3).
+fn type_ident(q: &QName) -> String {
+    lookup_type_name(q, || AsPascalCase(&q.local).to_string())
+}
+
 impl RustCodegen {
     pub fn new(options: RustOptions) -> Self {
         let zero_copy = options.zero_copy;
@@ -203,6 +211,9 @@ impl RustCodegen {
     }
 
     pub fn generate_module(&self, ir: &SchemaIR) -> String {
+        set_type_name_map(build_type_name_map(ir, |local| {
+            AsPascalCase(local).to_string()
+        }));
         let mut out = String::new();
 
         if let Some(ref header) = self.options.custom_header {
@@ -413,7 +424,7 @@ impl RustCodegen {
         s: &SimpleTypeDef,
         types_with_lifetime: &HashSet<QName>,
     ) {
-        let type_name = AsPascalCase(&s.qname.local).to_string();
+        let type_name = type_ident(&s.qname);
         let needs_lifetime = types_with_lifetime.contains(&s.qname);
 
         if let Some(ref doc) = s.documentation {
@@ -429,7 +440,7 @@ impl RustCodegen {
     }
 
     fn emit_enum(&self, out: &mut String, e: &EnumDef) {
-        let enum_name = AsPascalCase(&e.qname.local).to_string();
+        let enum_name = type_ident(&e.qname);
 
         if let Some(ref doc) = e.documentation {
             let _ = writeln!(out, "/// {}", doc.trim());
@@ -527,7 +538,7 @@ impl RustCodegen {
         types_with_lifetime: &HashSet<QName>,
         ir: &SchemaIR,
     ) {
-        let union_name = AsPascalCase(&u.qname.local).to_string();
+        let union_name = type_ident(&u.qname);
         let needs_lifetime = types_with_lifetime.contains(&u.qname);
 
         if let Some(ref doc) = u.documentation {
@@ -598,7 +609,7 @@ impl RustCodegen {
         types_with_lifetime: &HashSet<QName>,
         ir: &SchemaIR,
     ) {
-        let struct_name = AsPascalCase(&s.qname.local).to_string();
+        let struct_name = type_ident(&s.qname);
         let needs_lifetime = types_with_lifetime.contains(&s.qname);
 
         if let Some(ref doc) = s.documentation {
@@ -733,7 +744,7 @@ impl RustCodegen {
         match type_ref {
             TypeRef::Primitive(prim) => self.context.map_primitive(*prim).to_string(),
             TypeRef::Named(qname) => {
-                let name = AsPascalCase(&qname.local).to_string();
+                let name = type_ident(qname);
                 if self.options.zero_copy && types_with_lifetime.contains(qname) {
                     format!("{}<'a>", name)
                 } else {
@@ -763,7 +774,7 @@ impl RustCodegen {
     ) {
         let mut declared_names = BTreeSet::new();
         for td in ir.types.values() {
-            declared_names.insert(AsPascalCase(&td.qname().local).to_string());
+            declared_names.insert(type_ident(td.qname()));
         }
 
         for element in ir.elements.values() {
@@ -952,7 +963,7 @@ impl RustCodegen {
         match type_ref {
             TypeRef::Named(qname) => {
                 if let Some(TypeDef::Enum(_)) = ir.types.get(qname) {
-                    Some(AsPascalCase(&qname.local).to_string())
+                    Some(type_ident(qname))
                 } else {
                     None
                 }
@@ -987,7 +998,7 @@ impl RustCodegen {
         types_with_lifetime: &HashSet<QName>,
         ir: &SchemaIR,
     ) {
-        let struct_name = AsPascalCase(&s.qname.local).to_string();
+        let struct_name = type_ident(&s.qname);
         let needs_lifetime = types_with_lifetime.contains(&s.qname);
 
         let impl_header = if needs_lifetime {
@@ -1102,7 +1113,7 @@ impl RustCodegen {
                         .map(|b| format!("\"{}\"", b.xml_name))
                         .collect();
                     let _ = writeln!(out, "                    {} => {{", branch_tags.join(" | "));
-                    let union_name = AsPascalCase(&union_def.qname.local).to_string();
+                    let union_name = type_ident(&union_def.qname);
                     let _ = writeln!(
                         out,
                         "                        let val = {}::decode_xml(reader, &e)?;",
@@ -1150,7 +1161,7 @@ impl RustCodegen {
                         .map(|b| format!("\"{}\"", b.xml_name))
                         .collect();
                     let _ = writeln!(out, "                    {} => {{", branch_tags.join(" | "));
-                    let union_name = AsPascalCase(&union_def.qname.local).to_string();
+                    let union_name = type_ident(&union_def.qname);
                     let _ = writeln!(
                         out,
                         "                        let val = {}::decode_xml(reader, &e)?;",
@@ -1830,7 +1841,7 @@ impl RustCodegen {
         types_with_lifetime: &HashSet<QName>,
         ir: &SchemaIR,
     ) {
-        let union_name = AsPascalCase(&u.qname.local).to_string();
+        let union_name = type_ident(&u.qname);
         let needs_lifetime = types_with_lifetime.contains(&u.qname);
 
         let impl_header = if needs_lifetime {

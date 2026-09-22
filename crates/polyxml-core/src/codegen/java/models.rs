@@ -160,7 +160,7 @@ impl JavaCodegen {
             .as_ref()
             .filter(|q| matches!(ir.types.get(q), Some(TypeDef::Struct(_))));
         let extends = base
-            .map(|q| format!(" extends {}", to_java_type_name(&q.local)))
+            .map(|q| format!(" extends {}", type_ident(q)))
             .unwrap_or_default();
         let nested = if indent.is_empty() { "" } else { "static " };
         let abstract_kw = if s.is_abstract { "abstract " } else { "" };
@@ -258,7 +258,7 @@ impl JavaCodegen {
         };
         let extends = base
             .map(|q| {
-                let n = to_java_type_name(&q.local);
+                let n = type_ident(q);
                 format!(" extends {n}.{n}Builder")
             })
             .unwrap_or_default();

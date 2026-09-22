@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -27,9 +27,41 @@ pub enum SchemaError {
     Resolution(String),
 }
 
+/// A parsed `<xs:group>` definition: its flattened element fields plus the
+/// positions of any nested `<xs:group ref="...">` particles it contains.
+#[derive(Debug, Clone, Default)]
+struct GroupDef {
+    fields: Vec<FieldDef>,
+    /// `(insertion index into `fields`, referenced group)` — ascending.
+    group_refs: Vec<(usize, QName)>,
+}
+
+/// A recorded `<xs:group ref>` particle awaiting post-parse expansion.
+#[derive(Debug, Clone)]
+struct PendingGroupRef {
+    /// The struct (or group body) the fields must be spliced into.
+    owner: QName,
+    /// Insertion index into the owner's field list (pre-expansion).
+    at: usize,
+    group: QName,
+}
+
 /// A pure-Rust XSD 1.0/1.1 Schema Parser.
 pub struct XsdParser {
-    visited_files: HashSet<PathBuf>,
+    /// Raw (pre-merge) IR per canonical file path, keyed so chameleon includes
+    /// can be re-namespaced per includer without re-parsing (issue #51 item 9).
+    file_cache: HashMap<PathBuf, SchemaIR>,
+    /// Groups registered by each cached file, replayed on cache hits.
+    file_groups: HashMap<PathBuf, Vec<(QName, GroupDef)>>,
+    /// Files currently being parsed (include-cycle guard).
+    active_files: HashSet<PathBuf>,
+    /// Named model groups visible to the current parse (issue #51 item 1).
+    groups: HashMap<QName, GroupDef>,
+    /// Group references awaiting expansion at frame end (issue #51 item 1).
+    pending_group_refs: Vec<PendingGroupRef>,
+    /// Include/import recursion depth; post-passes run in every frame, the
+    /// root frame (depth 1 while executing) additionally drops dead refs.
+    frame_depth: usize,
 }
 
 impl Default for XsdParser {
@@ -41,7 +73,12 @@ impl Default for XsdParser {
 impl XsdParser {
     pub fn new() -> Self {
         Self {
-            visited_files: HashSet::new(),
+            file_cache: HashMap::new(),
+            file_groups: HashMap::new(),
+            active_files: HashSet::new(),
+            groups: HashMap::new(),
+            pending_group_refs: Vec::new(),
+            frame_depth: 0,
         }
     }
 
@@ -49,14 +86,51 @@ impl XsdParser {
     pub fn parse_file(&mut self, path: impl AsRef<Path>) -> Result<SchemaIR, SchemaError> {
         let path = path.as_ref();
         let canonical = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-        if !self.visited_files.insert(canonical.clone()) {
-            // Already parsed this file
+
+        if let Some(cached) = self.file_cache.get(&canonical) {
+            // Cache hit: replay this file's group definitions so includers can
+            // resolve `<xs:group ref>` against them, then return the raw IR.
+            if let Some(registered) = self.file_groups.get(&canonical) {
+                for (qname, def) in registered {
+                    self.groups.insert(qname.clone(), def.clone());
+                }
+            }
+            return Ok(cached.clone());
+        }
+        if self.active_files.contains(&canonical) {
+            // Include cycle: cut recursion.
             return Ok(SchemaIR::new());
         }
 
-        let content = fs::read_to_string(path)?;
-        let base_dir = path.parent().unwrap_or_else(|| Path::new("."));
-        self.parse_str_internal(&content, Some(base_dir))
+        self.active_files.insert(canonical.clone());
+        let groups_before: HashSet<QName> = self.groups.keys().cloned().collect();
+        let content = fs::read_to_string(path);
+        let parsed = match content {
+            Ok(content) => {
+                let base_dir = path.parent().unwrap_or_else(|| Path::new("."));
+                self.parse_str_internal(&content, Some(base_dir))
+            }
+            Err(e) => Err(e.into()),
+        };
+        self.active_files.remove(&canonical);
+        let ir = parsed?;
+
+        // Snapshot groups registered while parsing this file for cache replay.
+        let file_owned: Vec<(QName, GroupDef)> = self
+            .groups
+            .iter()
+            .filter(|(q, _)| !groups_before.contains(q))
+            .map(|(q, d)| (q.clone(), d.clone()))
+            .collect();
+        if !file_owned.is_empty() {
+            self.file_groups
+                .entry(canonical.clone())
+                .or_default()
+                .extend(file_owned);
+        }
+
+        self.file_cache.insert(canonical.clone(), ir.clone());
+        Ok(ir)
     }
 
     /// Parse an XSD schema from a string slice.
@@ -65,6 +139,27 @@ impl XsdParser {
     }
 
     fn parse_str_internal(
+        &mut self,
+        xml: &str,
+        base_dir: Option<&Path>,
+    ) -> Result<SchemaIR, SchemaError> {
+        self.frame_depth += 1;
+        let result = self.parse_str_body(xml, base_dir);
+        self.frame_depth -= 1;
+        let mut ir = result?;
+
+        // Frame post-passes: inherit pattern facets up derivation chains
+        // (issue #51 item 8) and expand named model group references
+        // (issue #51 item 1). Both are idempotent. Cycle detection runs last
+        // so fields spliced in from groups are covered as well.
+        inherit_pattern_facets(&mut ir);
+        self.expand_group_refs(&mut ir, self.frame_depth == 0);
+        ir.resolve_cycles();
+
+        Ok(ir)
+    }
+
+    fn parse_str_body(
         &mut self,
         xml: &str,
         base_dir: Option<&Path>,
@@ -122,7 +217,23 @@ impl XsdParser {
                                 if let Some(dir) = base_dir {
                                     let inc_path = dir.join(&schema_location);
                                     if inc_path.exists() {
-                                        let sub_ir = self.parse_file(&inc_path)?;
+                                        let pend_before = self.pending_group_refs.len();
+                                        let groups_before: HashSet<QName> =
+                                            self.groups.keys().cloned().collect();
+                                        let mut sub_ir = self.parse_file(&inc_path)?;
+                                        // Chameleon include (no targetNamespace in the
+                                        // included file): attribute its components to
+                                        // this schema's namespace (issue #51 item 9).
+                                        if sub_ir.target_namespace.is_none() {
+                                            if let Some(ns) = target_namespace.as_deref() {
+                                                rekey_to_namespace(&mut sub_ir, ns);
+                                                self.rekey_new_state(
+                                                    &groups_before,
+                                                    pend_before,
+                                                    ns,
+                                                );
+                                            }
+                                        }
                                         merge_ir(&mut ir, sub_ir);
                                     }
                                 }
@@ -146,6 +257,7 @@ impl XsdParser {
                                 target_namespace.as_deref(),
                                 &prefixes,
                                 None,
+                                &mut ir,
                             )? {
                                 ir.add_type(type_def);
                             }
@@ -172,6 +284,21 @@ impl XsdParser {
                                 ir.add_element(elem_def);
                             }
                         }
+                        "group" => {
+                            // Named model group definition (issue #51 item 1).
+                            if let Some(gname) = get_attr_value(e, "name") {
+                                let gq = QName::new(target_namespace.as_deref(), gname);
+                                let def = self.parse_group_body(
+                                    &mut reader,
+                                    target_namespace.as_deref(),
+                                    &prefixes,
+                                    &mut ir,
+                                )?;
+                                self.groups.insert(gq, def);
+                            } else {
+                                skip_subtree(&mut reader)?;
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -184,7 +311,23 @@ impl XsdParser {
                                 if let Some(dir) = base_dir {
                                     let inc_path = dir.join(&schema_location);
                                     if inc_path.exists() {
-                                        let sub_ir = self.parse_file(&inc_path)?;
+                                        let pend_before = self.pending_group_refs.len();
+                                        let groups_before: HashSet<QName> =
+                                            self.groups.keys().cloned().collect();
+                                        let mut sub_ir = self.parse_file(&inc_path)?;
+                                        // Chameleon include (no targetNamespace in the
+                                        // included file): attribute its components to
+                                        // this schema's namespace (issue #51 item 9).
+                                        if sub_ir.target_namespace.is_none() {
+                                            if let Some(ns) = target_namespace.as_deref() {
+                                                rekey_to_namespace(&mut sub_ir, ns);
+                                                self.rekey_new_state(
+                                                    &groups_before,
+                                                    pend_before,
+                                                    ns,
+                                                );
+                                            }
+                                        }
                                         merge_ir(&mut ir, sub_ir);
                                     }
                                 }
@@ -208,6 +351,13 @@ impl XsdParser {
                                 &prefixes,
                             ) {
                                 ir.add_element(elem_def);
+                            }
+                        }
+                        "group" => {
+                            // Empty named model group (no particles).
+                            if let Some(gname) = get_attr_value(e, "name") {
+                                let gq = QName::new(target_namespace.as_deref(), gname);
+                                self.groups.insert(gq, GroupDef::default());
                             }
                         }
                         "complexType" => {
@@ -245,19 +395,20 @@ impl XsdParser {
             buf.clear();
         }
 
-        // Run cycle detection and inject cut points
-        ir.resolve_cycles();
+        // Cycle detection runs in `parse_str_internal` after the group
+        // expansion and pattern inheritance post-passes.
 
         Ok(ir)
     }
 
     fn parse_complex_type(
-        &self,
+        &mut self,
         reader: &mut Reader<&[u8]>,
         start: &BytesStart,
         target_ns: Option<&str>,
         prefixes: &HashMap<String, String>,
         name_override: Option<String>,
+        ir: &mut SchemaIR,
     ) -> Result<Option<TypeDef>, SchemaError> {
         let name = match get_attr_value(start, "name").or(name_override) {
             Some(n) => n,
@@ -268,13 +419,16 @@ impl XsdParser {
             .map(|v| v == "true" || v == "1")
             .unwrap_or(false);
 
-        let qname = QName::new(target_ns, name);
+        let qname = QName::new(target_ns, name.clone());
         let mut fields = Vec::new();
         let mut base_type = None;
         let mut documentation = None;
         let mut is_choice_model = false;
         let mut choice_is_unbounded = false;
         let mut choice_branches = Vec::new();
+        let mut in_simple_content = false;
+        let mut value_field_pushed = false;
+        let mut group_refs: Vec<(usize, QName)> = Vec::new();
         let mut buf = Vec::new();
 
         let mut compositor_stack: Vec<bool> = Vec::new();
@@ -291,13 +445,42 @@ impl XsdParser {
                             documentation = Some(text);
                             depth -= 1;
                         }
+                        "simpleContent" => {
+                            in_simple_content = true;
+                        }
+                        "restriction" if in_simple_content => {
+                            if let Some(base) = get_attr_value(e, "base") {
+                                let resolved = resolve_qname(&base, target_ns, prefixes);
+                                if resolved != qname {
+                                    base_type = Some(resolved);
+                                }
+                                if !value_field_pushed {
+                                    value_field_pushed = true;
+                                    fields.push(value_field(&base, target_ns, prefixes));
+                                }
+                            }
+                        }
                         "extension" => {
                             if let Some(base) = get_attr_value(e, "base") {
                                 let resolved = resolve_qname(&base, target_ns, prefixes);
                                 if resolved != qname {
                                     base_type = Some(resolved);
                                 }
+                                // simpleContent extension: the text content is the
+                                // value of the restricted base type (issue #51 item 4).
+                                if in_simple_content && !value_field_pushed {
+                                    value_field_pushed = true;
+                                    fields.push(value_field(&base, target_ns, prefixes));
+                                }
                             }
+                        }
+                        "group" => {
+                            // Named model group particle; expanded post-parse.
+                            if let Some(r) = get_attr_value(e, "ref") {
+                                group_refs
+                                    .push((fields.len(), resolve_qname(&r, target_ns, prefixes)));
+                            }
+                            skip_subtree(reader)?;
                         }
                         "sequence" | "all" => {
                             let is_unbounded = get_attr_value(e, "maxOccurs")
@@ -324,13 +507,20 @@ impl XsdParser {
                         }
                         "element" => {
                             let in_unbounded = compositor_stack.iter().any(|&b| b);
-                            if let Some(field) = parse_element_field(
+                            if let Some(mut field) = parse_element_field(
                                 e,
                                 target_ns,
                                 prefixes,
                                 is_choice_model,
                                 in_unbounded,
                             ) {
+                                // Consume inline type definitions so nested
+                                // fields cannot leak into the parent struct;
+                                // extracted types are registered in `ir`
+                                // (issue #51 item 5).
+                                self.consume_inline_element_type(
+                                    reader, e, target_ns, prefixes, &name, &mut field, ir,
+                                )?;
                                 if is_choice_model {
                                     choice_branches.push(UnionBranch {
                                         variant_name: field.name.clone(),
@@ -364,6 +554,18 @@ impl XsdParser {
                                 if resolved != qname {
                                     base_type = Some(resolved);
                                 }
+                                // simpleContent extension without children.
+                                if in_simple_content && !value_field_pushed {
+                                    value_field_pushed = true;
+                                    fields.push(value_field(&base, target_ns, prefixes));
+                                }
+                            }
+                        }
+                        "group" => {
+                            // Self-closing group reference; expanded post-parse.
+                            if let Some(r) = get_attr_value(e, "ref") {
+                                group_refs
+                                    .push((fields.len(), resolve_qname(&r, target_ns, prefixes)));
                             }
                         }
                         "element" => {
@@ -411,11 +613,26 @@ impl XsdParser {
             buf.clear();
         }
 
-        if is_choice_model
+        // Group references inside a bounded choice are not spliceable into a
+        // union's branch list, so keep such types as structs.
+        let is_union = is_choice_model
             && !choice_is_unbounded
             && !choice_branches.is_empty()
-            && fields.len() == choice_branches.len()
-        {
+            && group_refs.is_empty()
+            && fields.len() == choice_branches.len();
+
+        // Record group refs for post-parse expansion (issue #51 item 1).
+        if !is_union {
+            for (at, group) in group_refs {
+                self.pending_group_refs.push(PendingGroupRef {
+                    owner: qname.clone(),
+                    at,
+                    group,
+                });
+            }
+        }
+
+        if is_union {
             Ok(Some(TypeDef::Union(UnionDef {
                 qname,
                 branches: choice_branches,
@@ -430,6 +647,186 @@ impl XsdParser {
                 documentation,
             })))
         }
+    }
+
+    /// Consume an `<xs:element>` start tag's subtree. If it carries an inline
+    /// `complexType`/`simpleType` definition (and no `type`/`ref` attribute),
+    /// extract that definition as a uniquely named type and point `field` at
+    /// it. Otherwise the subtree is skipped so its content can never leak into
+    /// the enclosing struct (issue #51 item 5).
+    #[allow(clippy::too_many_arguments)]
+    fn consume_inline_element_type(
+        &mut self,
+        reader: &mut Reader<&[u8]>,
+        element_start: &BytesStart,
+        target_ns: Option<&str>,
+        prefixes: &HashMap<String, String>,
+        parent_local: &str,
+        field: &mut FieldDef,
+        ir: &mut SchemaIR,
+    ) -> Result<(), SchemaError> {
+        if get_attr_value(element_start, "type").is_some()
+            || get_attr_value(element_start, "ref").is_some()
+        {
+            // Type already specified — discard (illegal) inline content.
+            skip_subtree(reader)?;
+            return Ok(());
+        }
+
+        let elem_local = get_attr_value(element_start, "name")
+            .or_else(|| get_attr_value(element_start, "ref").map(|r| strip_prefix(&r).to_string()))
+            .unwrap_or_else(|| field.name.clone());
+
+        let mut extracted = false;
+        let mut depth = 1usize;
+        let mut buf = Vec::new();
+        while depth > 0 {
+            match reader.read_event_into(&mut buf)? {
+                Event::Start(ref e) => {
+                    let local = strip_prefix(e.name().into_inner());
+                    if !extracted && local == "complexType" {
+                        let unique = unique_type_name(
+                            ir,
+                            target_ns,
+                            &format!("{}{}Type", parent_local, elem_local),
+                        );
+                        if let Some(type_def) = self.parse_complex_type(
+                            reader,
+                            e,
+                            target_ns,
+                            prefixes,
+                            Some(unique),
+                            ir,
+                        )? {
+                            let q = type_def.qname().clone();
+                            ir.add_type(type_def);
+                            field.type_ref = TypeRef::Named(q);
+                            extracted = true;
+                        }
+                    } else if !extracted && local == "simpleType" {
+                        let unique = unique_type_name(
+                            ir,
+                            target_ns,
+                            &format!("{}{}SimpleType", parent_local, elem_local),
+                        );
+                        if let Some(type_def) =
+                            self.parse_simple_type(reader, e, target_ns, prefixes, Some(unique))?
+                        {
+                            let q = type_def.qname().clone();
+                            ir.add_type(type_def);
+                            field.type_ref = TypeRef::Named(q);
+                            extracted = true;
+                        }
+                    } else {
+                        depth += 1;
+                    }
+                }
+                Event::End(_) => depth -= 1,
+                Event::Eof => break,
+                _ => {}
+            }
+            buf.clear();
+        }
+        Ok(())
+    }
+
+    /// Parse the body of a named `<xs:group>` definition: its element
+    /// particles plus nested group references (issue #51 item 1).
+    fn parse_group_body(
+        &mut self,
+        reader: &mut Reader<&[u8]>,
+        target_ns: Option<&str>,
+        prefixes: &HashMap<String, String>,
+        ir: &mut SchemaIR,
+    ) -> Result<GroupDef, SchemaError> {
+        let mut def = GroupDef::default();
+        let mut compositor_stack: Vec<bool> = Vec::new();
+        let mut in_choice = false;
+        let mut depth = 1usize;
+        let mut buf = Vec::new();
+
+        while depth > 0 {
+            match reader.read_event_into(&mut buf)? {
+                Event::Start(ref e) => {
+                    depth += 1;
+                    let local = strip_prefix(e.name().into_inner());
+                    match local {
+                        "documentation" => {
+                            let _text = reader.read_text(e.name())?.to_string();
+                            depth -= 1;
+                        }
+                        "sequence" | "all" | "choice" => {
+                            if local == "choice" {
+                                in_choice = true;
+                            }
+                            let is_unbounded = get_attr_value(e, "maxOccurs")
+                                .map(|v| {
+                                    v == "unbounded"
+                                        || v.parse::<u32>().map(|n| n > 1).unwrap_or(false)
+                                })
+                                .unwrap_or(false);
+                            compositor_stack.push(is_unbounded);
+                        }
+                        "element" => {
+                            let in_unbounded = compositor_stack.iter().any(|&b| b);
+                            if let Some(mut field) =
+                                parse_element_field(e, target_ns, prefixes, in_choice, in_unbounded)
+                            {
+                                self.consume_inline_element_type(
+                                    reader, e, target_ns, prefixes, "", &mut field, ir,
+                                )?;
+                                def.fields.push(field);
+                            }
+                        }
+                        "group" => {
+                            if let Some(r) = get_attr_value(e, "ref") {
+                                def.group_refs.push((
+                                    def.fields.len(),
+                                    resolve_qname(&r, target_ns, prefixes),
+                                ));
+                            }
+                            skip_subtree(reader)?;
+                        }
+                        "any" => def.fields.push(parse_any_field(e)),
+                        _ => {}
+                    }
+                }
+                Event::Empty(ref e) => {
+                    let local = strip_prefix(e.name().into_inner());
+                    match local {
+                        "element" => {
+                            let in_unbounded = compositor_stack.iter().any(|&b| b);
+                            if let Some(field) =
+                                parse_element_field(e, target_ns, prefixes, in_choice, in_unbounded)
+                            {
+                                def.fields.push(field);
+                            }
+                        }
+                        "group" => {
+                            if let Some(r) = get_attr_value(e, "ref") {
+                                def.group_refs.push((
+                                    def.fields.len(),
+                                    resolve_qname(&r, target_ns, prefixes),
+                                ));
+                            }
+                        }
+                        "any" => def.fields.push(parse_any_field(e)),
+                        _ => {}
+                    }
+                }
+                Event::End(ref e) => {
+                    let local = strip_prefix(e.name().into_inner());
+                    if local == "sequence" || local == "choice" || local == "all" {
+                        compositor_stack.pop();
+                    }
+                    depth -= 1;
+                }
+                Event::Eof => break,
+                _ => {}
+            }
+            buf.clear();
+        }
+        Ok(def)
     }
 
     fn parse_simple_type(
@@ -553,6 +950,28 @@ impl XsdParser {
             buf.clear();
         }
 
+        // Issue #51 item 2: drop duplicate enumeration values (keep the first
+        // occurrence) and disambiguate variant names that collide after
+        // sanitization, so generated enums always compile.
+        if !enum_values.is_empty() {
+            let mut seen_values = HashSet::new();
+            enum_values.retain(|v| seen_values.insert(v.value.clone()));
+
+            let mut seen_names = HashSet::new();
+            for v in &mut enum_values {
+                if !seen_names.insert(v.name.clone()) {
+                    let base = v.name.clone();
+                    let mut n = 2u32;
+                    let mut candidate = format!("{base}{n}");
+                    while !seen_names.insert(candidate.clone()) {
+                        n += 1;
+                        candidate = format!("{base}{n}");
+                    }
+                    v.name = candidate;
+                }
+            }
+        }
+
         if !enum_values.is_empty() {
             Ok(Some(TypeDef::Enum(EnumDef {
                 qname,
@@ -571,7 +990,7 @@ impl XsdParser {
     }
 
     fn parse_global_element(
-        &self,
+        &mut self,
         reader: &mut Reader<&[u8]>,
         start: &BytesStart,
         target_ns: Option<&str>,
@@ -611,7 +1030,10 @@ impl XsdParser {
                             depth -= 1;
                         }
                         "complexType" => {
-                            let anon_name = format!("{}Type", name);
+                            // Unique naming guards against `{name}Type`
+                            // colliding with an existing type (issue #51 item 5).
+                            let anon_name =
+                                unique_type_name(ir, target_ns, &format!("{}Type", name));
                             let anon_qname = QName::new(target_ns, anon_name.clone());
                             if let Some(type_def) = self.parse_complex_type(
                                 reader,
@@ -619,6 +1041,7 @@ impl XsdParser {
                                 target_ns,
                                 prefixes,
                                 Some(anon_name),
+                                ir,
                             )? {
                                 match type_def {
                                     TypeDef::Struct(mut s) => {
@@ -636,7 +1059,8 @@ impl XsdParser {
                             depth -= 1;
                         }
                         "simpleType" => {
-                            let anon_name = format!("{}SimpleType", name);
+                            let anon_name =
+                                unique_type_name(ir, target_ns, &format!("{}SimpleType", name));
                             let anon_qname = QName::new(target_ns, anon_name.clone());
                             if let Some(type_def) = self.parse_simple_type(
                                 reader,
@@ -679,6 +1103,95 @@ impl XsdParser {
             nillable,
             documentation,
         }))
+    }
+
+    /// Splice referenced group fields into their owner structs (issue #51
+    /// item 1). Runs at the end of every parse frame; entries that cannot be
+    /// resolved yet are carried to the parent frame (dropped at the root).
+    fn expand_group_refs(&mut self, ir: &mut SchemaIR, root: bool) {
+        let pending = std::mem::take(&mut self.pending_group_refs);
+        let mut carried: Vec<PendingGroupRef> = Vec::new();
+        let mut deltas: HashMap<QName, usize> = HashMap::new();
+
+        for p in pending {
+            let resolved = {
+                let mut visiting = HashSet::new();
+                self.group_fields(&p.group, &mut visiting)
+            };
+            let Some(gfields) = resolved else {
+                if !root {
+                    carried.push(p);
+                }
+                continue;
+            };
+
+            let Some(TypeDef::Struct(owner)) = ir.types.get_mut(&p.owner) else {
+                if !root {
+                    carried.push(p);
+                }
+                continue;
+            };
+            let delta = deltas.get(&p.owner).copied().unwrap_or(0);
+            let at = (p.at + delta).min(owner.fields.len());
+            let before = owner.fields.len();
+            for (i, f) in gfields.into_iter().enumerate() {
+                owner.fields.insert(at + i, f);
+            }
+            let added = owner.fields.len() - before;
+            *deltas.entry(p.owner.clone()).or_insert(0) += added;
+        }
+
+        self.pending_group_refs = carried;
+    }
+
+    /// Expand a group's fields, recursively splicing nested group refs.
+    /// Returns `None` if the group (or a nested group) is not yet defined.
+    fn group_fields(&self, gq: &QName, visiting: &mut HashSet<QName>) -> Option<Vec<FieldDef>> {
+        if !visiting.insert(gq.clone()) {
+            // Illegal group cycle — cut rather than recurse forever.
+            return Some(Vec::new());
+        }
+        let def = self.groups.get(gq)?;
+        let mut fields = def.fields.clone();
+        let refs = def.group_refs.clone();
+        let mut delta = 0usize;
+        for (at, sub) in refs {
+            let sub_fields = self.group_fields(&sub, visiting)?;
+            let at = (at + delta).min(fields.len());
+            let before = fields.len();
+            for (i, f) in sub_fields.into_iter().enumerate() {
+                fields.insert(at + i, f);
+            }
+            delta += fields.len() - before;
+        }
+        Some(fields)
+    }
+
+    /// Re-namespace parser state created during a chameleon include (issue
+    /// #51 item 9): newly registered groups and carried group refs that still
+    /// carry no namespace adopt the includer's namespace.
+    fn rekey_new_state(&mut self, groups_before: &HashSet<QName>, pend_before: usize, ns: &str) {
+        let stale: Vec<QName> = self
+            .groups
+            .keys()
+            .filter(|q| q.namespace.is_none() && !groups_before.contains(*q))
+            .cloned()
+            .collect();
+        for old in stale {
+            if let Some(mut def) = self.groups.remove(&old) {
+                rekey_group_def(&mut def, ns);
+                self.groups
+                    .insert(QName::new(Some(ns.to_string()), old.local), def);
+            }
+        }
+        for p in self.pending_group_refs.iter_mut().skip(pend_before) {
+            if p.owner.namespace.is_none() {
+                p.owner = QName::new(Some(ns.to_string()), p.owner.local.clone());
+            }
+            if p.group.namespace.is_none() {
+                p.group = QName::new(Some(ns.to_string()), p.group.local.clone());
+            }
+        }
     }
 }
 
@@ -900,6 +1413,248 @@ fn sanitize_variant_name(name: &str) -> String {
         format!("V{}", s)
     } else {
         s
+    }
+}
+
+/// Consume events until the closing tag of the current element (whose
+/// `Start` was already read). Discards content without interpreting it.
+fn skip_subtree(reader: &mut Reader<&[u8]>) -> Result<(), SchemaError> {
+    let mut depth = 1usize;
+    let mut buf = Vec::new();
+    loop {
+        match reader.read_event_into(&mut buf)? {
+            Event::Start(_) => depth += 1,
+            Event::End(_) => {
+                depth -= 1;
+                if depth == 0 {
+                    break;
+                }
+            }
+            Event::Eof => break,
+            _ => {}
+        }
+        buf.clear();
+    }
+    Ok(())
+}
+
+/// The synthetic `<Text>` field representing a `simpleContent` value
+/// (issue #51 item 4).
+fn value_field(
+    base: &str,
+    target_ns: Option<&str>,
+    prefixes: &HashMap<String, String>,
+) -> FieldDef {
+    FieldDef {
+        name: "value".to_string(),
+        xml_name: "value".to_string(),
+        namespace: None,
+        kind: FieldKind::Text,
+        type_ref: resolve_type_ref(base, target_ns, prefixes),
+        cardinality: Cardinality::required_one(),
+        nillable: false,
+        default_value: None,
+        fixed_value: None,
+        documentation: None,
+        facets: None,
+        is_cycle_cut: false,
+    }
+}
+
+/// Pick a type name that does not collide with an existing type in `ir`
+/// (issue #51 items 3/5): `{base}`, `{base}2`, `{base}3`, ...
+fn unique_type_name(ir: &SchemaIR, target_ns: Option<&str>, base: &str) -> String {
+    let mut name = base.to_string();
+    let mut n = 2u32;
+    while ir.types.contains_key(&QName::new(target_ns, name.as_str())) {
+        name = format!("{base}{n}");
+        n += 1;
+    }
+    name
+}
+
+/// Rewrite every namespace-less QName in the IR to `ns`. Used for chameleon
+/// includes, whose components adopt the including schema's target namespace
+/// (issue #51 item 9).
+fn rekey_to_namespace(ir: &mut SchemaIR, ns: &str) {
+    ir.target_namespace = Some(ns.to_string());
+
+    let old_types = std::mem::take(&mut ir.types);
+    let mut types = BTreeMap::new();
+    for (mut k, mut v) in old_types {
+        if k.namespace.is_none() {
+            k = QName::new(Some(ns.to_string()), k.local);
+        }
+        rekey_type_def(&mut v, ns);
+        types.insert(k, v);
+    }
+    ir.types = types;
+
+    let old_elements = std::mem::take(&mut ir.elements);
+    let mut elements = BTreeMap::new();
+    for (mut k, mut v) in old_elements {
+        if k.namespace.is_none() {
+            k = QName::new(Some(ns.to_string()), k.local);
+        }
+        if v.qname.namespace.is_none() {
+            v.qname = QName::new(Some(ns.to_string()), v.qname.local.clone());
+        }
+        rekey_type_ref(&mut v.type_ref, ns);
+        if let Some(sg) = &mut v.substitution_group {
+            if sg.namespace.is_none() {
+                *sg = QName::new(Some(ns.to_string()), sg.local.clone());
+            }
+        }
+        elements.insert(k, v);
+    }
+    ir.elements = elements;
+
+    let old_subs = std::mem::take(&mut ir.substitution_groups);
+    let mut subs = HashMap::new();
+    for (k, v) in old_subs {
+        let k = if k.namespace.is_none() {
+            QName::new(Some(ns.to_string()), k.local)
+        } else {
+            k
+        };
+        let v = v
+            .into_iter()
+            .map(|q| {
+                if q.namespace.is_none() {
+                    QName::new(Some(ns.to_string()), q.local)
+                } else {
+                    q
+                }
+            })
+            .collect();
+        subs.insert(k, v);
+    }
+    ir.substitution_groups = subs;
+}
+
+fn rekey_type_ref(tr: &mut TypeRef, ns: &str) {
+    match tr {
+        TypeRef::Named(q) => {
+            if q.namespace.is_none() {
+                *q = QName::new(Some(ns.to_string()), q.local.clone());
+            }
+        }
+        TypeRef::Boxed(inner) | TypeRef::List(inner) => rekey_type_ref(inner, ns),
+        TypeRef::Primitive(_) => {}
+    }
+}
+
+fn rekey_type_def(td: &mut TypeDef, ns: &str) {
+    match td {
+        TypeDef::Struct(s) => {
+            if s.qname.namespace.is_none() {
+                s.qname = QName::new(Some(ns.to_string()), s.qname.local.clone());
+            }
+            if let Some(b) = &mut s.base_type {
+                if b.namespace.is_none() {
+                    *b = QName::new(Some(ns.to_string()), b.local.clone());
+                }
+            }
+            for f in &mut s.fields {
+                rekey_field(f, ns);
+            }
+        }
+        TypeDef::Enum(e) => {
+            if e.qname.namespace.is_none() {
+                e.qname = QName::new(Some(ns.to_string()), e.qname.local.clone());
+            }
+            rekey_type_ref(&mut e.base_type, ns);
+        }
+        TypeDef::Simple(st) => {
+            if st.qname.namespace.is_none() {
+                st.qname = QName::new(Some(ns.to_string()), st.qname.local.clone());
+            }
+            rekey_type_ref(&mut st.base_type, ns);
+        }
+        TypeDef::Union(u) => {
+            if u.qname.namespace.is_none() {
+                u.qname = QName::new(Some(ns.to_string()), u.qname.local.clone());
+            }
+            for b in &mut u.branches {
+                // Branches are element particles: they carry the schema
+                // target namespace, same as element fields.
+                if b.namespace.is_none() {
+                    b.namespace = Some(ns.to_string());
+                }
+                rekey_type_ref(&mut b.type_ref, ns);
+            }
+        }
+    }
+}
+
+fn rekey_field(f: &mut FieldDef, ns: &str) {
+    rekey_type_ref(&mut f.type_ref, ns);
+    // Element fields normalize to the target namespace; attributes are
+    // unqualified and wildcards/content stay namespace-less.
+    if matches!(f.kind, FieldKind::Element) && f.namespace.is_none() {
+        f.namespace = Some(ns.to_string());
+    }
+}
+
+fn rekey_group_def(def: &mut GroupDef, ns: &str) {
+    for f in &mut def.fields {
+        rekey_field(f, ns);
+    }
+    for (_, g) in &mut def.group_refs {
+        if g.namespace.is_none() {
+            *g = QName::new(Some(ns.to_string()), g.local.clone());
+        }
+    }
+}
+
+/// Inherit pattern facets from base simple types down their derivation
+/// chains (issue #51 item 8): every derivation step's patterns must be
+/// enforced together. Idempotent.
+fn inherit_pattern_facets(ir: &mut SchemaIR) {
+    let derived: Vec<(QName, QName)> = ir
+        .types
+        .iter()
+        .filter_map(|(q, t)| match t {
+            TypeDef::Simple(s) => match &s.base_type {
+                TypeRef::Named(b) => Some((q.clone(), b.clone())),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect();
+
+    for (q, base) in derived {
+        let mut visited = HashSet::new();
+        let inherited = collect_chain_patterns(ir, &base, &mut visited);
+        if inherited.is_empty() {
+            continue;
+        }
+        if let Some(TypeDef::Simple(s)) = ir.types.get_mut(&q) {
+            for p in inherited {
+                if !s.facets.patterns.contains(&p) {
+                    s.facets.patterns.push(p);
+                }
+            }
+        }
+    }
+}
+
+/// Collect every pattern facet along a simple type's base chain
+/// (base-first), with cycle protection.
+fn collect_chain_patterns(ir: &SchemaIR, q: &QName, visited: &mut HashSet<QName>) -> Vec<String> {
+    if !visited.insert(q.clone()) {
+        return Vec::new();
+    }
+    match ir.types.get(q) {
+        Some(TypeDef::Simple(s)) => {
+            let mut out = match &s.base_type {
+                TypeRef::Named(b) => collect_chain_patterns(ir, b, visited),
+                _ => Vec::new(),
+            };
+            out.extend(s.facets.patterns.iter().cloned());
+            out
+        }
+        _ => Vec::new(),
     }
 }
 

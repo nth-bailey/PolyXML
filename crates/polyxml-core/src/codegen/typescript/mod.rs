@@ -4,7 +4,9 @@ use std::fmt::Write as FmtWrite;
 use heck::{AsLowerCamelCase, AsPascalCase};
 use serde::{Deserialize, Serialize};
 
-use crate::codegen::{sanitize_keyword, LanguageContext};
+use crate::codegen::{
+    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+};
 use crate::ir::{
     EnumDef, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef,
     TypeRef, UnionDef,
@@ -135,7 +137,7 @@ impl LanguageContext for TypeScriptLanguageContext {
     fn map_type_ref(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => self.map_primitive(*prim).to_string(),
-            TypeRef::Named(qname) => to_ts_type_name(&qname.local),
+            TypeRef::Named(qname) => type_ident(qname),
             TypeRef::Boxed(inner) | TypeRef::List(inner) => {
                 let inner_str = self.map_type_ref(inner);
                 if matches!(type_ref, TypeRef::List(_)) {
@@ -192,6 +194,12 @@ pub struct TypeScriptCodegen {
     pub context: TypeScriptLanguageContext,
 }
 
+/// Emitted TypeScript identifier for a named type, disambiguated across
+/// namespaces for the IR currently being generated (issue #51 item 3).
+fn type_ident(q: &QName) -> String {
+    lookup_type_name(q, || to_ts_type_name(&q.local))
+}
+
 impl TypeScriptCodegen {
     pub fn new(options: TypeScriptOptions) -> Self {
         Self {
@@ -202,6 +210,7 @@ impl TypeScriptCodegen {
 
     /// Generate a complete, standalone TypeScript module from a SchemaIR graph.
     pub fn generate_module(&self, ir: &SchemaIR) -> String {
+        set_type_name_map(build_type_name_map(ir, to_ts_type_name));
         let mut out = String::new();
         let recursive_types = self.find_recursive_types(ir);
 
@@ -351,7 +360,7 @@ impl TypeScriptCodegen {
     }
 
     fn emit_simple_type(&self, out: &mut String, s: &SimpleTypeDef) {
-        let ts_name = to_ts_type_name(&s.qname.local);
+        let ts_name = type_ident(&s.qname);
         let base_type = self.context.map_type_ref(&s.base_type);
 
         if let Some(ref doc) = s.documentation {
@@ -384,7 +393,7 @@ impl TypeScriptCodegen {
     }
 
     fn emit_enum(&self, out: &mut String, e: &EnumDef) {
-        let ts_name = to_ts_type_name(&e.qname.local);
+        let ts_name = type_ident(&e.qname);
 
         if let Some(ref doc) = e.documentation {
             self.emit_docstring(out, doc, "");
@@ -446,7 +455,7 @@ impl TypeScriptCodegen {
     }
 
     fn emit_union(&self, out: &mut String, u: &UnionDef) {
-        let ts_name = to_ts_type_name(&u.qname.local);
+        let ts_name = type_ident(&u.qname);
 
         if let Some(ref doc) = u.documentation {
             self.emit_docstring(out, doc, "");
@@ -520,7 +529,7 @@ impl TypeScriptCodegen {
         ir: &SchemaIR,
         recursive_types: &HashSet<QName>,
     ) {
-        let ts_name = to_ts_type_name(&s.qname.local);
+        let ts_name = type_ident(&s.qname);
 
         if let Some(ref doc) = s.documentation {
             self.emit_docstring(out, doc, "");
@@ -528,7 +537,7 @@ impl TypeScriptCodegen {
 
         let mut extends_clause = String::new();
         if let Some(ref base) = s.base_type {
-            let base_name = to_ts_type_name(&base.local);
+            let base_name = type_ident(base);
             extends_clause = format!(" extends {}", base_name);
         }
 
@@ -543,7 +552,7 @@ impl TypeScriptCodegen {
         } else if extends_clause.is_empty() {
             let _ = writeln!(out, "export type {} = {{", ts_name);
         } else {
-            let base_name = to_ts_type_name(&s.base_type.as_ref().unwrap().local);
+            let base_name = type_ident(s.base_type.as_ref().unwrap());
             let _ = writeln!(out, "export type {} = {} & {{", ts_name, base_name);
         }
 
@@ -707,7 +716,7 @@ impl TypeScriptCodegen {
                 }
                 PrimitiveType::AnyType | PrimitiveType::AnySimpleType => "z.unknown()".into(),
             },
-            TypeRef::Named(qname) => format!("{}Schema", to_ts_type_name(&qname.local)),
+            TypeRef::Named(qname) => format!("{}Schema", type_ident(qname)),
             TypeRef::Boxed(inner) => self.zod_expr_for_type(inner),
             TypeRef::List(inner) => format!("z.array({})", self.zod_expr_for_type(inner)),
         }
@@ -957,7 +966,7 @@ impl TypeScriptCodegen {
     fn emit_root_aliases(&self, out: &mut String, ir: &SchemaIR) {
         let mut declared_names = BTreeSet::new();
         for td in ir.types.values() {
-            declared_names.insert(to_ts_type_name(&td.qname().local));
+            declared_names.insert(type_ident(td.qname()));
         }
 
         for element in ir.elements.values() {
@@ -1081,7 +1090,7 @@ impl TypeScriptCodegen {
                 }
                 PrimitiveType::AnyType | PrimitiveType::AnySimpleType => "v.unknown()".into(),
             },
-            TypeRef::Named(qname) => format!("{}Schema", to_ts_type_name(&qname.local)),
+            TypeRef::Named(qname) => format!("{}Schema", type_ident(qname)),
             TypeRef::Boxed(inner) => self.valibot_expr_for_type(inner),
             TypeRef::List(inner) => format!("v.array({})", self.valibot_expr_for_type(inner)),
         }
@@ -1198,7 +1207,7 @@ impl TypeScriptCodegen {
                 }
                 PrimitiveType::AnyType | PrimitiveType::AnySimpleType => "Type.Unknown()".into(),
             },
-            TypeRef::Named(qname) => format!("{}Schema", to_ts_type_name(&qname.local)),
+            TypeRef::Named(qname) => format!("{}Schema", type_ident(qname)),
             TypeRef::Boxed(inner) => self.typebox_expr_for_type(inner),
             TypeRef::List(inner) => format!("Type.Array({})", self.typebox_expr_for_type(inner)),
         }

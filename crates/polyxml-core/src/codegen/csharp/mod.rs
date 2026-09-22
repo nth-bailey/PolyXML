@@ -8,9 +8,11 @@ use std::fmt::Write as FmtWrite;
 use heck::{AsLowerCamelCase, AsPascalCase};
 use serde::{Deserialize, Serialize};
 
-use crate::codegen::{sanitize_keyword, LanguageContext};
+use crate::codegen::{
+    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+};
 use crate::ir::{
-    EnumDef, FieldDef, FieldKind, PrimitiveType, RestrictionFacets, SchemaIR, SimpleTypeDef,
+    EnumDef, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef,
     StructDef, TypeDef, TypeRef, UnionDef,
 };
 
@@ -218,7 +220,7 @@ impl LanguageContext for CSharpLanguageContext {
     fn map_type_ref(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => self.map_primitive(*prim).to_string(),
-            TypeRef::Named(qname) => to_csharp_type_name(&qname.local),
+            TypeRef::Named(qname) => type_ident(qname),
             TypeRef::Boxed(inner) => self.map_type_ref(inner),
             TypeRef::List(inner) => format!("List<{}>", self.map_type_ref(inner)),
         }
@@ -229,6 +231,12 @@ impl LanguageContext for CSharpLanguageContext {
 pub struct CSharpCodegen {
     options: CSharpOptions,
     context: CSharpLanguageContext,
+}
+
+/// Emitted C# identifier for a named type, disambiguated across namespaces
+/// for the IR currently being generated (issue #51 item 3).
+fn type_ident(q: &QName) -> String {
+    lookup_type_name(q, || to_csharp_type_name(&q.local))
 }
 
 impl CSharpCodegen {
@@ -242,6 +250,7 @@ impl CSharpCodegen {
 
     /// Emits all types in the given SchemaIR as a single C# compilation unit.
     pub fn generate_module(&self, ir: &SchemaIR) -> String {
+        set_type_name_map(build_type_name_map(ir, to_csharp_type_name));
         let mut out = String::new();
 
         if let Some(ref header) = self.options.custom_header {
@@ -350,7 +359,7 @@ impl CSharpCodegen {
         // Enums
         for def in ir.types.values() {
             if let TypeDef::Enum(e) = def {
-                let name = to_csharp_type_name(&e.qname.local);
+                let name = type_ident(&e.qname);
                 writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
             }
         }
@@ -358,7 +367,7 @@ impl CSharpCodegen {
         // Simple types
         for def in ir.types.values() {
             if let TypeDef::Simple(s) = def {
-                let name = to_csharp_type_name(&s.qname.local);
+                let name = type_ident(&s.qname);
                 writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
             }
         }
@@ -366,7 +375,7 @@ impl CSharpCodegen {
         // Unions
         for def in ir.types.values() {
             if let TypeDef::Union(u) = def {
-                let name = to_csharp_type_name(&u.qname.local);
+                let name = type_ident(&u.qname);
                 writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
             }
         }
@@ -374,7 +383,7 @@ impl CSharpCodegen {
         // Structs
         for def in ir.types.values() {
             if let TypeDef::Struct(s) = def {
-                let name = to_csharp_type_name(&s.qname.local);
+                let name = type_ident(&s.qname);
                 writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
                 writeln!(out, "{}[JsonSerializable(typeof(List<{}>))]", indent, name).unwrap();
             }
@@ -399,7 +408,7 @@ impl CSharpCodegen {
     }
 
     fn emit_enum(&self, out: &mut String, e: &EnumDef, indent: &str) {
-        let enum_name = to_csharp_type_name(&e.qname.local);
+        let enum_name = type_ident(&e.qname);
         if let Some(ref doc) = e.documentation {
             self.emit_docstring(out, doc, indent);
         }
@@ -482,7 +491,7 @@ impl CSharpCodegen {
 
     fn emit_simple(&self, out: &mut String, s: &SimpleTypeDef, indent: &str) {
         if !s.facets.is_empty() || !self.options.use_records {
-            let type_name = to_csharp_type_name(&s.qname.local);
+            let type_name = type_ident(&s.qname);
             let base_type = self.context.map_type_ref(&s.base_type);
 
             if let Some(ref doc) = s.documentation {
@@ -557,7 +566,7 @@ impl CSharpCodegen {
     }
 
     fn emit_union(&self, out: &mut String, u: &UnionDef, indent: &str) {
-        let choice_name = to_csharp_type_name(&u.qname.local);
+        let choice_name = type_ident(&u.qname);
         if let Some(ref doc) = u.documentation {
             self.emit_docstring(out, doc, indent);
         }
@@ -662,7 +671,7 @@ impl CSharpCodegen {
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR, indent: &str) {
-        let struct_name = to_csharp_type_name(&s.qname.local);
+        let struct_name = type_ident(&s.qname);
         if let Some(ref doc) = s.documentation {
             self.emit_docstring(out, doc, indent);
         }
@@ -690,7 +699,7 @@ impl CSharpCodegen {
         let mut base_clause = Vec::new();
         if let Some(ref base_qname) = s.base_type {
             if matches!(ir.types.get(base_qname), Some(TypeDef::Struct(_))) {
-                let base_name = to_csharp_type_name(&base_qname.local);
+                let base_name = type_ident(base_qname);
                 base_clause.push(base_name);
             }
         }
@@ -816,7 +825,7 @@ impl CSharpCodegen {
     }
 
     fn emit_struct_validator(&self, out: &mut String, s: &StructDef, indent: &str) {
-        let struct_name = to_csharp_type_name(&s.qname.local);
+        let struct_name = type_ident(&s.qname);
         let new_kw = if !self.options.use_records {
             if s.base_type.is_some() {
                 "override "
@@ -940,9 +949,9 @@ impl CSharpCodegen {
             TypeRef::Primitive(p) => self.context.map_primitive(*p).to_string(),
             TypeRef::Named(qn) => {
                 if let Some(TypeDef::Union(u)) = ir.types.get(qn) {
-                    to_csharp_type_name(&u.qname.local)
+                    type_ident(&u.qname)
                 } else {
-                    to_csharp_type_name(&qn.local)
+                    type_ident(qn)
                 }
             }
             TypeRef::Boxed(inner) => self.context.map_type_ref(inner),
@@ -969,7 +978,7 @@ impl CSharpCodegen {
             // If the field is a choice (UnionDef), emit XmlElement("branchXml", typeof(BranchType))
             if let TypeRef::Named(ref qname) = f.type_ref {
                 if let Some(TypeDef::Union(u)) = ir.types.get(qname) {
-                    let choice_name = to_csharp_type_name(&u.qname.local);
+                    let choice_name = type_ident(&u.qname);
                     for branch in &u.branches {
                         let variant_name = to_csharp_type_name(&branch.variant_name);
                         parts.push(format!(

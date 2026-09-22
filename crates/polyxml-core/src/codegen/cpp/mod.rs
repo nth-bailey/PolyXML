@@ -4,7 +4,9 @@ use std::fmt::Write as FmtWrite;
 use heck::{AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
-use crate::codegen::{sanitize_keyword, LanguageContext};
+use crate::codegen::{
+    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+};
 use crate::ir::{
     EnumDef, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef,
     TypeRef, UnionDef,
@@ -157,7 +159,7 @@ impl LanguageContext for CppLanguageContext {
     fn map_type_ref(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => self.map_primitive(*prim).to_string(),
-            TypeRef::Named(qname) => to_cpp_type_name(&qname.local),
+            TypeRef::Named(qname) => type_ident(qname),
             TypeRef::Boxed(inner) => format!("std::unique_ptr<{}>", self.map_type_ref(inner)),
             TypeRef::List(inner) => format!("std::vector<{}>", self.map_type_ref(inner)),
         }
@@ -239,6 +241,12 @@ pub struct CppCodegen {
     context: CppLanguageContext,
 }
 
+/// Emitted C++ identifier for a named type, disambiguated across namespaces
+/// for the IR currently being generated (issue #51 item 3).
+fn type_ident(q: &QName) -> String {
+    lookup_type_name(q, || to_cpp_type_name(&q.local))
+}
+
 impl CppCodegen {
     pub fn new(options: CppOptions) -> Self {
         Self {
@@ -249,6 +257,7 @@ impl CppCodegen {
 
     /// Generate complete header-only source (`.hpp`).
     pub fn generate_header(&self, ir: &SchemaIR) -> String {
+        set_type_name_map(build_type_name_map(ir, to_cpp_type_name));
         let mut out = String::new();
         if let Some(ref header) = self.options.custom_header {
             let trimmed = header.trim();
@@ -286,6 +295,7 @@ impl CppCodegen {
 
     /// Generate complete C++20 module interface unit (`.cppm`).
     pub fn generate_module_unit(&self, ir: &SchemaIR, module_name: &str) -> String {
+        set_type_name_map(build_type_name_map(ir, to_cpp_type_name));
         let mut out = String::new();
         if let Some(ref header) = self.options.custom_header {
             let trimmed = header.trim();
@@ -470,7 +480,7 @@ endif()
         // 1. Enums
         for type_def in ir.types.values() {
             if let TypeDef::Enum(enum_def) = type_def {
-                let enum_name = to_cpp_type_name(&enum_def.qname.local);
+                let enum_name = type_ident(&enum_def.qname);
                 let full_type = format!("{}::{}", ns, enum_name);
                 writeln!(out, "template <>").unwrap();
                 writeln!(out, "struct glz::meta<{}> {{", full_type).unwrap();
@@ -498,7 +508,7 @@ endif()
         let sorted_qnames = self.topological_sort_types(ir);
         for qname in sorted_qnames {
             if let Some(TypeDef::Struct(s)) = ir.types.get(&qname) {
-                let struct_name = to_cpp_type_name(&s.qname.local);
+                let struct_name = type_ident(&s.qname);
                 let full_type = format!("{}::{}", ns, struct_name);
                 writeln!(out, "template <>").unwrap();
                 writeln!(out, "struct glz::meta<{}> {{", full_type).unwrap();
@@ -570,7 +580,7 @@ concept XmlModel = requires(T a) {{
             .values()
             .filter_map(|t| {
                 if let TypeDef::Struct(s) = t {
-                    Some(to_cpp_type_name(&s.qname.local))
+                    Some(type_ident(&s.qname))
                 } else {
                     None
                 }
@@ -622,7 +632,7 @@ concept XmlModel = requires(T a) {{
                 writeln!(out, "/// {}", line).unwrap();
             }
         }
-        let type_name = to_cpp_type_name(&simple.qname.local);
+        let type_name = type_ident(&simple.qname);
         let base_type = self.context.map_type_ref(&simple.base_type);
         writeln!(out, "using {} = {};\n", type_name, base_type).unwrap();
     }
@@ -634,7 +644,7 @@ concept XmlModel = requires(T a) {{
             }
         }
 
-        let enum_name = to_cpp_type_name(&enum_def.qname.local);
+        let enum_name = type_ident(&enum_def.qname);
         writeln!(out, "enum class {} {{", enum_name).unwrap();
 
         for variant in &enum_def.variants {
@@ -668,8 +678,16 @@ concept XmlModel = requires(T a) {{
             writeln!(out, "    return \"\";").unwrap();
             writeln!(out, "}}\n").unwrap();
 
-            // from_string
-            let func_name = format!("{}_from_string", AsSnakeCase(&enum_def.qname.local));
+            // from_string — stem follows the disambiguated type name only when
+            // it differs from the natural one, preserving the historical
+            // snake-of-local form otherwise (issue #51 item 3).
+            let natural = to_cpp_type_name(&enum_def.qname.local);
+            let stem = if enum_name == natural {
+                AsSnakeCase(&enum_def.qname.local).to_string()
+            } else {
+                AsSnakeCase(&enum_name).to_string()
+            };
+            let func_name = format!("{stem}_from_string");
             writeln!(
                 out,
                 "[[nodiscard]] inline std::optional<{}> {}(std::string_view s) noexcept {{",
@@ -697,7 +715,7 @@ concept XmlModel = requires(T a) {{
             }
         }
 
-        let union_name = to_cpp_type_name(&u.qname.local);
+        let union_name = type_ident(&u.qname);
 
         // Check if branches have distinct types and no primitives
         let mut branch_types = Vec::new();
@@ -758,17 +776,17 @@ concept XmlModel = requires(T a) {{
             }
         }
 
-        let struct_name = to_cpp_type_name(&s.qname.local);
+        let struct_name = type_ident(&s.qname);
         let mut base_clause = String::new();
         let mut simple_content_base: Option<String> = None;
 
         if let Some(ref base_qname) = s.base_type {
             if matches!(ir.types.get(base_qname), Some(TypeDef::Struct(_))) {
-                base_clause = format!(" : public {}", to_cpp_type_name(&base_qname.local));
+                base_clause = format!(" : public {}", type_ident(base_qname));
             } else if let Some(prim) = PrimitiveType::from_xsd_name(&base_qname.local) {
                 simple_content_base = Some(self.context.map_primitive(prim).to_string());
             } else if let Some(TypeDef::Simple(st)) = ir.types.get(base_qname) {
-                simple_content_base = Some(to_cpp_type_name(&st.qname.local));
+                simple_content_base = Some(type_ident(&st.qname));
             }
         }
 

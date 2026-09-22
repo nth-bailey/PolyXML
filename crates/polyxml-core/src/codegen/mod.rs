@@ -1,4 +1,5 @@
-use std::collections::HashSet;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 
 use heck::{AsKebabCase, AsLowerCamelCase, AsPascalCase, AsShoutySnakeCase, AsSnakeCase};
@@ -21,7 +22,7 @@ pub use python::{PythonBackend, PythonCodegen, PythonOptions};
 pub use rust::{RustCodegen, RustOptions};
 pub use typescript::{TypeScriptBackend, TypeScriptCodegen, TypeScriptOptions};
 
-use crate::ir::{PrimitiveType, TypeRef};
+use crate::ir::{PrimitiveType, QName, SchemaIR, TypeRef};
 
 #[derive(Debug, Error)]
 pub enum CodegenError {
@@ -47,6 +48,52 @@ pub trait LanguageContext: Send + Sync {
 
     /// Map a canonical TypeRef to the target language's type string.
     fn map_type_ref(&self, type_ref: &TypeRef) -> String;
+}
+
+thread_local! {
+    /// Disambiguated type identifiers for the IR currently being generated,
+    /// keyed by qualified name (issue #51 item 3). Refreshed at the start of
+    /// every `generate_module` call; lookups for names absent from the map
+    /// (e.g. references to unloaded external types) fall back to the
+    /// language's default local-name derivation.
+    static TYPE_NAME_MAP: RefCell<HashMap<QName, String>> = RefCell::new(HashMap::new());
+}
+
+/// Install the disambiguated type-name map for the current thread.
+/// Called by each codegen's `generate_module`.
+pub fn set_type_name_map(map: HashMap<QName, String>) {
+    TYPE_NAME_MAP.with(|cell| *cell.borrow_mut() = map);
+}
+
+/// Resolve the emitted identifier for a named type, falling back to the
+/// language-specific derivation when the type is not part of the current IR.
+pub fn lookup_type_name(qname: &QName, fallback: impl FnOnce() -> String) -> String {
+    TYPE_NAME_MAP
+        .with(|cell| cell.borrow().get(qname).cloned())
+        .unwrap_or_else(fallback)
+}
+
+/// Assign a unique identifier to every type in the IR. Types whose
+/// language-cased names collide (same local name in different namespaces)
+/// get numeric suffixes; the first type in `BTreeMap` order keeps the bare
+/// name, making the assignment deterministic.
+pub fn build_type_name_map<F: Fn(&str) -> String>(
+    ir: &SchemaIR,
+    name_of: F,
+) -> HashMap<QName, String> {
+    let mut taken: HashSet<String> = HashSet::new();
+    let mut map = HashMap::new();
+    for qname in ir.types.keys() {
+        let base = name_of(&qname.local);
+        let mut name = base.clone();
+        let mut n = 2u32;
+        while !taken.insert(name.clone()) {
+            name = format!("{base}{n}");
+            n += 1;
+        }
+        map.insert(qname.clone(), name);
+    }
+    map
 }
 
 /// Create a pre-configured MiniJinja environment with PolyXML case filters and keyword sanitization.

@@ -3,9 +3,11 @@ use std::fmt::Write as FmtWrite;
 use heck::{AsPascalCase, AsSnakeCase};
 use serde::{Deserialize, Serialize};
 
-use crate::codegen::{sanitize_keyword, LanguageContext};
+use crate::codegen::{
+    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+};
 use crate::ir::{
-    EnumDef, FieldDef, FieldKind, PrimitiveType, RestrictionFacets, SchemaIR, SimpleTypeDef,
+    EnumDef, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef,
     StructDef, TypeDef, TypeRef, UnionDef,
 };
 
@@ -124,7 +126,7 @@ impl LanguageContext for GoLanguageContext {
     fn map_type_ref(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => self.map_primitive(*prim).to_string(),
-            TypeRef::Named(qname) => to_go_type_name(&qname.local),
+            TypeRef::Named(qname) => type_ident(qname),
             TypeRef::Boxed(inner) => format!("*{}", self.map_type_ref(inner)),
             TypeRef::List(inner) => format!("[]{}", self.map_type_ref(inner)),
         }
@@ -231,6 +233,12 @@ pub struct GoCodegen {
     context: GoLanguageContext,
 }
 
+/// Emitted Go identifier for a named type, disambiguated across namespaces
+/// for the IR currently being generated (issue #51 item 3).
+fn type_ident(q: &QName) -> String {
+    lookup_type_name(q, || to_go_type_name(&q.local))
+}
+
 impl GoCodegen {
     pub fn new(options: GoOptions) -> Self {
         Self {
@@ -241,6 +249,7 @@ impl GoCodegen {
 
     /// Generate complete Go module content.
     pub fn generate_module(&self, ir: &SchemaIR) -> String {
+        set_type_name_map(build_type_name_map(ir, to_go_type_name));
         let mut body = String::new();
         let mut has_time = false;
         let mut has_fmt = false;
@@ -394,13 +403,13 @@ impl GoCodegen {
             }
         }
 
-        let type_name = to_go_type_name(&simple.qname.local);
+        let type_name = type_ident(&simple.qname);
         let base_type = self.context.map_type_ref(&simple.base_type);
         writeln!(out, "type {} {}\n", type_name, base_type).unwrap();
     }
 
     fn emit_enum(&self, out: &mut String, enum_def: &EnumDef) {
-        let enum_name = to_go_type_name(&enum_def.qname.local);
+        let enum_name = type_ident(&enum_def.qname);
         if let Some(ref doc) = enum_def.documentation {
             for line in doc.lines() {
                 writeln!(out, "// {}", line).unwrap();
@@ -441,7 +450,7 @@ impl GoCodegen {
     }
 
     fn emit_union(&self, out: &mut String, u: &UnionDef) {
-        let choice_name = to_go_type_name(&u.qname.local);
+        let choice_name = type_ident(&u.qname);
         if let Some(ref doc) = u.documentation {
             for line in doc.lines() {
                 writeln!(out, "// {}", line).unwrap();
@@ -587,7 +596,7 @@ impl GoCodegen {
     }
 
     fn emit_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
-        let struct_name = to_go_type_name(&s.qname.local);
+        let struct_name = type_ident(&s.qname);
         if let Some(ref doc) = s.documentation {
             for line in doc.lines() {
                 writeln!(out, "// {}", line).unwrap();
@@ -620,12 +629,12 @@ impl GoCodegen {
         let mut simple_content_base: Option<String> = None;
         if let Some(ref base_qname) = s.base_type {
             if matches!(ir.types.get(base_qname), Some(TypeDef::Struct(_))) {
-                let base_name = to_go_type_name(&base_qname.local);
+                let base_name = type_ident(base_qname);
                 writeln!(out, "    {}", base_name).unwrap();
             } else if let Some(prim) = PrimitiveType::from_xsd_name(&base_qname.local) {
                 simple_content_base = Some(self.context.map_primitive(prim).to_string());
             } else if let Some(TypeDef::Simple(st)) = ir.types.get(base_qname) {
-                simple_content_base = Some(to_go_type_name(&st.qname.local));
+                simple_content_base = Some(type_ident(&st.qname));
             }
         }
 
@@ -744,7 +753,7 @@ impl GoCodegen {
     }
 
     fn emit_struct_validator(&self, out: &mut String, s: &StructDef) {
-        let struct_name = to_go_type_name(&s.qname.local);
+        let struct_name = type_ident(&s.qname);
         writeln!(out, "func (s {}) Validate() error {{", struct_name).unwrap();
 
         let mut has_checks = false;

@@ -44,3 +44,32 @@ To run benchmarks on the pure Rust engine against XML payloads:
 ```bash
 cargo bench -p polyxml
 ```
+
+## 4. Schema Parser Architecture (`schema_parser/mod.rs`, post issue #51)
+
+The XSD parser runs **frame-based post-passes**: `parse_str_internal` wraps
+`parse_str_body` with a frame-depth counter, and every frame end (schema root,
+include/import) runs `inherit_pattern_facets` → `expand_group_refs` →
+`resolve_cycles` (last, so cuts see the final graph).
+
+Key mechanisms (regression-locked in `crates/polyxml-core/tests/test_issue51_audit.rs`):
+
+1. **Named groups**: `<xs:group name>` bodies are captured into
+   `GroupDef`/`PendingGroupRef` state; `<xs:group ref>` usages expand via
+   `parse_group_body` + `consume_inline_element_type` at frame end.
+2. **Enum dedup**: duplicate `<xs:enumeration>` values are dropped; distinct
+   values whose identifiers collide get numeric suffixes.
+3. **Nested inline types**: an `<xs:element>` carrying an inline
+   `complexType`/`simpleType` is extracted as a uniquely named top-level type
+   (`unique_type_name`) — its fields must never leak into the parent struct.
+4. **simpleContent**: `<xs:extension>` emits a `Text` field named `value`
+   carrying the extension base type.
+5. **Pattern inheritance**: derived simple types append their base type's
+   patterns (AND semantics) via `inherit_pattern_facets`; enum facet
+   inheritance is intentionally skipped (`EnumDef` has no facets).
+6. **File cache & chameleon includes**: the cache stores the raw post-passed
+   IR keyed by canonical path (`file_cache`), replays group state
+   (`file_groups`) on hit, and re-keys chameleon (namespace-less) includes
+   per-includer via `rekey_to_namespace`/`rekey_new_state`.
+7. Parser reuse across `parse_file` calls is supported; groups partially
+   replay from `file_groups` on cache hit.

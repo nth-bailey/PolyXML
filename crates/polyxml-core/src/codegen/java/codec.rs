@@ -20,13 +20,9 @@ impl JavaCodegen {
                 _ => Ok(()),
             }
         }
-        let names: HashSet<_> = ir
-            .types
-            .values()
-            .map(|d| to_java_type_name(&d.qname().local))
-            .collect();
+        let names: HashSet<_> = ir.types.values().map(|d| type_ident(d.qname())).collect();
         for def in ir.types.values() {
-            let name = to_java_type_name(&def.qname().local);
+            let name = type_ident(def.qname());
             if names.contains(&format!("{name}Codec")) {
                 return Err(format!(
                     "direct codec name {name}Codec collides with a schema type"
@@ -70,7 +66,7 @@ impl JavaCodegen {
     }
 
     pub(super) fn generate_codec(&self, def: &TypeDef, ir: &SchemaIR) -> String {
-        let name = to_java_type_name(&def.qname().local);
+        let name = type_ident(def.qname());
         let mut out = String::new();
         self.emit_file_header(&mut out);
         out.push_str("import javax.xml.stream.*;\nimport java.io.*;\n\n");
@@ -224,7 +220,7 @@ impl JavaCodegen {
     }
 
     fn emit_read_struct(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
-        let name = to_java_type_name(&s.qname.local);
+        let name = type_ident(&s.qname);
         if s.is_abstract && !self.options.use_records {
             out.push_str("            throw new XMLStreamException(\"Cannot instantiate abstract XML type without a concrete codec\");\n");
             return;
@@ -400,7 +396,7 @@ impl JavaCodegen {
                 self.emit_write_value(out, inner, value, local, ns, ir, indent)
             }
             TypeRef::Named(q) => {
-                let name = to_java_type_name(&q.local);
+                let name = type_ident(q);
                 let _ = writeln!(
                     out,
                     "{indent}{name}Codec.writeXml({value}, writer, {local:?}, {ns:?});"
@@ -415,7 +411,7 @@ impl JavaCodegen {
 
     fn read_value(&self, ty: &TypeRef, ir: &SchemaIR) -> String {
         match ty {
-            TypeRef::Named(q) => format!("{}Codec.readXml(reader)", to_java_type_name(&q.local)),
+            TypeRef::Named(q) => format!("{}Codec.readXml(reader)", type_ident(q)),
             TypeRef::Boxed(t) => self.read_value(t, ir),
             _ => self.parse_scalar(ty, "reader.getElementText()", ir),
         }
@@ -431,11 +427,11 @@ impl JavaCodegen {
             }
             TypeRef::Named(q) => match ir.types.get(q) {
                 Some(TypeDef::Enum(_)) => {
-                    format!("{}.fromValue({raw})", to_java_type_name(&q.local))
+                    format!("{}.fromValue({raw})", type_ident(q))
                 }
                 Some(TypeDef::Simple(s)) => format!(
                     "new {}({})",
-                    to_java_type_name(&q.local),
+                    type_ident(q),
                     self.parse_scalar(&s.base_type, raw, ir)
                 ),
                 _ => "null".into(),

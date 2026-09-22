@@ -7,9 +7,11 @@ use std::fmt::Write as FmtWrite;
 use heck::{AsLowerCamelCase, AsPascalCase, AsShoutySnakeCase};
 use serde::{Deserialize, Serialize};
 
-use crate::codegen::{sanitize_keyword, LanguageContext};
+use crate::codegen::{
+    build_type_name_map, lookup_type_name, sanitize_keyword, set_type_name_map, LanguageContext,
+};
 use crate::ir::{
-    EnumDef, PrimitiveType, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef,
+    EnumDef, PrimitiveType, QName, RestrictionFacets, SchemaIR, SimpleTypeDef, StructDef, TypeDef,
     TypeRef, UnionDef,
 };
 
@@ -134,7 +136,7 @@ impl LanguageContext for JavaLanguageContext {
     fn map_type_ref(&self, type_ref: &TypeRef) -> String {
         match type_ref {
             TypeRef::Primitive(prim) => self.map_primitive(*prim).to_string(),
-            TypeRef::Named(qname) => to_java_type_name(&qname.local),
+            TypeRef::Named(qname) => type_ident(qname),
             TypeRef::Boxed(inner) | TypeRef::List(inner) => {
                 let inner_str = self.boxed_type(inner);
                 if matches!(type_ref, TypeRef::List(_)) {
@@ -172,7 +174,7 @@ impl JavaLanguageContext {
                 PrimitiveType::Base64Binary | PrimitiveType::HexBinary => "byte[]".to_string(),
                 _ => self.map_primitive(*prim).to_string(),
             },
-            TypeRef::Named(qname) => to_java_type_name(&qname.local),
+            TypeRef::Named(qname) => type_ident(qname),
             TypeRef::Boxed(inner) => self.boxed_type(inner),
             TypeRef::List(inner) => format!("java.util.List<{}>", self.boxed_type(inner)),
         }
@@ -205,6 +207,12 @@ pub fn to_java_type_name(name: &str) -> String {
     sanitize_keyword(&sanitized, "java")
 }
 
+/// Emitted Java identifier for a named type, disambiguated across
+/// namespaces for the IR currently being generated (issue #51 item 3).
+pub(super) fn type_ident(q: &QName) -> String {
+    lookup_type_name(q, || to_java_type_name(&q.local))
+}
+
 /// Convert an XML enumeration variant name to SCREAMING_SNAKE_CASE for Java enum constants.
 pub fn to_java_enum_constant(name: &str) -> String {
     let raw = AsShoutySnakeCase(name).to_string();
@@ -234,6 +242,7 @@ impl JavaCodegen {
 
     /// Generate individual compilation units (`{TypeName}.java`), one for each schema type.
     pub fn generate_files(&self, ir: &SchemaIR) -> Vec<(String, String)> {
+        set_type_name_map(build_type_name_map(ir, to_java_type_name));
         let mut files = Vec::new();
 
         for type_def in ir.types.values() {
@@ -253,6 +262,7 @@ impl JavaCodegen {
 
     /// Generate a single outer class (`{outer_class_name}.java`) enclosing all types as static members.
     pub fn generate_module(&self, ir: &SchemaIR, outer_class_name: &str) -> String {
+        set_type_name_map(build_type_name_map(ir, to_java_type_name));
         let mut out = String::new();
 
         self.emit_file_header(&mut out);
@@ -368,22 +378,22 @@ impl JavaCodegen {
         let mut out = String::new();
         let type_name = match type_def {
             TypeDef::Struct(s) => {
-                let name = to_java_type_name(&s.qname.local);
+                let name = type_ident(&s.qname);
                 self.emit_struct(&mut out, s, &name, indent, ir);
                 name
             }
             TypeDef::Enum(e) => {
-                let name = to_java_type_name(&e.qname.local);
+                let name = type_ident(&e.qname);
                 self.emit_enum(&mut out, e, &name, indent);
                 name
             }
             TypeDef::Union(u) => {
-                let name = to_java_type_name(&u.qname.local);
+                let name = type_ident(&u.qname);
                 self.emit_union(&mut out, u, &name, indent);
                 name
             }
             TypeDef::Simple(s) => {
-                let name = to_java_type_name(&s.qname.local);
+                let name = type_ident(&s.qname);
                 self.emit_simple(&mut out, s, &name, indent);
                 name
             }
