@@ -86,41 +86,17 @@ pub struct GenerateArgs {
     #[arg(short = 'm', long = "mode", value_name = "MODE")]
     pub mode: Option<String>,
 
-    /// Zero-copy mode for Rust models (borrow Cow<'a, str> instead of owned String)
-    #[arg(long = "zero-copy", hide = true, default_missing_value = "true", num_args = 0..=1)]
+    /// Zero-copy mode for Rust models (borrow Cow<'a, str>); pass 'false' for owned String fields (default: true)
+    #[arg(long = "zero-copy", default_missing_value = "true", num_args = 0..=1)]
     pub zero_copy: Option<bool>,
 
     /// Emit streaming serialization and deserialization codecs (default: true)
     #[arg(long = "codecs", default_missing_value = "true", num_args = 0..=1)]
     pub codecs: Option<bool>,
 
-    /// Emit runtime Zod validation schemas for TypeScript (default: false)
-    #[arg(long = "zod", hide = true, default_missing_value = "true", num_args = 0..=1)]
-    pub zod: Option<bool>,
-
-    /// C# System.Text.Json compile-time source generation context (default: false)
-    #[arg(long = "source-gen", hide = true, default_missing_value = "true", num_args = 0..=1)]
-    pub source_gen: Option<bool>,
-
-    /// C# record representation ('class' or 'struct', default: 'class')
-    #[arg(long = "record-kind", hide = true, value_name = "KIND")]
-    pub record_kind: Option<String>,
-
     /// Target model style (e.g. record, pojo, class, record-class, record-struct)
     #[arg(long, value_name = "STYLE")]
     pub style: Option<String>,
-
-    /// Emit fluent Java builders
-    #[arg(long, hide = true, default_missing_value = "true", num_args = 0..=1)]
-    pub builder: Option<bool>,
-
-    /// Java XML binding: annotation (default) or direct StAX companion codecs
-    #[arg(long, hide = true, value_parser = ["annotation", "direct"])]
-    pub codec: Option<String>,
-
-    /// Rust rkyv zero-copy binary wire format serialization (default: false)
-    #[arg(long = "rkyv", hide = true, default_missing_value = "true", num_args = 0..=1)]
-    pub rkyv: Option<bool>,
 
     /// Output directory for generated source files
     #[arg(short = 'o', long = "out", alias = "out-dir", value_name = "DIR")]
@@ -250,12 +226,6 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
             || args.mode.is_some()
             || args.zero_copy.is_some()
             || args.codecs.is_some()
-            || args.zod.is_some()
-            || args.source_gen.is_some()
-            || args.record_kind.is_some()
-            || args.builder.is_some()
-            || args.codec.is_some()
-            || args.rkyv.is_some()
             || args.out.is_some()
             || args.custom_header.is_some()
             || args.strict_facets
@@ -291,18 +261,15 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         mode: args.mode.as_deref(),
         zero_copy: args.zero_copy,
         codecs: args.codecs,
-        zod: args.zod,
-        source_gen: args.source_gen,
-        record_kind: args.record_kind.as_deref(),
         style: args.style.as_deref(),
-        builder: args.builder,
-        codec: args.codec.as_deref(),
-        rkyv: args.rkyv,
+        builder: None,
+        codec: None,
+        rkyv: None,
         custom_header: args.custom_header.as_deref(),
     };
     let resolved_options = languages
         .iter()
-        .map(|lang| emit_opts.resolve(lang, true))
+        .map(|lang| emit_opts.resolve(lang))
         .collect::<std::io::Result<Vec<_>>>()?;
 
     let mut parser = XsdParser::new();
@@ -359,7 +326,7 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     let targets = manifest.resolved_targets();
     for target in &targets {
-        target_options(target).resolve(&target.target, true)?;
+        target_options(target).resolve(&target.target)?;
     }
 
     let schema_files = manifest.expand_schemas(base_dir)?;
@@ -414,7 +381,7 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
             target_dir.display()
         );
 
-        let emit_opts = target_options(target).resolve(&target.target, false)?;
+        let emit_opts = target_options(target).resolve(&target.target)?;
 
         for (schema_path, ir) in &compiled_schemas {
             emit_target_code(&target.target, emit_opts, &target_dir, schema_path, ir)?;
@@ -511,9 +478,6 @@ pub struct TargetEmitOptions<'a> {
     pub mode: Option<&'a str>,
     pub zero_copy: Option<bool>,
     pub codecs: Option<bool>,
-    pub zod: Option<bool>,
-    pub source_gen: Option<bool>,
-    pub record_kind: Option<&'a str>,
     pub style: Option<&'a str>,
     pub builder: Option<bool>,
     pub codec: Option<&'a str>,
@@ -607,7 +571,9 @@ fn emit_target_code(
 
             let options = TypeScriptOptions {
                 backend: ts_backend,
-                emit_zod: opts.zod.unwrap_or(false),
+                // Zod emission is selected via `--backend zod`; the removed
+                // legacy `--zod` switch was the only other way to set this.
+                emit_zod: false,
                 use_interface: true,
                 readonly_fields: false,
                 emit_root_aliases: true,
@@ -742,10 +708,11 @@ fn emit_target_code(
                 .map(|s| s.to_string_lossy())
                 .unwrap_or_else(|| "Models".into());
 
-            let record_kind = opts
-                .record_kind
-                .and_then(CSharpRecordKind::from_str_loose)
-                .unwrap_or(CSharpRecordKind::Class);
+            let record_kind = if matches!(opts.style, Some("record-struct")) {
+                CSharpRecordKind::Struct
+            } else {
+                CSharpRecordKind::Class
+            };
 
             let options = CSharpOptions {
                 namespace: ns.to_string(),
@@ -756,7 +723,7 @@ fn emit_target_code(
                 use_records,
                 use_file_scoped_namespaces: true,
                 emit_root_records: true,
-                emit_source_gen: opts.source_gen.unwrap_or(false),
+                emit_source_gen: opts.backend == Some("source-gen"),
                 source_gen_context_name: format!("{}JsonContext", AsPascalCase(&file_stem)),
                 custom_header: opts.custom_header.map(|s| s.to_string()),
             };

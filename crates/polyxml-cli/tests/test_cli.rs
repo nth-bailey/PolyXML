@@ -432,7 +432,8 @@ fn test_cli_typescript_generation() {
             "generate",
             "--lang",
             "ts",
-            "--zod",
+            "--backend",
+            "zod",
             "--out",
             zod_out.to_str().unwrap(),
             schema_file.to_str().unwrap(),
@@ -1250,9 +1251,10 @@ fn test_cli_csharp_source_gen_and_record_struct() {
             schema_file.to_str().unwrap(),
             "--lang",
             "csharp",
-            "--source-gen",
-            "--record-kind",
-            "struct",
+            "--backend",
+            "source-gen",
+            "--style",
+            "record-struct",
             "-o",
             out_dir.to_str().unwrap(),
         ])
@@ -1391,7 +1393,7 @@ fn test_cli_go_easyjson_and_sonic_backend() {
 }
 
 #[test]
-fn test_cli_rust_rkyv_flag() {
+fn test_cli_rust_rkyv_feature() {
     let dir = tempdir().unwrap();
     let schema_file = dir.path().join("event.xsd");
     fs::write(
@@ -1414,7 +1416,8 @@ fn test_cli_rust_rkyv_flag() {
             schema_file.to_str().unwrap(),
             "--lang",
             "rust",
-            "--rkyv",
+            "--feature",
+            "rkyv",
             "-o",
             out_dir.to_str().unwrap(),
         ])
@@ -1455,8 +1458,8 @@ schemas = ["model.xsd"]
 [[generate]]
 target = "csharp"
 output = "cs"
-source_gen = true
-record_kind = "struct"
+backend = "source-gen"
+style = "record-struct"
 
 [[generate]]
 target = "ts"
@@ -1471,7 +1474,7 @@ backend = "sonic"
 [[generate]]
 target = "rust"
 output = "rs"
-rkyv = true
+features = ["rkyv"]
 "#,
     )
     .unwrap();
@@ -1628,9 +1631,8 @@ fn test_java_csharp_model_style_options_and_manifest() {
             "java",
             "--style",
             "pojo",
-            "--builder",
-            "--codec",
-            "direct",
+            "--feature",
+            "builder,direct-codec",
             "--out",
             java.to_str().unwrap(),
         ])
@@ -1647,16 +1649,9 @@ fn test_java_csharp_model_style_options_and_manifest() {
     assert!(java.join("ModelCodec.java").exists());
     for args in [
         vec!["--lang", "go", "--style", "pojo"],
-        vec!["--lang", "csharp", "--builder"],
-        vec![
-            "--lang",
-            "csharp",
-            "--style",
-            "class",
-            "--record-kind",
-            "struct",
-        ],
-        vec!["--lang", "java", "--codec", "unknown"],
+        vec!["--lang", "csharp", "--feature", "builder"],
+        vec!["--lang", "cs", "--feature", "zero-copy"],
+        vec!["--lang", "java", "--backend", "unknown"],
     ] {
         let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
             .args([
@@ -1679,8 +1674,7 @@ schemas = ["model.xsd"]
 target = "java"
 output = "generated-java"
 style = "class"
-builder = true
-codec = "direct"
+features = ["builder", "direct-codec"]
 [codegen.csharp]
 output = "generated-csharp"
 style = "pojo"
@@ -1702,70 +1696,43 @@ style = "pojo"
     assert!(cs.contains("get; set;"));
     let parsed: WorkspaceManifest = r#"[codegen.java]
 style="pojo"
-builder=true
-codec="direct"
+features=["builder", "direct-codec"]
 "#
     .parse()
     .unwrap();
     let target = &parsed.resolved_targets()[0];
     assert_eq!(target.style.as_deref(), Some("pojo"));
-    assert_eq!(target.builder, Some(true));
-    assert_eq!(target.codec.as_deref(), Some("direct"));
+    assert_eq!(
+        target.features,
+        vec!["builder".to_string(), "direct-codec".to_string()]
+    );
 }
 
 #[test]
-fn unified_options_match_legacy_output_and_warn() {
+fn removed_legacy_flags_are_rejected() {
     let dir = tempdir().unwrap();
     let schema = dir.path().join("model.xsd");
     fs::write(&schema, r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="Item"><xs:sequence><xs:element name="name" type="xs:string"/></xs:sequence></xs:complexType></xs:schema>"#).unwrap();
-    for (lang, old, new) in [
-        ("ts", vec!["--zod"], vec!["--backend", "zod"]),
-        ("cs", vec!["--source-gen"], vec!["--backend", "source-gen"]),
-        (
-            "rs",
-            vec!["--zero-copy", "--rkyv"],
-            vec!["--feature", "zero-copy", "--feature", "rkyv"],
-        ),
-        (
-            "java",
-            vec!["--builder", "--codec", "direct"],
-            vec!["--feature", "builder,direct-codec"],
-        ),
-        (
-            "csharp",
-            vec!["--record-kind", "struct"],
-            vec!["--style", "record-struct"],
-        ),
+    for args in [
+        vec!["--zod"],
+        vec!["--source-gen"],
+        vec!["--record-kind", "struct"],
+        vec!["--rkyv"],
+        vec!["--builder"],
+        vec!["--codec", "direct"],
     ] {
-        let legacy = dir.path().join(format!("{lang}-old"));
-        let unified = dir.path().join(format!("{lang}-new"));
-        for (flags, out, warning) in [(old, &legacy, true), (new, &unified, false)] {
-            let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
-                .arg("generate")
-                .arg(&schema)
-                .args(["--lang", lang])
-                .args(flags)
-                .arg("--out")
-                .arg(out)
-                .output()
-                .unwrap();
-            let stderr = String::from_utf8_lossy(&result.stderr);
-            assert!(result.status.success(), "{lang}: {stderr}");
-            assert_eq!(stderr.contains("deprecated"), warning, "{stderr}");
-        }
-        let mut files = 0;
-        for entry in fs::read_dir(&legacy).unwrap() {
-            let entry = entry.unwrap();
-            assert_eq!(
-                fs::read(entry.path()).unwrap(),
-                fs::read(unified.join(entry.file_name())).unwrap(),
-                "{lang}: {:?}",
-                entry.file_name()
-            );
-            files += 1;
-        }
-        assert!(files > 0);
-        assert_eq!(files, fs::read_dir(&unified).unwrap().count());
+        let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+            .arg("generate")
+            .arg(&schema)
+            .arg("--out")
+            .arg(dir.path().join("out"))
+            .args(&args)
+            .output()
+            .unwrap();
+        assert!(!result.status.success(), "{args:?}");
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        assert!(stderr.contains("unexpected argument"), "{args:?}: {stderr}");
+        assert!(!dir.path().join("out").exists());
     }
 }
 
@@ -1784,11 +1751,6 @@ fn unified_options_fail_before_schema_io_including_dry_run() {
             "feature 'rkyv'",
         ),
         (vec!["--lang", "rust", "--feature", "phf"], "feature 'phf'"),
-        (vec!["--lang", "python", "--zod"], "option 'zod'"),
-        (
-            vec!["--lang", "ts", "--zod", "--backend", "valibot"],
-            "conflicts",
-        ),
         (
             vec![
                 "--lang",
@@ -1802,34 +1764,13 @@ fn unified_options_fail_before_schema_io_including_dry_run() {
         (
             vec![
                 "--lang",
-                "java",
-                "--codec",
-                "annotation",
-                "--feature",
-                "direct-codec",
-            ],
-            "conflicts",
-        ),
-        (
-            vec![
-                "--lang",
-                "cs",
-                "--source-gen=false",
+                "python",
                 "--backend",
-                "source-gen",
-            ],
-            "conflicts",
-        ),
-        (
-            vec![
-                "--lang",
-                "cs",
+                "pydantic",
                 "--style",
-                "record-class",
-                "--record-kind",
-                "struct",
+                "dataclass",
             ],
-            "conflicts",
+            "requires the Python dataclass backend",
         ),
         (
             vec!["--lang", "python", "--style", "class"],
@@ -1929,13 +1870,12 @@ fn unified_help_hides_legacy_flags() {
         .output()
         .unwrap();
     let help = String::from_utf8_lossy(&result.stdout);
-    for flag in ["--backend", "--style", "--feature"] {
+    for flag in ["--backend", "--style", "--feature", "--zero-copy"] {
         assert!(help.contains(flag));
     }
     for flag in [
         "--zod",
         "--source-gen",
-        "--zero-copy",
         "--rkyv",
         "--builder",
         "--record-kind",

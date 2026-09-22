@@ -22,7 +22,7 @@ if not binary.exists():
     subprocess.run(["cargo", "build", "-p", "polyxml-cli"], cwd=repo, check=True)
 for style, package in [("pojo", "pojo"), ("record", "records")]:
     subprocess.run([str(binary), "generate", str(xsd), "--lang", "java", "--style", style,
-                    "--builder", "--codec", "direct", "--backend", "jackson",
+                    "--feature", "builder,direct-codec", "--backend", "jackson",
                     "--package", f"io.polyxml.bench.{package}", "--out", str(target / "generated-sources/polyxml" / package)], check=True)
 helper = target / "generated-sources/polyxml/RecordMutation.java"
 args = ", ".join("status" if field == "status" else f"value.{field}()" for field in fields)
@@ -30,5 +30,5 @@ helper.write_text('package io.polyxml.bench;\npublic final class RecordMutation 
                   'public static io.polyxml.bench.records.Message withStatus(io.polyxml.bench.records.Message value, String status) {\n'
                   f'return new io.polyxml.bench.records.Message({args});\n' + '}\n}\n')
 subprocess.run([str(binary), "generate", str(base / "cases.xsd"), "--lang", "java", "--style", "pojo",
-                "--builder", "--codec", "direct", "--backend", "jackson",
+                "--feature", "builder,direct-codec", "--backend", "jackson",
                 "--package", "io.polyxml.bench.cases", "--out", str(target / "generated-sources/polyxml/cases")], check=True)

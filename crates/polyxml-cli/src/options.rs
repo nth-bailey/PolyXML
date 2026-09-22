@@ -19,19 +19,16 @@ pub(crate) fn target_options(target: &config::TargetConfig) -> TargetEmitOptions
             .or_else(|| target.modules.filter(|v| *v).map(|_| "modules")),
         zero_copy: target.zero_copy,
         codecs: target.codecs,
-        zod: target.zod,
-        source_gen: target.source_gen,
-        record_kind: target.record_kind.as_deref(),
         style: target.style.as_deref(),
-        builder: target.builder,
-        codec: target.codec.as_deref(),
-        rkyv: target.rkyv,
+        builder: None,
+        codec: None,
+        rkyv: None,
         custom_header: target.custom_header.as_deref(),
     }
 }
 
 impl<'a> TargetEmitOptions<'a> {
-    pub(crate) fn resolve(mut self, lang: &str, warn: bool) -> Result<Self> {
+    pub(crate) fn resolve(mut self, lang: &str) -> Result<Self> {
         let language = lang.to_lowercase();
         let target = match language.as_str() {
             "python" | "py" => "python",
@@ -67,76 +64,6 @@ impl<'a> TargetEmitOptions<'a> {
             }
         }
 
-        // Reject even explicit false legacy flags on unrelated targets: they are
-        // almost always mistakes in scripts, and must not silently do nothing.
-        for (name, present, required, replacement) in [
-            ("zod", self.zod.is_some(), "typescript", "--backend zod"),
-            (
-                "source-gen",
-                self.source_gen.is_some(),
-                "csharp",
-                "--backend source-gen",
-            ),
-            (
-                "zero-copy",
-                self.zero_copy.is_some(),
-                "rust",
-                "--feature zero-copy",
-            ),
-            ("rkyv", self.rkyv.is_some(), "rust", "--feature rkyv"),
-            (
-                "builder",
-                self.builder.is_some(),
-                "java",
-                "--feature builder",
-            ),
-            (
-                "codec",
-                self.codec.is_some(),
-                "java",
-                "--feature direct-codec (or omit for annotations)",
-            ),
-            (
-                "record-kind",
-                self.record_kind.is_some(),
-                "csharp",
-                "--style record-class or --style record-struct",
-            ),
-        ] {
-            if present {
-                if target != required {
-                    return Err(invalid(format!("option '{name}' is not supported for target '{target}'; use it with '{required}'.")));
-                }
-                if warn {
-                    eprintln!("warning: option '--{name}' is deprecated. Use '{replacement}' instead (manifest: backend/style/features).");
-                }
-            }
-        }
-        if self.zod == Some(true) {
-            if self.backend.is_some_and(|v| {
-                TypeScriptBackend::from_str_loose(v) != Some(TypeScriptBackend::Zod)
-            }) {
-                return Err(invalid(
-                    "--zod conflicts with the selected backend; use --backend zod.",
-                ));
-            }
-            self.backend = Some("zod");
-        } else if self.zod == Some(false)
-            && self.backend.is_some_and(|v| {
-                TypeScriptBackend::from_str_loose(v) == Some(TypeScriptBackend::Zod)
-            })
-        {
-            return Err(invalid("--zod false conflicts with --backend zod."));
-        }
-        if target == "csharp" {
-            if let Some(backend) = self.backend {
-                let enabled = backend == "source-gen";
-                if self.source_gen.is_some_and(|value| value != enabled) {
-                    return Err(invalid("source-gen conflicts with the selected backend."));
-                }
-                self.source_gen = Some(enabled);
-            }
-        }
         let supported_styles: &[&str] = match target {
             "java" => &["record", "pojo", "class"],
             "csharp" => &["record", "pojo", "class", "record-class", "record-struct"],
@@ -164,34 +91,6 @@ impl<'a> TargetEmitOptions<'a> {
                 ));
             }
         }
-        if let Some(kind) = self.record_kind {
-            if CSharpRecordKind::from_str_loose(kind).is_none() {
-                return Err(invalid(format!(
-                    "Unknown record-kind '{kind}'; use class or struct."
-                )));
-            }
-        }
-        if target == "csharp" {
-            let kind = match self.style {
-                Some("record-class" | "class" | "pojo") => Some("class"),
-                Some("record-struct") => Some("struct"),
-                _ => None,
-            };
-            if let Some(kind) = kind {
-                if self.record_kind.is_some_and(|v| {
-                    CSharpRecordKind::from_str_loose(v) != CSharpRecordKind::from_str_loose(kind)
-                }) {
-                    return Err(invalid("style conflicts with record-kind."));
-                }
-                self.record_kind = Some(kind);
-            }
-        }
-        if self
-            .codec
-            .is_some_and(|v| !matches!(v, "annotation" | "direct"))
-        {
-            return Err(invalid("Unknown codec; use annotation or direct."));
-        }
         if let Some(mode) = self.mode {
             if target != "cpp" || CppMode::from_str_loose(mode).is_none() {
                 return Err(invalid(format!("mode '{mode}' is not supported for target '{target}'; C++ supports header or modules.")));
@@ -217,11 +116,6 @@ impl<'a> TargetEmitOptions<'a> {
                 "slots" => &mut self.slots,
                 "kw-only" => &mut self.kw_only,
                 "direct-codec" => {
-                    if self.codec == Some("annotation") {
-                        return Err(invalid(
-                            "feature 'direct-codec' conflicts with codec 'annotation'.",
-                        ));
-                    }
                     self.codec = Some("direct");
                     continue;
                 }
@@ -229,7 +123,7 @@ impl<'a> TargetEmitOptions<'a> {
             };
             if *option == Some(false) {
                 return Err(invalid(format!(
-                    "feature '{feature}' conflicts with its explicitly disabled legacy option."
+                    "feature '{feature}' conflicts with an explicitly disabled option."
                 )));
             }
             *option = Some(true);

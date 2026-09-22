@@ -87,7 +87,7 @@ polyxml generate \
 
 Options apply to every language selected in one invocation. Use `polyxml.toml`
 when targets need different options. Invalid values, unsupported combinations,
-and conflicting legacy options fail before schema parsing or output creation,
+and conflicting options fail before schema parsing or output creation,
 including with `--dry-run`.
 
 | Target | Backends (first is default) | Styles | Features |
@@ -120,14 +120,13 @@ style = "pojo"
 features = ["builder", "direct-codec"]
 ```
 
-Legacy flags remain accepted but are hidden from help and emit a deprecation
-warning. Replace `--zod` with `--backend zod`, `--source-gen` with
-`--backend source-gen`, `--zero-copy` / `--rkyv` / `--builder` with their
-`--feature` equivalents, `--codec direct` with `--feature direct-codec`, and
-`--record-kind struct` with `--style record-struct`. Legacy manifest fields are
-also retained and warned about. Explicit legacy `false` values are preserved;
-combining one with an enabling feature is an error. For owned Rust strings,
-`--zero-copy=false` (or `zero_copy = false` in the manifest) remains available.
+The legacy hidden flags `--zod`, `--source-gen`, `--record-kind`, `--rkyv`,
+`--builder`, and `--codec`, along with their `polyxml.toml` counterparts, have
+been removed: clap rejects the flags outright and unknown manifest fields are
+errors, so the unified options above are the only spellings. For owned Rust
+strings, `--zero-copy=false` (or `zero_copy = false` in the manifest) remains
+available as a first-class option; combining it with `--feature zero-copy` is
+an error.
 
 `polyxml generate` without schema paths delegates to the manifest. Put target
 options in that manifest; command-line generation overrides are rejected rather

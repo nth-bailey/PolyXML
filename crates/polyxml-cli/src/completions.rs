@@ -150,9 +150,7 @@ pub fn candidates(kind: &str, words: &[String]) -> Vec<String> {
                 features: if kind == "feature" { &features } else { &[] },
                 ..Default::default()
             };
-            languages
-                .iter()
-                .all(|lang| opts.resolve(lang, false).is_ok())
+            languages.iter().all(|lang| opts.resolve(lang).is_ok())
         })
         .map(|value| value.to_string())
         .collect()

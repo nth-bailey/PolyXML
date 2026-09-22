@@ -358,12 +358,12 @@ let restored_xml = json_to_xml(
 
 ---
 
-## 9. Zero-Copy Binary Wire Format Serialization via rkyv (`--rkyv`)
+## 9. Zero-Copy Binary Wire Format Serialization via rkyv (`--feature rkyv`)
 
 For inter-process communication (IPC), shared memory, network wire protocols, and high-frequency messaging where even JSON and binary serialization overhead is unacceptable, PolyXML supports zero-copy deserialization via **`rkyv`**:
 
 ```bash
-polyxml generate --lang rust --rkyv --out ./src/generated schema.xsd
+polyxml generate --lang rust --feature rkyv --out ./src/generated schema.xsd
 ```
 
 This generates `#[cfg_attr(feature = "rkyv", ...)]` attributes on structs, enums, and choices:

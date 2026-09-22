@@ -132,8 +132,8 @@ If external compilers are installed on the development machine, run the E2E veri
 ## 6. Java/C# Model Styles and Direct Java Codecs
 
 - `--style record|pojo|class` is shared by Java and C#. Records remain the default;
-  `pojo`/`class` select mutable models. Java `--builder` and
-  `--codec annotation|direct` must also be forwarded in both manifest forms.
+  `pojo`/`class` select mutable models. Java's `--feature builder,direct-codec`
+  must also be forwarded as `features = [...]` in both manifest forms.
 - Java mutable models/builders live in `java/models.rs`; StAX companions live in
   `java/codec.rs`. Inheritance must share field-name allocation between accessors,
   builders, and codecs. A derived builder extends its base builder and overrides
@@ -159,7 +159,7 @@ If external compilers are installed on the development machine, run the E2E veri
   all 7 targets from whichever local `target/{debug,release}/polyxml` is newer;
   a clean `git status` there proves byte-for-byte output parity after codegen
   changes. The same schema is the best large-schema smoke for
-  `--style pojo --builder --codec direct`: `javac` the output and round-trip
+  `--style pojo --feature builder,direct-codec`: `javac` the output and round-trip
   `data/pacs_008_customer_credit_transfer.xml` through the generated root codec.
 - `benchmarks/java -Ppanama` needs JDK 22+, but the host default can be JDK 21.
   Set `JAVA_HOME`/`PATH` to a downloaded JDK (Temurin 25 worked) and run
@@ -234,8 +234,14 @@ derived types inherit their base's patterns at parse time):
   parsers can still return `None`; the CLI must reject invalid values before
   emitter defaults are applied.
 - New opt-ins belong in repeatable `--feature` and manifest `features` arrays.
-  Legacy booleans remain hidden with warnings; reject contradictions rather
-  than silently overriding an explicit false. Keep CLI and manifest parity.
+  The legacy hidden flags (`--zod`, `--source-gen`, `--record-kind`, `--rkyv`,
+  `--builder`, `--codec`) and their manifest keys were deleted outright: clap
+  rejects the flags as unexpected arguments, `#[serde(deny_unknown_fields)]`
+  rejects the keys, and the deprecation-warning loop no longer exists. Keep
+  CLI and manifest parity.
+- `--zero-copy` (and manifest `zero_copy`) stays a first-class bool because
+  `--feature` cannot express `false`; it alone selects owned Rust output, and
+  `--zero-copy=false --feature zero-copy` is still rejected as a contradiction.
 - Defaults remain unchanged, including C# record classes, Rust zero-copy, and
   Python slots/kw-only. Expose only implemented styles/features. The issue's
   future examples (phf, aot, Python plain class, C# mutable struct) are not yet

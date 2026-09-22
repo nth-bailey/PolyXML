@@ -10,9 +10,9 @@ description: Ultra-fast Java XML processing using Java 22 Foreign Function & Mem
 Records remain the default. Select mutable JavaBeans for setter-based frameworks:
 
 ```bash
-polyxml generate schema.xsd --lang java --style pojo --builder --out generated
-polyxml generate schema.xsd --lang java --style pojo --backend jackson --builder --out generated
-polyxml generate schema.xsd --lang java --style record --builder --out generated
+polyxml generate schema.xsd --lang java --style pojo --feature builder --out generated
+polyxml generate schema.xsd --lang java --style pojo --backend jackson --feature builder --out generated
+polyxml generate schema.xsd --lang java --style record --feature builder --out generated
 ```
 
 `--style class` is an alias for `pojo`. Mutable complex types have a public no-argument
@@ -49,10 +49,11 @@ is introduced.
 ## Direct streaming XML codecs
 
 ```bash
-polyxml generate schema.xsd --lang java --style pojo --builder --codec direct --out generated
+polyxml generate schema.xsd --lang java --style pojo --feature builder,direct-codec --out generated
 ```
 
-`--codec annotation` is the default and emits only models. `direct` adds a companion
+Annotation-based codecs are the default and emit only models.
+`--feature direct-codec` adds a companion
 `TypeNameCodec.java` for every generated type, with statically linked getters/setters,
 constructors, and nested codecs. It works with either record or POJO models and can
 be combined with Jackson annotations. It uses StAX from the JDK, without reflection
@@ -97,9 +98,8 @@ target = "java"
 output = "generated/java"
 package = "com.enterprise.models"
 style = "pojo"
-builder = true
+features = ["builder", "direct-codec"]
 backend = "jackson"
-codec = "direct"
 ```
 
 The same options work under `[codegen.java]`. See the
