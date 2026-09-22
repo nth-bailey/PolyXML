@@ -225,3 +225,34 @@ derived types inherit their base's patterns at parse time):
 - Field-level facets (`FieldDef.facets`) are never populated by the parser
   today, so `emit_struct`'s field path needs no `AfterValidator` wiring; if
   that ever changes, mirror the type-level handling there.
+
+## 9. Unified CLI Options (issue #50)
+
+- `polyxml-cli/src/options.rs` normalizes and validates backend/style/features
+  for direct generation and both manifest forms. Validate all targets before
+  schema parsing, dry-run success, or output creation. Core `from_str_loose`
+  parsers can still return `None`; the CLI must reject invalid values before
+  emitter defaults are applied.
+- New opt-ins belong in repeatable `--feature` and manifest `features` arrays.
+  Legacy booleans remain hidden with warnings; reject contradictions rather
+  than silently overriding an explicit false. Keep CLI and manifest parity.
+- Defaults remain unchanged, including C# record classes, Rust zero-copy, and
+  Python slots/kw-only. Expose only implemented styles/features. The issue's
+  future examples (phf, aot, Python plain class, C# mutable struct) are not yet
+  generator capabilities.
+- Shared CLI options apply to every `--lang`, not just the preceding one. Use
+  per-target manifest entries for heterogeneous configurations. Schema-less
+  `generate` must not silently ignore generation overrides.
+
+- Shell completion adapters live under `polyxml-cli/src/completions/`. Their
+  hidden `__complete` helper filters candidates through the same option resolver
+  used for generation; preserve multi-target intersection and language aliases.
+  Bash is exercised in CLI integration tests. Zsh/Fish tests run when those
+  shells are available on PATH, and skip otherwise.
+- `benchmarks/cli/benchmark.sh` uses hyperfine with `--shell=none` to avoid shell
+  calibration error for sub-5ms startup measurements. Results are fresh processes
+  with warm OS caches, not machine-reboot or cold-disk startup measurements.
+
+- Color diagnostics respect `NO_COLOR`. When checking terminal color in a PTY,
+  unset `NO_COLOR` in the test subprocess and use a color-capable `TERM`; test
+  the opt-out separately. This development environment sets `NO_COLOR=1`.

@@ -50,6 +50,8 @@ pub struct TargetConfig {
     pub output: String,
     pub enabled: Option<bool>,
     pub backend: Option<String>,
+    #[serde(default)]
+    pub features: Vec<String>,
     pub package: Option<String>,
     pub namespace: Option<String>,
     pub strict_facets: Option<bool>,
@@ -78,6 +80,8 @@ pub struct CodegenTargetConfig {
     pub enabled: Option<bool>,
     pub output: Option<String>,
     pub backend: Option<String>,
+    #[serde(default)]
+    pub features: Vec<String>,
     pub package: Option<String>,
     pub namespace: Option<String>,
     pub strict_facets: Option<bool>,
@@ -151,6 +155,7 @@ impl WorkspaceManifest {
                         output,
                         enabled: cfg.enabled,
                         backend: cfg.backend.clone(),
+                        features: cfg.features.clone(),
                         package: cfg.package.clone(),
                         namespace: cfg.namespace.clone(),
                         strict_facets: cfg.strict_facets,

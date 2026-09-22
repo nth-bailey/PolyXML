@@ -1,0 +1,38 @@
+#compdef polyxml
+# Save as _polyxml in a directory on $fpath before running compinit.
+_polyxml_values() {
+    local kind=$1
+    local -a values
+    values=("${(@f)$("${words[1]}" __complete "$kind" -- "${words[@]:1:$((CURRENT-2))}" 2>/dev/null)}")
+    compadd -a values
+}
+_polyxml() {
+    if (( CURRENT == 2 )); then
+        _polyxml_values command
+        return
+    fi
+    case "$words[2]" in
+        generate)
+            _arguments -s \
+                '*'{-l,--lang}'[Target language]:language:_polyxml_values lang' \
+                {-b,--backend}'[Serialization backend]:backend:_polyxml_values backend' \
+                '--style[Type representation]:style:_polyxml_values style' \
+                '*--feature[Opt-in enhancement]:feature:_polyxml_values feature' \
+                {-o,--out}'[Output directory]:directory:_files -/' \
+                {-c,--config}'[Workspace manifest]:file:_files' \
+                {-p,--package}'[Package or namespace]:package:' \
+                {-m,--mode}'[C++ packaging mode]:mode:(header modules)' \
+                '--codecs[Emit codecs]:boolean:(true false)' \
+                '--custom-header[Custom header]:text:' \
+                '--strict-facets[Enforce facets]' '--dry-run[Validate without writing]' \
+                '--format[Format generated code]' '--help[Show help]' \
+                '*:schema:_files' ;;
+        *)
+            if [[ "$PREFIX" == -* ]]; then _polyxml_values flag; else _files; fi ;;
+    esac
+}
+if [[ "$funcstack[1]" == _polyxml ]]; then
+    _polyxml "$@"
+else
+    compdef _polyxml polyxml
+fi

@@ -11,6 +11,7 @@ benchmarks/
 ├── README.md        # This index: catalog, methodology, conventions
 ├── run_all.sh       # Orchestrator: builds the extension, runs Rust + Python suites
 ├── __init__.py      # Package marker for `python -m benchmarks.python`
+├── cli/             # CLI startup and argument validation (hyperfine)
 ├── python/          # Python bindings vs the Python XML ecosystem (custom CLI suite)
 └── java/            # Java bindings vs JAXB, Jackson, and the Panama native binding (JMH)
 ```
@@ -25,6 +26,7 @@ equivalent) and never at this root.
 | :--- | :--- | :--- | :--- |
 | Rust core engine | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) | `cargo bench --bench core_benchmarks` |
 | Python comparative | [`python/`](python/README.md) | Custom CLI suite | `python -m benchmarks.python` or `./benchmarks/run_all.sh` |
+| CLI startup | [`cli/`](cli/README.md) | hyperfine | `./benchmarks/cli/benchmark.sh` |
 | Java four-runtime | [`java/`](java/README.md) | JMH (Maven) | See [`java/README.md`](java/README.md) |
 
 The Rust Criterion suite lives inside its crate because `cargo bench` requires

@@ -49,12 +49,12 @@ cargo install polyxml-cli
 | Target | Flag (`--lang`) | Generated Artifacts & Features |
 | :--- | :--- | :--- |
 | **Python** | `python` | Modern Python 3.12+ `@dataclass` or Pydantic v2 models, field constraints, zero-copy streaming codecs |
-| **Rust** | `rust` | Zero-copy `Cow<'a, str>` & owned structs, automatic recursive boxing (`Box<T>`), streaming serializers/deserializers, rkyv wire format (`--rkyv`) |
+| **Rust** | `rust` | Zero-copy `Cow<'a, str>` & owned structs, automatic recursive boxing (`Box<T>`), streaming serializers/deserializers, rkyv wire format (`--feature rkyv`) |
 | **C++** | `cpp` | Modern C++20/C++23 value types, C++20 Modules (`--mode modules`), Glaze reflection (`--backend glaze`), CMake/Meson export |
-| **Java** | `java` | Java 21+ records or mutable JavaBeans (`--style pojo`), fluent builders (`--builder`), direct StAX codecs (`--codec direct`), Jackson XML/JSON annotations (`--backend jackson`) |
+| **Java** | `java` | Java 21+ records or mutable JavaBeans (`--style pojo`), fluent builders (`--feature builder`), direct StAX codecs (`--feature direct-codec`), Jackson XML/JSON annotations (`--backend jackson`) |
 | **TypeScript** | `typescript` | TypeScript 5+ interfaces, discriminated unions, runtime validation schemas via Zod, Valibot, or TypeBox (`--backend`) |
 | **Go** | `go` | Idiomatic Go 1.22+ structs with `encoding/xml` tags, reflectionless EasyJSON (`--backend easyjson`) & ByteDance Sonic JIT (`--backend sonic`) |
-| **C#** | `csharp` | Modern C# 12 / .NET 8+ mutable classes (`--style class`), records and record structs (`--record-kind struct`), compile-time Native AOT source generation (`--source-gen`) |
+| **C#** | `csharp` | Modern C# 12 / .NET 8+ mutable classes (`--style class`), records and record structs (`--style record-struct`), compile-time Native AOT source generation (`--backend source-gen`) |
 
 ---
 
@@ -78,7 +78,7 @@ polyxml generate --lang java --backend jackson --package com.enterprise.banking 
 polyxml generate --lang cpp --mode modules --backend glaze --package enterprise::crm --out ./generated/cpp schemas/order.xsd
 
 # Generate zero-copy Rust models with codecs and rkyv wire format
-polyxml generate --lang rust --zero-copy --codecs --rkyv --out ./generated/rust schemas/order.xsd
+polyxml generate --lang rust --feature zero-copy --codecs --feature rkyv --out ./generated/rust schemas/order.xsd
 
 # Generate TypeScript with tree-shakeable Valibot schemas
 polyxml generate --lang ts --backend valibot --out ./generated/ts schemas/order.xsd
@@ -87,7 +87,7 @@ polyxml generate --lang ts --backend valibot --out ./generated/ts schemas/order.
 polyxml generate --lang go --backend sonic --package crm --out ./generated/go schemas/order.xsd
 
 # Generate C# record structs with Native AOT source generation
-polyxml generate --lang csharp --record-kind struct --source-gen --namespace Enterprise.Crm --out ./generated/csharp schemas/order.xsd
+polyxml generate --lang csharp --style record-struct --backend source-gen --namespace Enterprise.Crm --out ./generated/csharp schemas/order.xsd
 
 # Multi-target compilation in a single invocation
 polyxml generate \
@@ -141,9 +141,8 @@ codecs = true
 [[generate]]
 target = "rust"
 output = "src/generated/rust"
-zero_copy = true
+features = ["zero-copy", "rkyv"]
 codecs = true
-rkyv = true
 
 [[generate]]
 target = "java"
@@ -172,8 +171,8 @@ backend = "sonic"
 target = "csharp"
 output = "src/generated/csharp"
 namespace = "Enterprise.Banking.Iso20022"
-source_gen = true
-record_kind = "struct"
+backend = "source-gen"
+style = "record-struct"
 ```
 
 ---
@@ -185,3 +184,10 @@ Explore full-scale repositories using PolyXML CLI manifests across all 7 languag
 - **[💳 FinTech & Banking](https://github.com/nth-bailey/polyxml-finance-examples)**: Instant Payments ↔ ISO 20022 pacs.008 XML
 - **[🚍 Smart Cities & Transit](https://github.com/nth-bailey/polyxml-transit-examples)**: Google GTFS-Realtime ↔ CEN SIRI v2.0 & NeTEx XML
 
+
+## Shell completion
+
+Run `polyxml completions bash`, `polyxml completions zsh`, or
+`polyxml completions fish` to generate a shell script. Backend, style, and feature
+suggestions are filtered by the selected language(s). See the
+[compiler guide](../../docs/guides/compiler.md#shell-completion) for installation.

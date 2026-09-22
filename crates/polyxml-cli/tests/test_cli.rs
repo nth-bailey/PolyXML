@@ -1712,3 +1712,581 @@ codec="direct"
     assert_eq!(target.builder, Some(true));
     assert_eq!(target.codec.as_deref(), Some("direct"));
 }
+
+#[test]
+fn unified_options_match_legacy_output_and_warn() {
+    let dir = tempdir().unwrap();
+    let schema = dir.path().join("model.xsd");
+    fs::write(&schema, r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="Item"><xs:sequence><xs:element name="name" type="xs:string"/></xs:sequence></xs:complexType></xs:schema>"#).unwrap();
+    for (lang, old, new) in [
+        ("ts", vec!["--zod"], vec!["--backend", "zod"]),
+        ("cs", vec!["--source-gen"], vec!["--backend", "source-gen"]),
+        (
+            "rs",
+            vec!["--zero-copy", "--rkyv"],
+            vec!["--feature", "zero-copy", "--feature", "rkyv"],
+        ),
+        (
+            "java",
+            vec!["--builder", "--codec", "direct"],
+            vec!["--feature", "builder,direct-codec"],
+        ),
+        (
+            "csharp",
+            vec!["--record-kind", "struct"],
+            vec!["--style", "record-struct"],
+        ),
+    ] {
+        let legacy = dir.path().join(format!("{lang}-old"));
+        let unified = dir.path().join(format!("{lang}-new"));
+        for (flags, out, warning) in [(old, &legacy, true), (new, &unified, false)] {
+            let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+                .arg("generate")
+                .arg(&schema)
+                .args(["--lang", lang])
+                .args(flags)
+                .arg("--out")
+                .arg(out)
+                .output()
+                .unwrap();
+            let stderr = String::from_utf8_lossy(&result.stderr);
+            assert!(result.status.success(), "{lang}: {stderr}");
+            assert_eq!(stderr.contains("deprecated"), warning, "{stderr}");
+        }
+        let mut files = 0;
+        for entry in fs::read_dir(&legacy).unwrap() {
+            let entry = entry.unwrap();
+            assert_eq!(
+                fs::read(entry.path()).unwrap(),
+                fs::read(unified.join(entry.file_name())).unwrap(),
+                "{lang}: {:?}",
+                entry.file_name()
+            );
+            files += 1;
+        }
+        assert!(files > 0);
+        assert_eq!(files, fs::read_dir(&unified).unwrap().count());
+    }
+}
+
+#[test]
+fn unified_options_fail_before_schema_io_including_dry_run() {
+    let dir = tempdir().unwrap();
+    let out = dir.path().join("output");
+    for (flags, expected) in [
+        (
+            vec!["--lang", "python", "--backend", "jackson"],
+            "Supported backends: dataclass, pydantic",
+        ),
+        (vec!["--lang", "ts", "--backend", "zodd"], "backend 'zodd'"),
+        (
+            vec!["--lang", "python", "--feature", "rkyv"],
+            "feature 'rkyv'",
+        ),
+        (vec!["--lang", "rust", "--feature", "phf"], "feature 'phf'"),
+        (vec!["--lang", "python", "--zod"], "option 'zod'"),
+        (
+            vec!["--lang", "ts", "--zod", "--backend", "valibot"],
+            "conflicts",
+        ),
+        (
+            vec![
+                "--lang",
+                "rust",
+                "--zero-copy=false",
+                "--feature",
+                "zero-copy",
+            ],
+            "conflicts",
+        ),
+        (
+            vec![
+                "--lang",
+                "java",
+                "--codec",
+                "annotation",
+                "--feature",
+                "direct-codec",
+            ],
+            "conflicts",
+        ),
+        (
+            vec![
+                "--lang",
+                "cs",
+                "--source-gen=false",
+                "--backend",
+                "source-gen",
+            ],
+            "conflicts",
+        ),
+        (
+            vec![
+                "--lang",
+                "cs",
+                "--style",
+                "record-class",
+                "--record-kind",
+                "struct",
+            ],
+            "conflicts",
+        ),
+        (
+            vec!["--lang", "python", "--style", "class"],
+            "Supported styles",
+        ),
+        (
+            vec!["--lang", "cs", "--style", "struct"],
+            "Supported styles",
+        ),
+        (
+            vec!["--lang", "java", "--lang", "python", "--feature", "builder"],
+            "feature 'builder'",
+        ),
+        (vec!["--lang", "typo"], "Unknown target"),
+    ] {
+        for dry_run in [false, true] {
+            let mut cmd = Command::new(env!("CARGO_BIN_EXE_polyxml"));
+            cmd.args(["generate", "missing.xsd"])
+                .args(&flags)
+                .arg("--out")
+                .arg(&out);
+            if dry_run {
+                cmd.arg("--dry-run");
+            }
+            let result = cmd.output().unwrap();
+            let stderr = String::from_utf8_lossy(&result.stderr);
+            assert!(!result.status.success());
+            assert!(stderr.contains(expected), "{flags:?}: {stderr}");
+            assert!(!out.exists());
+        }
+    }
+}
+
+#[test]
+fn unified_manifest_forms_generate_identical_output_and_validate_early() {
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("model.xsd"), r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="Item"><xs:sequence><xs:element name="name" type="xs:string"/></xs:sequence></xs:complexType></xs:schema>"#).unwrap();
+    let manifest = dir.path().join("polyxml.toml");
+    fs::write(
+        &manifest,
+        r#"
+[workspace]
+schemas = ["model.xsd"]
+[[generate]]
+target = "java"
+output = "array"
+backend = "standard"
+style = "pojo"
+features = ["builder", "direct-codec"]
+[codegen.java]
+output = "table"
+backend = "standard"
+style = "pojo"
+features = ["builder", "direct-codec"]
+"#,
+    )
+    .unwrap();
+    let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config"])
+        .arg(&manifest)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert!(!String::from_utf8_lossy(&result.stderr).contains("deprecated"));
+    for file in ["Item.java", "ItemCodec.java"] {
+        assert_eq!(
+            fs::read(dir.path().join("array").join(file)).unwrap(),
+            fs::read(dir.path().join("table").join(file)).unwrap()
+        );
+    }
+    let model = fs::read_to_string(dir.path().join("array/Item.java")).unwrap();
+    assert!(model.contains("class Item"));
+    assert!(model.contains("builder()"));
+    for section in ["[[generate]]\ntarget = 'python'", "[codegen.python]"] {
+        fs::write(&manifest, format!("[workspace]\nschemas = ['missing.xsd']\n{section}\noutput = 'invalid'\nfeatures = ['builder']\n")).unwrap();
+        for command in ["build", "generate"] {
+            let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+                .args([command, "--dry-run", "--config"])
+                .arg(&manifest)
+                .output()
+                .unwrap();
+            assert!(!result.status.success());
+            assert!(String::from_utf8_lossy(&result.stderr).contains("feature 'builder'"));
+            assert!(!dir.path().join("invalid").exists());
+        }
+    }
+}
+
+#[test]
+fn unified_help_hides_legacy_flags() {
+    let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["generate", "--help"])
+        .output()
+        .unwrap();
+    let help = String::from_utf8_lossy(&result.stdout);
+    for flag in ["--backend", "--style", "--feature"] {
+        assert!(help.contains(flag));
+    }
+    for flag in [
+        "--zod",
+        "--source-gen",
+        "--zero-copy",
+        "--rkyv",
+        "--builder",
+        "--record-kind",
+    ] {
+        assert!(!help.contains(flag));
+    }
+}
+
+#[test]
+fn unified_supported_backends_and_styles_validate() {
+    let dir = tempdir().unwrap();
+    let schema = dir.path().join("model.xsd");
+    fs::write(
+        &schema,
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"/>"#,
+    )
+    .unwrap();
+    for (lang, backends, styles) in [
+        (
+            "python",
+            vec!["dataclass", "pydantic", "pydantic-v2"],
+            vec!["dataclass"],
+        ),
+        ("rust", vec!["standard"], vec![]),
+        (
+            "ts",
+            vec!["interfaces", "zod", "valibot", "typebox", "none"],
+            vec![],
+        ),
+        (
+            "java",
+            vec!["standard", "jackson"],
+            vec!["record", "pojo", "class"],
+        ),
+        (
+            "c#",
+            vec!["standard", "source-gen"],
+            vec!["record", "record-class", "record-struct", "class", "pojo"],
+        ),
+        ("c++", vec!["standard", "glaze"], vec![]),
+        ("go", vec!["standard", "easyjson", "sonic"], vec![]),
+    ] {
+        for (flag, values) in [("--backend", backends), ("--style", styles)] {
+            for value in values {
+                let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+                    .arg("generate")
+                    .arg(&schema)
+                    .args(["--lang", lang, flag, value, "--dry-run"])
+                    .output()
+                    .unwrap();
+                assert!(
+                    result.status.success(),
+                    "{lang} {flag} {value}: {}",
+                    String::from_utf8_lossy(&result.stderr)
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn manifest_generation_does_not_ignore_cli_overrides() {
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("polyxml.toml"), "").unwrap();
+    let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .current_dir(dir.path())
+        .args(["generate", "--feature", "builder"])
+        .output()
+        .unwrap();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("set target options in polyxml.toml"));
+}
+
+#[test]
+fn python_features_respect_manifest_false_values_and_backend() {
+    let dir = tempdir().unwrap();
+    let schema = dir.path().join("model.xsd");
+    fs::write(&schema, r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="Item"><xs:sequence><xs:element name="name" type="xs:string"/></xs:sequence></xs:complexType></xs:schema>"#).unwrap();
+    let manifest = dir.path().join("polyxml.toml");
+    fs::write(&manifest, "[workspace]\nschemas=['model.xsd']\n[codegen.python]\noutput='generated'\nslots=false\nkw_only=false\n").unwrap();
+    let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config"])
+        .arg(&manifest)
+        .output()
+        .unwrap();
+    assert!(result.status.success());
+    assert!(fs::read_to_string(dir.path().join("generated/model.py"))
+        .unwrap()
+        .contains("@dataclass(slots=False, kw_only=False)"));
+    for backend in ["dataclass", "pydantic"] {
+        let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+            .arg("generate")
+            .arg(&schema)
+            .args([
+                "--lang",
+                "py",
+                "--backend",
+                backend,
+                "--feature",
+                "slots",
+                "--feature",
+                "kw-only",
+            ])
+            .arg("--out")
+            .arg(dir.path().join("features"))
+            .output()
+            .unwrap();
+        assert_eq!(result.status.success(), backend == "dataclass");
+        if backend == "dataclass" {
+            assert!(fs::read_to_string(dir.path().join("features/model.py"))
+                .unwrap()
+                .contains("@dataclass(slots=True, kw_only=True)"));
+        } else {
+            assert!(String::from_utf8_lossy(&result.stderr)
+                .contains("require the Python dataclass backend"));
+        }
+    }
+    fs::write(
+        &manifest,
+        "[workspace]\nschemas=['model.xsd']\n[codegen.python]\nslots=false\nfeatures=['slots']\n",
+    )
+    .unwrap();
+    let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["build", "--config"])
+        .arg(&manifest)
+        .output()
+        .unwrap();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("conflicts"));
+}
+
+#[test]
+fn completion_candidates_follow_target_validation() {
+    for (kind, words, expected) in [
+        ("backend", vec!["generate"], vec!["dataclass", "pydantic"]),
+        (
+            "backend",
+            vec!["generate", "--lang", "ts"],
+            vec!["interfaces", "zod", "valibot", "typebox", "standard"],
+        ),
+        (
+            "backend",
+            vec!["generate", "--lang=java"],
+            vec!["standard", "jackson"],
+        ),
+        (
+            "backend",
+            vec!["generate", "-lcs"],
+            vec!["standard", "source-gen"],
+        ),
+        (
+            "backend",
+            vec!["generate", "-l", "java", "-l", "cpp"],
+            vec!["standard"],
+        ),
+        (
+            "backend",
+            vec!["generate", "-l", "python", "-l", "java"],
+            vec![],
+        ),
+        ("backend", vec!["generate", "--lang", "unknown"], vec![]),
+        (
+            "feature",
+            vec!["generate", "--lang", "rust"],
+            vec!["zero-copy", "rkyv"],
+        ),
+        ("feature", vec!["generate", "--backend=pydantic"], vec![]),
+        (
+            "style",
+            vec!["generate", "--lang", "java"],
+            vec!["record", "pojo", "class"],
+        ),
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+            .args(["__complete", kind, "--"])
+            .args(&words)
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        assert_eq!(
+            String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .collect::<Vec<_>>(),
+            expected,
+            "{kind}: {words:?}"
+        );
+    }
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["__complete", "flag", "--", "generate"])
+        .output()
+        .unwrap();
+    let flags = String::from_utf8_lossy(&output.stdout);
+    assert!(flags.contains("--feature"));
+    assert!(!flags.contains("--zod"));
+}
+
+#[test]
+fn bash_completion_filters_values_in_the_shell() {
+    let dir = tempdir().unwrap();
+    let script = dir.path().join("polyxml.bash");
+    let output = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["completions", "bash"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    fs::write(&script, output.stdout).unwrap();
+    for (words, expected) in [
+        (
+            vec!["generate", "--lang", "java", "--backend", ""],
+            vec!["standard", "jackson"],
+        ),
+        (
+            vec!["generate", "--lang", "=", "ts", "--backend", "=", "v"],
+            vec!["valibot"],
+        ),
+        (
+            vec!["generate", "--lang=ts", "--backend", "v"],
+            vec!["valibot"],
+        ),
+        (
+            vec!["generate", "--lang", "rust", "--feature", "zero-copy,r"],
+            vec!["zero-copy,rkyv"],
+        ),
+        (
+            vec!["generate", "-l", "cs", "--style=record-s"],
+            vec!["--style=record-struct"],
+        ),
+        (
+            vec!["generate", "-l", "java", "-l", "go", "--backend", ""],
+            vec!["standard"],
+        ),
+    ] {
+        let output = Command::new("bash")
+            .args([
+                "--noprofile",
+                "--norc",
+                "-c",
+                r#"
+source "$1"
+shift
+COMP_WORDS=("$@")
+COMP_CWORD=$((${#COMP_WORDS[@]} - 1))
+_polyxml
+printf '%s\n' "${COMPREPLY[@]}"
+"#,
+                "completion-test",
+            ])
+            .arg(&script)
+            .arg(env!("CARGO_BIN_EXE_polyxml"))
+            .args(&words)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .collect::<Vec<_>>(),
+            expected,
+            "{words:?}"
+        );
+    }
+}
+
+#[test]
+fn zsh_completion_filters_values_when_available() {
+    if Command::new("zsh").arg("--version").output().is_err() {
+        return;
+    }
+    let dir = tempdir().unwrap();
+    let script = dir.path().join("_polyxml");
+    let generated = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["completions", "zsh"])
+        .output()
+        .unwrap();
+    assert!(generated.status.success());
+    fs::write(&script, generated.stdout).unwrap();
+    let result = Command::new("zsh")
+        .args([
+            "-f",
+            "-c",
+            r#"
+fpath=("${1:h}" $fpath)
+autoload -Uz _polyxml
+compadd() { print -l -- "${values[@]}"; }
+_arguments() { _polyxml_values backend; }
+words=("$2" generate --lang java --backend '')
+CURRENT=6
+_polyxml
+"#,
+            "completion-test",
+        ])
+        .arg(&script)
+        .arg(env!("CARGO_BIN_EXE_polyxml"))
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&result.stdout)
+            .lines()
+            .collect::<Vec<_>>(),
+        ["standard", "jackson"]
+    );
+}
+
+#[test]
+fn fish_completion_filters_values_when_available() {
+    if Command::new("fish").arg("--version").output().is_err() {
+        return;
+    }
+    let dir = tempdir().unwrap();
+    let script = dir.path().join("polyxml.fish");
+    let generated = Command::new(env!("CARGO_BIN_EXE_polyxml"))
+        .args(["completions", "fish"])
+        .output()
+        .unwrap();
+    assert!(generated.status.success());
+    fs::write(&script, generated.stdout).unwrap();
+    let binary_dir = std::path::Path::new(env!("CARGO_BIN_EXE_polyxml"))
+        .parent()
+        .unwrap();
+    let result = Command::new("fish")
+        .args([
+            "--no-config",
+            "-c",
+            r#"
+source $argv[1]
+set -gx PATH $argv[2] $PATH
+complete -C 'polyxml generate --lang java --backend '
+"#,
+        ])
+        .arg(&script)
+        .arg(binary_dir)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&result.stdout)
+            .lines()
+            .collect::<Vec<_>>(),
+        ["jackson", "standard"]
+    );
+}

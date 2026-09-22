@@ -1,0 +1,33 @@
+# Bash completion for PolyXML. Install with: source <(polyxml completions bash)
+_polyxml() {
+    local cur="${COMP_WORDS[COMP_CWORD]}" prev="${COMP_WORDS[COMP_CWORD-1]}"
+    local kind=flag prefix= candidates
+    local -a words=("${COMP_WORDS[@]:1:COMP_CWORD-1}")
+    COMPREPLY=()
+    if [[ "$prev" == = && "$COMP_CWORD" -ge 2 ]]; then prev="${COMP_WORDS[COMP_CWORD-2]}"; fi
+    if [[ "$cur" == = ]]; then cur=; fi
+    case "$prev" in
+        --lang|-l) kind=lang ;;
+        --backend|-b) kind=backend ;;
+        --style) kind=style ;;
+        --feature) kind=feature ;;
+        --out|--out-dir|-o|--config|-c|--schema|-s) return ;;
+    esac
+    case "$cur" in
+        --lang=*|--backend=*|--style=*|--feature=*)
+            kind="${cur%%=*}"; kind="${kind#--}"
+            prefix="${cur%%=*}="; cur="${cur#*=}" ;;
+    esac
+    if [[ "$kind" == feature && "$cur" == *,* ]]; then
+        prefix+="${cur%,*},"; cur="${cur##*,}"
+    fi
+    if (( COMP_CWORD == 1 )); then kind=command; fi
+    if [[ "$kind" == flag && "$cur" != -* ]]; then return; fi
+    candidates=$("${COMP_WORDS[0]}" __complete "$kind" -- "${words[@]}" 2>/dev/null)
+    local value
+    while IFS= read -r value; do
+        [[ -n "$value" && "$value" == "$cur"* ]] && COMPREPLY+=("$prefix$value")
+    done <<< "$candidates"
+    return 0
+}
+complete -o default -F _polyxml polyxml
