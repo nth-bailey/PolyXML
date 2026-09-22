@@ -1,3 +1,10 @@
+## [0.20.1](https://github.com/nth-bailey/PolyXML/compare/v0.20.0...v0.20.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* harden edge-case XSD handling in parser and all 7 codegens (issue [#51](https://github.com/nth-bailey/PolyXML/issues/51)) ([e7920a2](https://github.com/nth-bailey/PolyXML/commit/e7920a2e1a4e052e35f4387ef680559f8cf41e8e))
+
 # [0.20.0](https://github.com/nth-bailey/PolyXML/compare/v0.19.2...v0.20.0) (2026-09-22)
 
 
