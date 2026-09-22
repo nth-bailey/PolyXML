@@ -659,6 +659,11 @@ fn test_java_mutable_builders_and_direct_codecs_execute() {
     assert!(item.contains("extends Base"));
     assert!(item.contains("public boolean isActive()"));
     assert!(item.contains("public ItemBuilder id(int id)"));
+    let codec = &files.iter().find(|(n, _)| n == "ItemCodec.java").unwrap().1;
+    assert!(codec.contains("ThreadLocal<XMLInputFactory>"));
+    assert!(codec.contains("READER_FACTORY.get().createXMLStreamReader(input)"));
+    assert!(codec.contains("WRITER_FACTORY.get().createXMLStreamWriter(output"));
+    assert!(!codec.contains("XMLInputFactory.newFactory();\n        XMLStreamReader"));
     for (name, body) in files {
         fs::write(dir.path().join(name), body).unwrap();
     }

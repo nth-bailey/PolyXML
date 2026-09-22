@@ -29,11 +29,18 @@ public class BindingBenchmark {
     public XmlMapper mapper;
     public Marshaller marshaller;
     public Unmarshaller unmarshaller;
+    /** Shared StAX factories for the *Reuse benchmarks; per-thread in the generated codecs. */
+    public javax.xml.stream.XMLInputFactory sharedInput;
+    public javax.xml.stream.XMLOutputFactory sharedOutput;
     private final javax.xml.namespace.QName root = new javax.xml.namespace.QName("message");
 
     @Setup(Level.Trial)
     public void setup() throws Exception {
         mapper = XmlMapper.builder().addModule(new Jdk8Module()).build();
+        sharedInput = javax.xml.stream.XMLInputFactory.newFactory();
+        sharedInput.setProperty(javax.xml.stream.XMLInputFactory.SUPPORT_DTD, false);
+        sharedInput.setProperty("javax.xml.stream.isSupportingExternalEntities", false);
+        sharedOutput = javax.xml.stream.XMLOutputFactory.newFactory();
         JAXBContext context = JAXBContext.newInstance(io.polyxml.bench.jaxb.Message.class);
         marshaller = context.createMarshaller();
         unmarshaller = context.createUnmarshaller();
@@ -62,10 +69,12 @@ public class BindingBenchmark {
         if (!pojo.equals(MessageCodec.readXml(new ByteArrayInputStream(records.toByteArray())))) throw new AssertionError("record round trip");
     }
     @Benchmark public void directRead(Blackhole bh) throws Exception { for (byte[] xml : documents) bh.consume(MessageCodec.readXml(new ByteArrayInputStream(xml))); }
+    @Benchmark public void directReadReuse(Blackhole bh) throws Exception { for (byte[] xml : documents) { var reader=sharedInput.createXMLStreamReader(new ByteArrayInputStream(xml)); try { bh.consume(MessageCodec.readXml(reader)); } finally { reader.close(); } } }
     @Benchmark public void recordRead(Blackhole bh) throws Exception { for (byte[] xml : documents) bh.consume(io.polyxml.bench.records.MessageCodec.readXml(new ByteArrayInputStream(xml))); }
     @Benchmark public void jacksonRead(Blackhole bh) throws Exception { for (byte[] xml : documents) bh.consume(mapper.readValue(xml,Message.class)); }
     @Benchmark public void jaxbRead(Blackhole bh) throws Exception { for (byte[] xml : documents) bh.consume(unmarshaller.unmarshal(new javax.xml.transform.stream.StreamSource(new ByteArrayInputStream(xml)),io.polyxml.bench.jaxb.Message.class).getValue()); }
     @Benchmark public void directWrite(Blackhole bh) throws Exception { for (int i=0;i<batchSize;i++) { var out=new ByteArrayOutputStream(); MessageCodec.writeXml(pojo,out); bh.consume(out.toByteArray()); } }
+    @Benchmark public void directWriteReuse(Blackhole bh) throws Exception { for (int i=0;i<batchSize;i++) { var out=new ByteArrayOutputStream(); var writer=sharedOutput.createXMLStreamWriter(out,"UTF-8"); try { MessageCodec.writeXml(pojo,writer); writer.flush(); } finally { writer.close(); } bh.consume(out.toByteArray()); } }
     @Benchmark public void recordWrite(Blackhole bh) throws Exception { for (int i=0;i<batchSize;i++) { var out=new ByteArrayOutputStream(); io.polyxml.bench.records.MessageCodec.writeXml(record,out); bh.consume(out.toByteArray()); } }
     @Benchmark public void jacksonWrite(Blackhole bh) throws Exception { for (int i=0;i<batchSize;i++) bh.consume(mapper.writeValueAsBytes(pojo)); }
     @Benchmark public void jaxbWrite(Blackhole bh) throws Exception { for (int i=0;i<batchSize;i++) { var out=new ByteArrayOutputStream(); marshaller.marshal(new JAXBElement<>(root,io.polyxml.bench.jaxb.Message.class,legacy),out); bh.consume(out.toByteArray()); } }
