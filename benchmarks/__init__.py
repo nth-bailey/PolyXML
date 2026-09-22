@@ -1,1 +1,1 @@
-"""PolyXML comprehensive benchmarking suite."""
+"""PolyXML benchmark suites."""

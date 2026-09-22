@@ -7,7 +7,7 @@ import sys
 
 from rich.console import Console
 
-from benchmarks.runner import BenchmarkRunner
+from benchmarks.python.runner import BenchmarkRunner
 
 
 def parse_args() -> argparse.Namespace:
