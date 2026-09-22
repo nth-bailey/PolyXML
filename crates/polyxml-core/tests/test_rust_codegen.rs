@@ -5,6 +5,21 @@ use polyxml::ir::{
     Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, PrimitiveType, QName, SchemaIR,
     StructDef, TypeDef, TypeRef, UnionBranch, UnionDef,
 };
+use polyxml::schema_parser::XsdParser;
+
+/// Slice a generated struct or `impl` body from `start` up to the first
+/// closing brace at column 0, panicking when `start` is absent. Scoping
+/// assertions to one body keeps them from passing against a sibling type.
+fn section<'a>(code: &'a str, start: &str) -> &'a str {
+    let from = code
+        .find(start)
+        .unwrap_or_else(|| panic!("expected {start:?} in generated code:\n{code}"));
+    let rest = &code[from..];
+    match rest.find("\n}\n") {
+        Some(i) => &rest[..i + 3],
+        None => rest,
+    }
+}
 
 #[test]
 fn test_rust_identifier_sanitization() {
@@ -576,4 +591,254 @@ fn test_rust_rkyv_derives() {
     // Verify rkyv derives on enum, union, struct
     assert!(code.contains("#[cfg_attr(feature = \"rkyv\", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]"));
     assert!(code.contains("#[cfg_attr(feature = \"rkyv\", rkyv(check_bytes))]"));
+}
+
+// ---------------------------------------------------------------------------
+// xsd:extension base-field flattening: Rust structs have no inheritance, so a
+// derived type must inline the base chain's fields everywhere — struct body,
+// lifetime analysis, and both codec directions.
+// ---------------------------------------------------------------------------
+
+/// Lifetime edge case: `Middle` owns no string fields, so it only earns its
+/// `<'a>` if inherited fields participate in `compute_types_with_lifetime`.
+fn extension_xsd() -> &'static str {
+    r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="urn:ext" xmlns:t="urn:ext"
+            elementFormDefault="qualified">
+        <xs:complexType name="Base">
+            <xs:sequence>
+                <xs:element name="label" type="xs:string"/>
+            </xs:sequence>
+            <xs:attribute name="kind" type="xs:string" use="optional"/>
+        </xs:complexType>
+        <xs:complexType name="Middle">
+            <xs:complexContent>
+                <xs:extension base="t:Base">
+                    <xs:sequence>
+                        <xs:element name="rank" type="xs:int"/>
+                    </xs:sequence>
+                    <xs:attribute name="active" type="xs:boolean" use="optional"/>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
+        <xs:complexType name="Leaf">
+            <xs:complexContent>
+                <xs:extension base="t:Middle">
+                    <xs:sequence>
+                        <xs:element name="note" type="xs:string" minOccurs="0"/>
+                    </xs:sequence>
+                </xs:extension>
+            </xs:complexContent>
+        </xs:complexType>
+    </xs:schema>"#
+}
+
+#[test]
+fn test_rust_extension_inlines_base_fields() {
+    let ir = XsdParser::new()
+        .parse_str(extension_xsd())
+        .expect("parse extension schema");
+    let code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
+
+    let base = section(&code, "pub struct Base");
+    assert!(base.contains("pub label: Cow<'a, str>"));
+    assert!(base.contains("pub kind: Option<Cow<'a, str>>"));
+
+    let middle = section(&code, "pub struct Middle");
+    assert!(
+        middle.contains("pub struct Middle<'a> {"),
+        "inherited string field must propagate the lifetime parameter:\n{middle}"
+    );
+    for inherited in [
+        "pub label: Cow<'a, str>,",
+        "pub kind: Option<Cow<'a, str>>,",
+    ] {
+        assert!(
+            middle.contains(inherited),
+            "Middle dropped inherited field {inherited:?}:\n{middle}"
+        );
+    }
+    assert!(middle.contains("pub rank: i32,"));
+    assert!(middle.contains("pub active: Option<bool>,"));
+    // Root-first ordering: base fields precede derived ones.
+    let label_at = middle.find("pub label:").expect("label");
+    let rank_at = middle.find("pub rank:").expect("rank");
+    assert!(label_at < rank_at, "base fields must come first:\n{middle}");
+
+    // Three-level chain: Leaf sees Base + Middle + its own field.
+    let leaf = section(&code, "pub struct Leaf");
+    for expected in [
+        "pub label: Cow<'a, str>,",
+        "pub kind: Option<Cow<'a, str>>,",
+        "pub rank: i32,",
+        "pub active: Option<bool>,",
+        "pub note: Option<Cow<'a, str>>,",
+    ] {
+        assert!(
+            leaf.contains(expected),
+            "Leaf missing {expected:?}:\n{leaf}"
+        );
+    }
+}
+
+#[test]
+fn test_rust_extension_codecs_decode_and_encode_base_fields() {
+    let ir = XsdParser::new()
+        .parse_str(extension_xsd())
+        .expect("parse extension schema");
+    let code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
+
+    let middle_impl = section(&code, "impl<'a> Middle");
+    // Decode: variable slots, element dispatch, and attribute dispatch for
+    // every inherited member, plus enforcement of required base fields.
+    for expected in [
+        "let mut var_label = None;",
+        "let mut var_kind = None;",
+        "let mut var_rank = None;",
+        "\"label\" => {",
+        "\"kind\" => {",
+        "\"rank\" => {",
+        "\"active\" => {",
+        "Missing required field 'label'",
+    ] {
+        assert!(
+            middle_impl.contains(expected),
+            "Middle codec missing {expected:?}:\n{middle_impl}"
+        );
+    }
+    // Encode: inherited element and attribute both written back out.
+    for expected in [
+        "BytesStart::new(\"label\")",
+        "BytesText::new(self.label.as_ref())",
+        "push_attribute((\"kind\"",
+        "BytesStart::new(\"rank\")",
+    ] {
+        assert!(
+            middle_impl.contains(expected),
+            "Middle encode missing {expected:?}:\n{middle_impl}"
+        );
+    }
+
+    let leaf_impl = section(&code, "impl<'a> Leaf");
+    for expected in [
+        "let mut var_label = None;",
+        "let mut var_rank = None;",
+        "\"label\" => {",
+        "\"rank\" => {",
+        "Missing required field 'label'",
+        "BytesStart::new(\"label\")",
+        "push_attribute((\"kind\"",
+    ] {
+        assert!(
+            leaf_impl.contains(expected),
+            "Leaf codec missing {expected:?}:\n{leaf_impl}"
+        );
+    }
+}
+
+#[test]
+fn test_rust_simple_content_extension_shadow_rule() {
+    // simpleContent extension re-declares the base `value` field; flattening
+    // must inherit the base attributes without emitting a `value_2` duplicate.
+    let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="urn:sc" xmlns:t="urn:sc">
+        <xs:complexType name="Measurement">
+            <xs:simpleContent>
+                <xs:extension base="xs:decimal">
+                    <xs:attribute name="unit" type="xs:string"/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
+        <xs:complexType name="PreciseMeasurement">
+            <xs:simpleContent>
+                <xs:extension base="t:Measurement">
+                    <xs:attribute name="precision" type="xs:int"/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
+    </xs:schema>"#;
+
+    let ir = XsdParser::new()
+        .parse_str(xsd)
+        .expect("parse simpleContent schema");
+    let code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
+
+    let derived = section(&code, "pub struct PreciseMeasurement");
+    assert!(
+        derived.contains("pub unit: Option<Cow<'a, str>>,"),
+        "inherited unit attribute missing:\n{derived}"
+    );
+    assert!(
+        derived.contains("pub precision: Option<i32>,"),
+        "own precision attribute missing:\n{derived}"
+    );
+    assert_eq!(
+        derived.matches("pub value").count(),
+        1,
+        "value must be shadowed by the derived declaration, not duplicated:\n{derived}"
+    );
+    assert!(
+        !derived.contains("value_2"),
+        "shadow rule must prevent suffixed duplicates:\n{derived}"
+    );
+
+    let derived_impl = section(&code, "impl<'a> PreciseMeasurement");
+    assert!(derived_impl.contains("\"unit\" => {"));
+    assert!(derived_impl.contains("\"precision\" => {"));
+    assert!(derived_impl.contains("push_attribute((\"unit\""));
+    assert!(derived_impl.contains("push_attribute((\"precision\""));
+}
+
+#[test]
+fn test_rust_extension_base_cycle_cut() {
+    // A circular extension is invalid XSD but must not hang or duplicate
+    // fields when handed to the generator directly.
+    let mut ir = SchemaIR::new().with_target_namespace("urn:cycle");
+    let qa = QName::new(Some("urn:cycle"), "Alpha");
+    let qb = QName::new(Some("urn:cycle"), "Beta");
+
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: qa.clone(),
+        base_type: Some(qb.clone()),
+        is_abstract: false,
+        fields: vec![FieldDef::new(
+            "alphaField",
+            "alphaField",
+            FieldKind::Element,
+            TypeRef::Primitive(PrimitiveType::String),
+        )],
+        documentation: None,
+    }));
+    ir.add_type(TypeDef::Struct(StructDef {
+        qname: qb.clone(),
+        base_type: Some(qa.clone()),
+        is_abstract: false,
+        fields: vec![FieldDef::new(
+            "betaField",
+            "betaField",
+            FieldKind::Element,
+            TypeRef::Primitive(PrimitiveType::Int),
+        )],
+        documentation: None,
+    }));
+
+    let codegen = RustCodegen::new(RustOptions::default());
+    let code = codegen.generate_module(&ir);
+
+    let alpha = section(&code, "pub struct Alpha");
+    assert_eq!(
+        alpha.matches("pub beta_field").count(),
+        1,
+        "cycle-merged field must appear exactly once:\n{alpha}"
+    );
+    assert_eq!(alpha.matches("pub alpha_field").count(), 1);
+    assert!(alpha.contains("pub struct Alpha<'a> {"));
+
+    let beta = section(&code, "pub struct Beta");
+    assert_eq!(
+        beta.matches("pub alpha_field").count(),
+        1,
+        "cycle-merged field must appear exactly once:\n{beta}"
+    );
+    assert_eq!(beta.matches("pub beta_field").count(), 1);
 }

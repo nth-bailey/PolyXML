@@ -201,6 +201,59 @@ fn type_ident(q: &QName) -> String {
     lookup_type_name(q, || AsPascalCase(&q.local).to_string())
 }
 
+/// Flattened field list for a struct: every field inherited through its
+/// `xsd:extension` base chain (root first), followed by the struct's own
+/// fields. Rust structs have no inheritance, so a derived type must inline
+/// the base fields instead of silently dropping them — struct declarations,
+/// lifetime analysis, pattern detection, and both codec directions must all
+/// agree on this exact list.
+///
+/// When a derived type re-declares a field whose schema name matches an
+/// inherited one (the `simpleContent` value field, for instance), the
+/// most-derived declaration wins and the inherited duplicate is skipped, so
+/// flattening never introduces `value_2`-style duplicates. A base chain that
+/// revisits a type is cut at the revisit.
+fn flatten_fields<'a>(s: &'a StructDef, ir: &'a SchemaIR) -> Vec<&'a FieldDef> {
+    fn collect_bases<'a>(
+        s: &'a StructDef,
+        ir: &'a SchemaIR,
+        seen: &mut HashSet<QName>,
+        out: &mut Vec<&'a StructDef>,
+    ) {
+        if !seen.insert(s.qname.clone()) {
+            return;
+        }
+        if let Some(TypeDef::Struct(base)) = s.base_type.as_ref().and_then(|q| ir.types.get(q)) {
+            collect_bases(base, ir, seen, out);
+            out.push(base);
+        }
+    }
+
+    let mut bases = Vec::new();
+    collect_bases(s, ir, &mut HashSet::new(), &mut bases);
+    if bases.is_empty() {
+        return s.fields.iter().collect();
+    }
+
+    // Claim schema names leaf-to-root so the most-derived declaration of a
+    // name shadows any inherited duplicate. Names are claimed per struct, not
+    // per field, so an attribute and an element sharing a name inside one
+    // struct are both preserved.
+    let mut claimed: HashSet<&str> = HashSet::new();
+    let mut groups: Vec<Vec<&FieldDef>> = Vec::new();
+    for st in std::iter::once(s).chain(bases.iter().rev().copied()) {
+        let group: Vec<&FieldDef> = st
+            .fields
+            .iter()
+            .filter(|f| !claimed.contains(f.name.as_str()))
+            .collect();
+        claimed.extend(group.iter().map(|f| f.name.as_str()));
+        groups.push(group);
+    }
+    groups.reverse();
+    groups.into_iter().flatten().collect()
+}
+
 impl RustCodegen {
     pub fn new(options: RustOptions) -> Self {
         let zero_copy = options.zero_copy;
@@ -325,9 +378,8 @@ impl RustCodegen {
                         .branches
                         .iter()
                         .any(|b| typeref_has_lifetime(&b.type_ref, &requires_lifetime)),
-                    TypeDef::Struct(s) => s
-                        .fields
-                        .iter()
+                    TypeDef::Struct(s) => flatten_fields(s, ir)
+                        .into_iter()
                         .any(|f| typeref_has_lifetime(&f.type_ref, &requires_lifetime)),
                 };
 
@@ -653,7 +705,7 @@ impl RustCodegen {
         let _ = writeln!(out, "{} {{", struct_decl);
 
         let mut seen_fields = HashSet::new();
-        for field in &s.fields {
+        for field in flatten_fields(s, ir) {
             let rust_name = self.unique_rust_field_name(&field.name, &mut seen_fields);
             self.emit_struct_field(out, field, &rust_name, types_with_lifetime);
         }
@@ -1008,9 +1060,8 @@ impl RustCodegen {
         types_with_lifetime: &HashSet<QName>,
         ir: &SchemaIR,
     ) {
-        let has_patterns = s
-            .fields
-            .iter()
+        let has_patterns = flatten_fields(s, ir)
+            .into_iter()
             .any(|f| super::patterned_simple(&f.type_ref, ir).is_some());
         let struct_name = type_ident(&s.qname);
         let needs_lifetime = types_with_lifetime.contains(&s.qname);
@@ -1074,7 +1125,7 @@ impl RustCodegen {
             rust_name: String,
         }
         let mut field_metas = Vec::new();
-        for field in &s.fields {
+        for field in flatten_fields(s, ir) {
             let rust_name = self.unique_rust_field_name(&field.name, &mut seen_fields);
             field_metas.push(FieldMeta {
                 field: field.clone(),
