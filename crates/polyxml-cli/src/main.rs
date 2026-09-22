@@ -86,6 +86,18 @@ pub struct GenerateArgs {
     #[arg(long = "record-kind", value_name = "KIND")]
     pub record_kind: Option<String>,
 
+    /// Java/C# model style: record (default), pojo, or class
+    #[arg(long, value_parser = ["record", "pojo", "class"])]
+    pub style: Option<String>,
+
+    /// Emit fluent Java builders
+    #[arg(long, default_missing_value = "true", num_args = 0..=1)]
+    pub builder: Option<bool>,
+
+    /// Java XML binding: annotation (default) or direct StAX companion codecs
+    #[arg(long, value_parser = ["annotation", "direct"])]
+    pub codec: Option<String>,
+
     /// Rust rkyv zero-copy binary wire format serialization (default: false)
     #[arg(long = "rkyv", default_missing_value = "true", num_args = 0..=1)]
     pub rkyv: Option<bool>,
@@ -250,6 +262,9 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
             zod: args.zod,
             source_gen: args.source_gen,
             record_kind: args.record_kind.as_deref(),
+            style: args.style.as_deref(),
+            builder: args.builder,
+            codec: args.codec.as_deref(),
             rkyv: args.rkyv,
             custom_header: args.custom_header.as_deref(),
         };
@@ -346,6 +361,9 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
             zod: target.zod,
             source_gen: target.source_gen,
             record_kind: target.record_kind.as_deref(),
+            style: target.style.as_deref(),
+            builder: target.builder,
+            codec: target.codec.as_deref(),
             rkyv: target.rkyv,
             custom_header: target.custom_header.as_deref(),
         };
@@ -445,6 +463,9 @@ pub struct TargetEmitOptions<'a> {
     pub zod: Option<bool>,
     pub source_gen: Option<bool>,
     pub record_kind: Option<&'a str>,
+    pub style: Option<&'a str>,
+    pub builder: Option<bool>,
+    pub codec: Option<&'a str>,
     pub rkyv: Option<bool>,
     pub custom_header: Option<&'a str>,
 }
@@ -456,7 +477,34 @@ fn emit_target_code(
     schema_path: &Path,
     ir: &SchemaIR,
 ) -> std::io::Result<()> {
-    match lang.to_lowercase().as_str() {
+    let use_records = match opts.style.unwrap_or("record") {
+        "record" => true,
+        "pojo" | "class" => false,
+        value => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Unknown style: {value}"),
+            ))
+        }
+    };
+    let direct_codec = match opts.codec.unwrap_or("annotation") {
+        "annotation" => false,
+        "direct" => true,
+        value => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Unknown codec: {value}"),
+            ))
+        }
+    };
+    let language = lang.to_lowercase();
+    if (opts.style.is_some() && !matches!(language.as_str(), "java" | "csharp" | "cs" | "c#"))
+        || ((opts.builder.unwrap_or(false) || opts.codec.is_some()) && language != "java")
+        || (!use_records && opts.record_kind.is_some_and(|k| k != "class"))
+    {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "style is Java/C# only; builder and codec are Java only; mutable classes cannot use record structs"));
+    }
+    match language.as_str() {
         "python" | "py" => {
             let py_backend = opts
                 .backend
@@ -566,13 +614,20 @@ fn emit_target_code(
             let options = JavaOptions {
                 package_name: pkg,
                 backend: java_backend,
-                use_records: true,
+                use_records,
+                emit_builder: opts.builder.unwrap_or(false),
+                emit_direct_codec: direct_codec,
                 validate_facets: true,
                 emit_root_aliases: true,
                 custom_header: opts.custom_header.map(|s| s.to_string()),
             };
 
             let codegen = JavaCodegen::new(options);
+            if direct_codec {
+                codegen.validate_direct_codecs(ir).map_err(|message| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidInput, message)
+                })?;
+            }
             let files = codegen.generate_files(ir);
 
             for (filename, code) in files {
@@ -671,6 +726,7 @@ fn emit_target_code(
                 emit_json_attributes: true,
                 emit_validation: true,
                 record_kind,
+                use_records,
                 use_file_scoped_namespaces: true,
                 emit_root_records: true,
                 emit_source_gen: opts.source_gen.unwrap_or(false),

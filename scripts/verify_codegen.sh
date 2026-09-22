@@ -96,6 +96,15 @@ echo -n "  • Java 21+ (jackson)... "
 test -f "${TMP_DIR}/java_jack/SmokeModel.java"
 echo -e "${GREEN}OK${NC}"
 
+# Mutable Java models and direct codecs.
+echo -n "  • Java (POJO + builder + direct codec)... "
+"${POLYXML_BIN}" generate --lang java --style pojo --builder --codec direct --out "${TMP_DIR}/java_pojo" "${SCHEMA_FILE}" >/dev/null
+test -f "${TMP_DIR}/java_pojo/TreeNodeCodec.java"
+if command -v javac >/dev/null 2>&1; then
+    javac -d "${TMP_DIR}/java_classes" "${TMP_DIR}/java_pojo/"*.java
+fi
+echo -e "${GREEN}OK${NC}"
+
 # 5. TypeScript (zod, valibot, typebox)
 echo -n "  • TypeScript (zod)... "
 "${POLYXML_BIN}" generate --lang typescript --backend zod --out "${TMP_DIR}/ts_zod" "${SCHEMA_FILE}" >/dev/null
@@ -139,4 +148,9 @@ echo -n "  • C# (record struct + source-gen)... "
 test -f "${TMP_DIR}/cs_struct/TestSchema.cs"
 echo -e "${GREEN}OK${NC}"
 
+
+echo -n "  • C# (mutable class + source-gen)... "
+"${POLYXML_BIN}" generate --lang csharp --style class --source-gen --out "${TMP_DIR}/cs_class" "${SCHEMA_FILE}" >/dev/null
+test -f "${TMP_DIR}/cs_class/TestSchema.cs"
+echo -e "${GREEN}OK${NC}"
 echo -e "${GREEN}✨ Multi-target smoke verification passed completely across all 7 ecosystems!${NC}"

@@ -65,3 +65,11 @@ ruff format --check crates/polyxml-python/python/ tests/
 # 4. Python test suite with 100% statement & branch coverage
 pytest --cov=polyxml --cov-branch --cov-fail-under=100
 ```
+
+## 5. Reproducible Test Environment
+
+Run `uv sync --extra dev` and `uv run --extra dev pytest --cov=polyxml --cov-branch
+--cov-fail-under=100` from `crates/polyxml-python` when the checkout has multiple
+virtual environments. Selecting the root `.venv` first can omit `msgspec` and cause
+collection failures even though it is already declared in the package's `dev` extra.
+`uv sync` also rebuilds the editable ABI3 extension as needed.

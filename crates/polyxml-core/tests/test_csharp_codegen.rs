@@ -763,3 +763,111 @@ fn test_csharp_source_gen_context() {
     assert!(code.contains("[JsonSerializable(typeof(OrderStatus))]"));
     assert!(code.contains("public partial class CrmJsonContext : JsonSerializerContext"));
 }
+
+#[test]
+fn test_csharp_mutable_inheritance_roundtrip() {
+    let ir = polyxml::schema_parser::XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:complexType name="Base"><xs:attribute name="id" type="xs:int" use="required"/></xs:complexType>
+      <xs:complexType name="Item"><xs:complexContent><xs:extension base="Base"><xs:sequence>
+        <xs:element name="label" type="xs:string"/>
+        <xs:element name="tags" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="child" type="Item" minOccurs="0"/>
+      </xs:sequence></xs:extension></xs:complexContent></xs:complexType>
+      <xs:complexType name="Empty"/>
+      <xs:element name="document" type="Item"/>
+      <xs:element name="greeting" type="xs:string"/>
+    </xs:schema>"#).unwrap();
+    let generator = CSharpCodegen::new(CSharpOptions {
+        use_records: false,
+        emit_source_gen: true,
+        namespace: "Models".into(),
+        ..Default::default()
+    });
+    let code = generator.generate_module(&ir);
+    assert!(code.contains("public class Item : Base, IValidatableObject"));
+    assert!(code.contains("get; set;"));
+    assert!(!code.contains("public record"));
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("Models.cs"), code).unwrap();
+    fs::write(dir.path().join("Test.csproj"),r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><OutputType>Exe</OutputType><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup></Project>"#).unwrap();
+    fs::write(dir.path().join("Program.cs"),r#"using System; using System.IO; using System.Text.Json; using System.Xml.Serialization; using Models;
+class Program {
+ static void Main() {
+  var item = new Document { Id = 42, Label = "a<&", Child = new Item { Label = "child" } };
+  item.Tags!.Add("one"); item.Tags.Add("two");
+  var serializer = new XmlSerializer(typeof(Document));
+  var writer = new StringWriter(); serializer.Serialize(writer,item);
+  var copy = (Document)serializer.Deserialize(new StringReader(writer.ToString()))!;
+  if(copy.Id != 42 || copy.Label != item.Label || copy.Tags!.Count != 2 || copy.Child!.Label != "child") throw new Exception(writer.ToString());
+  copy.Label = "changed";
+  var json = JsonSerializer.Serialize(copy, PolyXmlJsonContext.Default.Document);
+  var restored = JsonSerializer.Deserialize(json, PolyXmlJsonContext.Default.Document)!;
+  if(restored.Label != "changed" || restored.Id != 42) throw new Exception(json);
+  _ = new Empty();
+  var greeting = new Greeting { Value = "hello" };
+  var gs = new XmlSerializer(typeof(Greeting)); var gw = new StringWriter(); gs.Serialize(gw,greeting);
+  if (((Greeting)gs.Deserialize(new StringReader(gw.ToString()))!).Value != "hello") throw new Exception(gw.ToString());
+ }
+}"#).unwrap();
+    if Command::new("dotnet").arg("--version").output().is_err() {
+        return;
+    }
+    let result = Command::new("dotnet")
+        .current_dir(dir.path())
+        .args(["run", "--project", "Test.csproj"])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn test_csharp_mutable_wrappers_and_choices_without_validation() {
+    let ir=polyxml::schema_parser::XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:simpleType name="Alias"><xs:restriction base="xs:string"/></xs:simpleType>
+      <xs:complexType name="Contact"><xs:choice><xs:element name="email" type="xs:string"/><xs:element name="phone" type="xs:string"/></xs:choice></xs:complexType>
+      <xs:complexType name="Person"><xs:sequence><xs:element name="name" type="Alias"/><xs:element name="contact" type="Contact"/></xs:sequence></xs:complexType>
+      <xs:element name="root" type="Contact"/>
+    </xs:schema>"#).unwrap();
+    let generator = CSharpCodegen::new(CSharpOptions {
+        use_records: false,
+        emit_validation: false,
+        emit_source_gen: true,
+        namespace: "Models".into(),
+        ..Default::default()
+    });
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("Models.cs"), generator.generate_module(&ir)).unwrap();
+    fs::write(dir.path().join("Test.csproj"),r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><OutputType>Exe</OutputType><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup></Project>"#).unwrap();
+    fs::write(dir.path().join("Program.cs"),r#"using System; using System.IO; using System.Text.Json; using System.Xml.Serialization; using Models;
+class Program { static void Main() {
+ var person = new Person { Name = new Alias("Alice"), Contact = new Contact.Email("a@example.org") };
+ ((Contact.Email)person.Contact).Value = "b@example.org";
+ var xml = new XmlSerializer(typeof(Person)); var writer = new StringWriter(); xml.Serialize(writer,person);
+ var copy = (Person)xml.Deserialize(new StringReader(writer.ToString()))!;
+ if(copy.Name.Value != "Alice" || ((Contact.Email)copy.Contact).Value != "b@example.org") throw new Exception(writer.ToString());
+ var json = JsonSerializer.Serialize(person, PolyXmlJsonContext.Default.Person);
+ if(JsonSerializer.Deserialize(json, PolyXmlJsonContext.Default.Person)!.Contact is not Contact.Email) throw new Exception(json);
+ var root = new Root { Value = new Contact.Phone("123") }; var rx = new XmlSerializer(typeof(Root)); var rw = new StringWriter(); rx.Serialize(rw,root);
+ if(((Root)rx.Deserialize(new StringReader(rw.ToString()))!).Value is not Contact.Phone) throw new Exception(rw.ToString());
+} }
+"#).unwrap();
+    if Command::new("dotnet").arg("--version").output().is_err() {
+        return;
+    }
+    let result = Command::new("dotnet")
+        .current_dir(dir.path())
+        .args(["run", "--project", "Test.csproj"])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr)
+    );
+}

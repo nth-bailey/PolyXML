@@ -125,3 +125,42 @@ If external compilers are installed on the development machine, run the E2E veri
 2. **Preserve Defaults**: When `--backend` or new flags are omitted, code generation MUST remain 100% backward compatible with zero behavioral changes.
 3. **Closing Braces**: When dynamically emitting interfaces/structs with varying field annotations, ensure trailing braces and blank lines (`out.push_str("}\n\n")`) are consistently emitted.
 4. **Git Pre-Push Hook**: Pre-push verifies all package versions match across 5 files. If remote `main` has advanced due to automated CI releases (`chore(release): X.Y.Z`), run `git pull --rebase origin main` before pushing.
+
+## 6. Java/C# Model Styles and Direct Java Codecs
+
+- `--style record|pojo|class` is shared by Java and C#. Records remain the default;
+  `pojo`/`class` select mutable models. Java `--builder` and
+  `--codec annotation|direct` must also be forwarded in both manifest forms.
+- Java mutable models/builders live in `java/models.rs`; StAX companions live in
+  `java/codec.rs`. Inheritance must share field-name allocation between accessors,
+  builders, and codecs. A derived builder extends its base builder and overrides
+  inherited fluent methods with a covariant return type.
+- Call `validate_direct_codecs` before CLI emission. Wildcards/dynamic `anyType`
+  cannot be silently dropped. The direct reader must consume exactly one element
+  and leave the cursor on END_ELEMENT; nested codecs rely on this contract.
+- C# mutable style must apply to structs, simple wrappers, union branches, and
+  root wrappers. Preserve XML/JSON attributes and invoke inherited validators.
+- Real Java compilation/round trips run in `test_java_codegen`; C# mutable XML and
+  source-generated JSON round trips run in `test_csharp_codegen`. Jackson/JAXB
+  interoperability is tested by `mvn -f benchmarks/java/pom.xml clean test` after
+  building the CLI. This requires Maven network access for dependencies initially.
+- `benchmarks/java` contains JMH read/write and mutation workloads. Use JDK 22+
+  and `-Ppanama` for native comparisons. Newer JDKs require the explicit JMH
+  annotation-processor path or the jar lacks `META-INF/BenchmarkList`. Clean the
+  Maven target when switching profiles. See its README for workload limits;
+  synthetic scalar projections are not full ISO 20022/UCI schema benchmarks.
+- CLI help assertions must track `Cli`'s current `about` text. A stale assertion
+  expecting “Polyglot XML schema compiler” predates the current help description.
+- The sibling checkout `../polyxml-finance-examples` carries the real ISO 20022
+  `schemas/finance/pacs_008_core.xsd`. Its `scripts/generate_all.sh` regenerates
+  all 7 targets from whichever local `target/{debug,release}/polyxml` is newer;
+  a clean `git status` there proves byte-for-byte output parity after codegen
+  changes. The same schema is the best large-schema smoke for
+  `--style pojo --builder --codec direct`: `javac` the output and round-trip
+  `data/pacs_008_customer_credit_transfer.xml` through the generated root codec.
+- `benchmarks/java -Ppanama` needs JDK 22+, but the host default can be JDK 21.
+  Set `JAVA_HOME`/`PATH` to a downloaded JDK (Temurin 25 worked) and run
+  `cargo build --release -p polyxml-c` first so `-Djava.library.path=target/release`
+  resolves `libpolyxml.so`. `mvn clean` deletes `target/*.json`, so always rerun
+  the JMH smoke (`-p batchSize=10 -wi 0 -i 1 -r 100ms -f 1 -foe true`) after a
+  clean build; its JSON lands in the gitignored `benchmarks/java/target/`.

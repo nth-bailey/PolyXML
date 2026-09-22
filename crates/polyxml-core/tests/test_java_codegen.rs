@@ -156,6 +156,8 @@ fn test_java_records_and_enums_generation() {
         package_name: "com.example.shop".to_string(),
         backend: JavaBackend::Standard,
         use_records: true,
+        emit_builder: false,
+        emit_direct_codec: false,
         validate_facets: true,
         emit_root_aliases: true,
         custom_header: None,
@@ -244,6 +246,8 @@ fn test_java_sealed_interface_choice() {
         package_name: "com.example.payment".to_string(),
         backend: JavaBackend::Standard,
         use_records: true,
+        emit_builder: false,
+        emit_direct_codec: false,
         validate_facets: true,
         emit_root_aliases: true,
         custom_header: None,
@@ -298,6 +302,8 @@ fn test_java_module_container_class() {
         package_name: "com.example.banking".to_string(),
         backend: JavaBackend::Standard,
         use_records: true,
+        emit_builder: false,
+        emit_direct_codec: false,
         validate_facets: true,
         emit_root_aliases: true,
         custom_header: None,
@@ -408,6 +414,8 @@ fn test_java_jackson_backend_struct_annotations() {
         package_name: "com.example.crm".to_string(),
         backend: JavaBackend::Jackson,
         use_records: true,
+        emit_builder: false,
+        emit_direct_codec: false,
         validate_facets: true,
         emit_root_aliases: true,
         custom_header: None,
@@ -469,6 +477,8 @@ fn test_java_jackson_backend_enum_annotations() {
         package_name: "com.example.orders".to_string(),
         backend: JavaBackend::Jackson,
         use_records: true,
+        emit_builder: false,
+        emit_direct_codec: false,
         validate_facets: true,
         emit_root_aliases: true,
         custom_header: None,
@@ -517,6 +527,8 @@ fn test_java_jackson_backend_union_annotations() {
         package_name: "com.example.messaging".to_string(),
         backend: JavaBackend::Jackson,
         use_records: true,
+        emit_builder: false,
+        emit_direct_codec: false,
         validate_facets: true,
         emit_root_aliases: true,
         custom_header: None,
@@ -559,6 +571,8 @@ fn test_java_jackson_backend_simple_type_annotations() {
         package_name: "com.example.types".to_string(),
         backend: JavaBackend::Jackson,
         use_records: true,
+        emit_builder: false,
+        emit_direct_codec: false,
         validate_facets: true,
         emit_root_aliases: true,
         custom_header: None,
@@ -612,4 +626,255 @@ fn test_java_jackson_backend_from_str_loose() {
         Some(JavaBackend::Standard)
     );
     assert_eq!(JavaBackend::from_str_loose("unknown"), None);
+}
+
+#[test]
+fn test_java_mutable_builders_and_direct_codecs_execute() {
+    let schema = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:simpleType name="Code"><xs:restriction base="xs:string"><xs:minLength value="2"/></xs:restriction></xs:simpleType>
+      <xs:complexType name="Base"><xs:attribute name="id" type="xs:int" use="required"/></xs:complexType>
+      <xs:complexType name="Item"><xs:complexContent><xs:extension base="Base"><xs:sequence>
+        <xs:element name="label" type="xs:string"/>
+        <xs:element name="active" type="xs:boolean"/>
+        <xs:element name="code" type="Code" minOccurs="0"/>
+        <xs:element name="tags" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="child" type="Item" minOccurs="0"/>
+        <xs:element name="bytes" type="xs:hexBinary" minOccurs="0"/>
+      </xs:sequence></xs:extension></xs:complexContent></xs:complexType>
+      <xs:element name="item" type="Item"/>
+    </xs:schema>"#;
+    let ir = polyxml::schema_parser::XsdParser::new()
+        .parse_str(schema)
+        .unwrap();
+    let generator = JavaCodegen::new(JavaOptions {
+        package_name: String::new(),
+        use_records: false,
+        emit_builder: true,
+        emit_direct_codec: true,
+        ..Default::default()
+    });
+    let dir = tempdir().unwrap();
+    let files = generator.generate_files(&ir);
+    let item = &files.iter().find(|(n, _)| n == "Item.java").unwrap().1;
+    assert!(item.contains("extends Base"));
+    assert!(item.contains("public boolean isActive()"));
+    assert!(item.contains("public ItemBuilder id(int id)"));
+    for (name, body) in files {
+        fs::write(dir.path().join(name), body).unwrap();
+    }
+    fs::write(dir.path().join("Main.java"), r#"
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+public class Main {
+    public static void main(String[] args) throws Exception {
+        var builder = Item.builder().id(7).label("a<&").active(true).tags(new java.util.ArrayList<>(java.util.List.of("one", "two")));
+        Item item = builder.build();
+        item.setCode(new Code("OK"));
+        item.setBytes(new byte[] {0, 15, -1});
+        item.setChild(Item.builder().id(8).label("child").build());
+        Item other = builder.build();
+        item.getTags().add("three");
+        if (other.getTags().size() != 2) throw new AssertionError("Builder shared a list");
+        other.setTags(null); other.getTags().add("reset");
+        if (!item.isActive() || item.getId() != 7) throw new AssertionError("Bean accessors");
+        var bytes = new ByteArrayOutputStream();
+        ItemCodec.writeXml(item, bytes);
+        try { BaseCodec.writeXml(item, new ByteArrayOutputStream()); throw new AssertionError("Derived fields silently dropped"); } catch (javax.xml.stream.XMLStreamException expected) {}
+        Item copy = ItemCodec.readXml(new ByteArrayInputStream(bytes.toByteArray()));
+        if (!item.equals(copy) || item.hashCode() != copy.hashCode()) throw new AssertionError(bytes + " -> " + copy);
+        copy.setId(20);
+        if (item.equals(copy)) throw new AssertionError("Inherited equals");
+        try { new Code("x"); throw new AssertionError("Missing facet validation"); } catch (IllegalArgumentException expected) {}
+        String xml = "<item id='4'><unknown><nested/></unknown><label>x</label><active>1</active></item>";
+        if (!ItemCodec.readXml(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8))).isActive()) throw new AssertionError("XML boolean");
+        try { ItemCodec.readXml(new ByteArrayInputStream("<item><active>bad</active></item>".getBytes())); throw new AssertionError("Bad boolean accepted"); } catch (javax.xml.stream.XMLStreamException expected) {}
+    }
+}
+"#).unwrap();
+    if Command::new("javac").arg("-version").output().is_err() {
+        return;
+    }
+    let sources: Vec<_> = fs::read_dir(dir.path())
+        .unwrap()
+        .map(|p| p.unwrap().path())
+        .collect();
+    let result = Command::new("javac").args(&sources).output().unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let result = Command::new("java")
+        .args(["-cp", dir.path().to_str().unwrap(), "Main"])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn test_java_record_builder_and_nested_codec_execute() {
+    let ir = polyxml::schema_parser::XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test" xmlns:t="urn:test" elementFormDefault="qualified">
+      <xs:complexType name="Base"><xs:attribute name="id" type="xs:int" use="required"/></xs:complexType>
+      <xs:complexType name="Message"><xs:complexContent><xs:extension base="t:Base"><xs:sequence><xs:element name="text" type="xs:string"/><xs:element name="count" type="xs:int" minOccurs="0"/></xs:sequence></xs:extension></xs:complexContent></xs:complexType>
+      <xs:complexType name="Empty"/>
+    </xs:schema>"#).unwrap();
+    let generator = JavaCodegen::new(JavaOptions {
+        package_name: String::new(),
+        emit_builder: true,
+        emit_direct_codec: true,
+        ..Default::default()
+    });
+    let dir = tempdir().unwrap();
+    fs::write(
+        dir.path().join("Models.java"),
+        generator.generate_module(&ir, "Models"),
+    )
+    .unwrap();
+    fs::write(dir.path().join("Main.java"),r#"import java.io.*;
+public class Main {
+ public static void main(String[] args) throws Exception {
+  var message = Models.Message.builder().id(5).text("hello").build();
+  if (message.count().isPresent()) throw new AssertionError();
+  var out = new ByteArrayOutputStream(); Models.MessageCodec.writeXml(message,out);
+  if (!Models.MessageCodec.readXml(new ByteArrayInputStream(out.toByteArray())).equals(message)) throw new AssertionError(out.toString());
+  if (Models.Empty.builder().build() == null) throw new AssertionError();
+ }
+}"#).unwrap();
+    if Command::new("javac").arg("-version").output().is_err() {
+        return;
+    }
+    let result = Command::new("javac")
+        .current_dir(dir.path())
+        .args(["Models.java", "Main.java"])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let result = Command::new("java")
+        .current_dir(dir.path())
+        .args(["-cp", ".", "Main"])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn test_direct_codec_rejects_wildcards_and_name_collisions() {
+    let generator = JavaCodegen::new(JavaOptions {
+        emit_direct_codec: true,
+        ..Default::default()
+    });
+    for schema in [
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="Open"><xs:sequence><xs:any/></xs:sequence></xs:complexType></xs:schema>"#,
+        r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="Item"/><xs:complexType name="ItemCodec"/></xs:schema>"#,
+    ] {
+        let ir = polyxml::schema_parser::XsdParser::new()
+            .parse_str(schema)
+            .unwrap();
+        assert!(generator.validate_direct_codecs(&ir).is_err());
+    }
+}
+
+#[test]
+fn test_java_direct_nil_lists_choices_and_namespaces() {
+    let mut ir=polyxml::schema_parser::XsdParser::new().parse_str(r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:t="urn:test" targetNamespace="urn:test" elementFormDefault="qualified">
+      <xs:complexType name="Choice"><xs:choice><xs:element name="text" type="xs:string"/><xs:element name="count" type="xs:int"/></xs:choice></xs:complexType>
+      <xs:simpleType name="Status"><xs:restriction base="xs:string"><xs:enumeration value="ready"/><xs:enumeration value="done"/></xs:restriction></xs:simpleType>
+      <xs:complexType name="Envelope"><xs:sequence>
+        <xs:element name="values" type="xs:string" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
+        <xs:element name="numbers" type="xs:string" minOccurs="0"/>
+        <xs:element name="choice" type="t:Choice"/>
+        <xs:element name="status" type="t:Status"/>
+        <xs:element name="nullable" type="xs:int" nillable="true"/>
+        <xs:element name="infinity" type="xs:double"/>
+      </xs:sequence></xs:complexType>
+    </xs:schema>"#).unwrap();
+    if let TypeDef::Struct(s) = ir
+        .types
+        .get_mut(&QName::new(Some("urn:test"), "Envelope"))
+        .unwrap()
+    {
+        s.fields
+            .iter_mut()
+            .find(|f| f.name == "numbers")
+            .unwrap()
+            .type_ref = TypeRef::List(Box::new(TypeRef::Primitive(PrimitiveType::Boolean)));
+    }
+    for records in [false, true] {
+        let generator = JavaCodegen::new(JavaOptions {
+            package_name: String::new(),
+            use_records: records,
+            emit_builder: true,
+            emit_direct_codec: true,
+            ..Default::default()
+        });
+        generator.validate_direct_codecs(&ir).unwrap();
+        let dir = tempdir().unwrap();
+        fs::write(
+            dir.path().join("Models.java"),
+            generator.generate_module(&ir, "Models"),
+        )
+        .unwrap();
+        let nil = if records {
+            "java.util.Optional.empty()"
+        } else {
+            "null"
+        };
+        let values = if records {
+            "copy.values()"
+        } else {
+            "copy.getValues()"
+        };
+        let numbers = if records {
+            "copy.numbers()"
+        } else {
+            "copy.getNumbers()"
+        };
+        fs::write(dir.path().join("Main.java"),format!(r#"import java.io.*;
+public class Main {{ public static void main(String[] args) throws Exception {{
+ var source=Models.Envelope.builder().values(new java.util.ArrayList<>(java.util.Arrays.asList("one",null,"three")))
+   .numbers(java.util.List.of(true,false)).choice(new Models.Choice.Text("hi<&")).status(Models.Status.READY)
+   .nullable({nil}).infinity(Double.POSITIVE_INFINITY).build();
+ var output=new ByteArrayOutputStream(); Models.EnvelopeCodec.writeXml(source,output);
+ String xml=output.toString(java.nio.charset.StandardCharsets.UTF_8);
+ if(!xml.contains("xsi:nil") || !xml.contains("INF") || !xml.contains("urn:test")) throw new AssertionError(xml);
+ var copy=Models.EnvelopeCodec.readXml(new ByteArrayInputStream(output.toByteArray()));
+ if(!source.equals(copy) || {values}.get(1)!=null || !{numbers}.equals(java.util.List.of(true,false))) throw new AssertionError(xml+" -> "+copy);
+}}
+}}"#)).unwrap();
+        if Command::new("javac").arg("-version").output().is_err() {
+            continue;
+        }
+        let result = Command::new("javac")
+            .current_dir(dir.path())
+            .args(["Models.java", "Main.java"])
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "records={records}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let result = Command::new("java")
+            .current_dir(dir.path())
+            .args(["-cp", ".", "Main"])
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "records={records}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
 }
