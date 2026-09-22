@@ -1,3 +1,15 @@
+# [0.20.0](https://github.com/nth-bailey/PolyXML/compare/v0.19.2...v0.20.0) (2026-09-22)
+
+
+### Bug Fixes
+
+* **java:** cache direct-codec StAX factories per thread ([3eecb74](https://github.com/nth-bailey/PolyXML/commit/3eecb7485a64f749faecc79fbecc610e6a92698e)), closes [#46](https://github.com/nth-bailey/PolyXML/issues/46)
+
+
+### Features
+
+* **codegen:** add mutable model styles, builders, and direct Java codecs ([65e86a7](https://github.com/nth-bailey/PolyXML/commit/65e86a74e087243c28b7fe67291c1b73f1ceeb27))
+
 ## [0.19.2](https://github.com/nth-bailey/PolyXML/compare/v0.19.1...v0.19.2) (2026-09-20)
 
 
