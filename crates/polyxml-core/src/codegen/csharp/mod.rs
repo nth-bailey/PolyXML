@@ -51,12 +51,19 @@ pub struct CSharpOptions {
     pub emit_validation: bool,
     /// Record emission kind (record class vs record struct)
     pub record_kind: CSharpRecordKind,
+    /// Emit immutable records (default) instead of mutable classes.
+    #[serde(default = "default_use_records")]
+    pub use_records: bool,
     /// Use modern C# 10+ file-scoped namespaces (`namespace Foo;`)
     pub use_file_scoped_namespaces: bool,
     /// Emit root element wrapper records or aliases
     pub emit_root_records: bool,
     /// Custom header text to prepend to generated files
     pub custom_header: Option<String>,
+}
+
+fn default_use_records() -> bool {
+    true
 }
 
 impl Default for CSharpOptions {
@@ -69,6 +76,7 @@ impl Default for CSharpOptions {
             source_gen_context_name: "PolyXmlJsonContext".to_string(),
             emit_validation: true,
             record_kind: CSharpRecordKind::Class,
+            use_records: true,
             use_file_scoped_namespaces: true,
             emit_root_records: true,
             custom_header: None,
@@ -372,6 +380,14 @@ impl CSharpCodegen {
             }
         }
 
+        if !self.options.use_records && self.options.emit_root_records {
+            for elem in ir.elements.values() {
+                let name = to_csharp_type_name(&elem.qname.local);
+                if name != self.context.map_type_ref(&elem.type_ref) {
+                    writeln!(out, "{}[JsonSerializable(typeof({}))]", indent, name).unwrap();
+                }
+            }
+        }
         let ctx_name = &self.options.source_gen_context_name;
         writeln!(
             out,
@@ -465,7 +481,7 @@ impl CSharpCodegen {
     }
 
     fn emit_simple(&self, out: &mut String, s: &SimpleTypeDef, indent: &str) {
-        if !s.facets.is_empty() {
+        if !s.facets.is_empty() || !self.options.use_records {
             let type_name = to_csharp_type_name(&s.qname.local);
             let base_type = self.context.map_type_ref(&s.base_type);
 
@@ -473,6 +489,43 @@ impl CSharpCodegen {
                 self.emit_docstring(out, doc, indent);
             }
 
+            if !self.options.use_records {
+                writeln!(
+                    out,
+                    "{}public class {}{}\n{}{{",
+                    indent,
+                    type_name,
+                    if self.options.emit_validation {
+                        " : IValidatableObject"
+                    } else {
+                        ""
+                    },
+                    indent
+                )
+                .unwrap();
+                if self.options.emit_xml_attributes {
+                    writeln!(out, "{}    [XmlText]", indent).unwrap();
+                }
+                writeln!(
+                    out,
+                    "{}    public {} Value {{ get; set; }} = default!;",
+                    indent, base_type
+                )
+                .unwrap();
+                writeln!(
+                    out,
+                    "{}    public {}() {{ }}\n{}    public {}({} value) {{ Value = value; }}",
+                    indent, type_name, indent, type_name, base_type
+                )
+                .unwrap();
+                if self.options.emit_validation {
+                    writeln!(out, "{}    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)\n{}    {{", indent, indent).unwrap();
+                    self.emit_facet_checks(out, &s.facets, "Value", &format!("{}        ", indent));
+                    writeln!(out, "{}        yield break;\n{}    }}", indent, indent).unwrap();
+                }
+                writeln!(out, "{}}}\n", indent).unwrap();
+                return;
+            }
             writeln!(
                 out,
                 "{}public sealed record {}([property: XmlText] {} Value) : IValidatableObject",
@@ -522,7 +575,31 @@ impl CSharpCodegen {
             }
         }
 
-        writeln!(out, "{}public abstract record {}", indent, choice_name).unwrap();
+        if !self.options.use_records && self.options.emit_json_attributes {
+            for branch in &u.branches {
+                writeln!(
+                    out,
+                    "{}[JsonDerivedType(typeof({}.{}), {:?})]",
+                    indent,
+                    choice_name,
+                    to_csharp_type_name(&branch.variant_name),
+                    branch.xml_name
+                )
+                .unwrap();
+            }
+        }
+        writeln!(
+            out,
+            "{}public abstract {} {}",
+            indent,
+            if self.options.use_records {
+                "record"
+            } else {
+                "class"
+            },
+            choice_name
+        )
+        .unwrap();
         writeln!(out, "{}{{", indent).unwrap();
 
         for branch in &u.branches {
@@ -546,6 +623,24 @@ impl CSharpCodegen {
                 format!("[property: {}] ", branch_attrs.join(", "))
             };
 
+            if !self.options.use_records {
+                writeln!(
+                    out,
+                    "{}    public sealed class {} : {}\n{}    {{",
+                    indent, variant_name, choice_name, indent
+                )
+                .unwrap();
+                writeln!(
+                    out,
+                    "{}        {}public {} Value {{ get; set; }} = default!;",
+                    indent,
+                    xml_attr.replace("[property: ", "["),
+                    branch_type
+                )
+                .unwrap();
+                writeln!(out, "{}        public {}() {{ }}\n{}        public {}({} value) {{ Value = value; }}\n{}    }}", indent, variant_name, indent, variant_name, branch_type, indent).unwrap();
+                continue;
+            }
             writeln!(
                 out,
                 "{}    public sealed record {}({}{} Value) : {}",
@@ -608,6 +703,39 @@ impl CSharpCodegen {
         } else {
             format!(" : {}", base_clause.join(", "))
         };
+
+        if !self.options.use_records {
+            writeln!(
+                out,
+                "{}public class {}{}\n{}{{",
+                indent, struct_name, implements_str, indent
+            )
+            .unwrap();
+            writeln!(out, "{}    public {}() {{ }}", indent, struct_name).unwrap();
+            for f in &s.fields {
+                let name = to_csharp_property_name(&f.name, Some(&struct_name));
+                let ty = self.map_field_type(f, ir);
+                let attrs = self
+                    .build_field_attributes(f, ir)
+                    .replace("[property: ", "[");
+                let initial = if f.cardinality.is_list() || f.type_ref.is_list() {
+                    "new()"
+                } else {
+                    "default!"
+                };
+                writeln!(
+                    out,
+                    "{}    {}public {} {} {{ get; set; }} = {};",
+                    indent, attrs, ty, name, initial
+                )
+                .unwrap();
+            }
+            if self.options.emit_validation {
+                self.emit_struct_validator(out, s, indent);
+            }
+            writeln!(out, "{}}}\n", indent).unwrap();
+            return;
+        }
 
         // Collect fields and parameters
         if s.fields.is_empty() {
@@ -689,7 +817,17 @@ impl CSharpCodegen {
 
     fn emit_struct_validator(&self, out: &mut String, s: &StructDef, indent: &str) {
         let struct_name = to_csharp_type_name(&s.qname.local);
-        let new_kw = if s.base_type.is_some() { "new " } else { "" };
+        let new_kw = if !self.options.use_records {
+            if s.base_type.is_some() {
+                "override "
+            } else {
+                "virtual "
+            }
+        } else if s.base_type.is_some() {
+            "new "
+        } else {
+            ""
+        };
         writeln!(
             out,
             "{}    public {}IEnumerable<ValidationResult> Validate(ValidationContext validationContext)",
@@ -698,6 +836,9 @@ impl CSharpCodegen {
         .unwrap();
         writeln!(out, "{}    {{", indent).unwrap();
 
+        if !self.options.use_records && s.base_type.is_some() {
+            writeln!(out, "{}        foreach (var result in base.Validate(validationContext)) yield return result;", indent).unwrap();
+        }
         let mut has_checks = false;
         for f in &s.fields {
             let prop_name = to_csharp_property_name(&f.name, Some(&struct_name));
@@ -888,10 +1029,46 @@ impl CSharpCodegen {
                         writeln!(out, "{}[XmlRoot(\"{}\")]", indent, elem.qname.local).unwrap();
                     }
                 }
+                if !self.options.use_records {
+                    let can_extend = matches!(&elem.type_ref, TypeRef::Named(q) if matches!(ir.types.get(q), Some(TypeDef::Struct(_) | TypeDef::Simple(_))));
+                    if !can_extend {
+                        writeln!(
+                            out,
+                            "{}public sealed class {}\n{}{{",
+                            indent, elem_name, indent
+                        )
+                        .unwrap();
+                        if self.options.emit_xml_attributes {
+                            let attribute = if matches!(&elem.type_ref, TypeRef::Named(q)
+                                if matches!(ir.types.get(q), Some(TypeDef::Union(_))))
+                            {
+                                "XmlElement"
+                            } else {
+                                "XmlText"
+                            };
+                            writeln!(out, "{}    [{}]", indent, attribute).unwrap();
+                        }
+                        writeln!(
+                            out,
+                            "{}    public {} Value {{ get; set; }} = default!;\n{}}}\n",
+                            indent, target_type, indent
+                        )
+                        .unwrap();
+                        continue;
+                    }
+                }
                 writeln!(
                     out,
-                    "{}public sealed record {} : {}\n{}{{",
-                    indent, elem_name, target_type, indent
+                    "{}public sealed {} {} : {}\n{}{{",
+                    indent,
+                    if self.options.use_records {
+                        "record"
+                    } else {
+                        "class"
+                    },
+                    elem_name,
+                    target_type,
+                    indent
                 )
                 .unwrap();
                 writeln!(out, "{}    public {}() : base() {{ }}", indent, elem_name).unwrap();

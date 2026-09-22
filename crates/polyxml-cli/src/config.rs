@@ -66,6 +66,9 @@ pub struct TargetConfig {
     pub zod: Option<bool>,
     pub source_gen: Option<bool>,
     pub record_kind: Option<String>,
+    pub style: Option<String>,
+    pub builder: Option<bool>,
+    pub codec: Option<String>,
     pub rkyv: Option<bool>,
     pub custom_header: Option<String>,
 }
@@ -91,6 +94,9 @@ pub struct CodegenTargetConfig {
     pub zod: Option<bool>,
     pub source_gen: Option<bool>,
     pub record_kind: Option<String>,
+    pub style: Option<String>,
+    pub builder: Option<bool>,
+    pub codec: Option<String>,
     pub rkyv: Option<bool>,
     pub custom_header: Option<String>,
 }
@@ -161,6 +167,9 @@ impl WorkspaceManifest {
                         zod: cfg.zod,
                         source_gen: cfg.source_gen,
                         record_kind: cfg.record_kind.clone(),
+                        style: cfg.style.clone(),
+                        builder: cfg.builder,
+                        codec: cfg.codec.clone(),
                         rkyv: cfg.rkyv,
                         custom_header: cfg.custom_header.clone().or_else(|| ws_header.clone()),
                     });

@@ -1,9 +1,107 @@
 ---
-title: Java 22 Guide (Project Panama FFI)
+title: Java Guide — Models, Direct Codecs, and Panama
 description: Ultra-fast Java XML processing using Java 22 Foreign Function & Memory API (Project Panama) with zero-JNI overhead.
 ---
 
-# Java 22 Guide: Project Panama FFI
+# Java Guide
+
+## Java 21 models: records, POJOs, and builders
+
+Records remain the default. Select mutable JavaBeans for setter-based frameworks:
+
+```bash
+polyxml generate schema.xsd --lang java --style pojo --builder --out generated
+polyxml generate schema.xsd --lang java --style pojo --backend jackson --builder --out generated
+polyxml generate schema.xsd --lang java --style record --builder --out generated
+```
+
+`--style class` is an alias for `pojo`. Mutable complex types have a public no-argument
+constructor, private fields, `getX`/`setX` accessors (`isX` for primitive booleans),
+`Serializable`, and value-based `equals`, `hashCode`, and `toString`. XSD extensions
+use Java inheritance. Optional scalar properties are nullable boxed values; repeated
+properties are mutable lists. A list getter initializes the list if it was set to null,
+so `order.getItems().add(item)` works. Simple-value wrappers and choice branches also
+use mutable classes in this mode.
+
+```java
+var entity = EntityMt.builder().id("UUID-1234").build();
+entity.setStatus("PROCESSED");
+```
+
+Builders include inherited fields and produce a fresh object on each `build()`.
+POJO builders copy their list containers; nested objects remain shared. Record builders
+use the canonical constructor and its facet checks. When builders or direct codecs
+are enabled, records flatten inherited fields into their components. POJO setters enforce
+supported facets, but a no-argument constructor permits a partially populated object.
+This is not full XSD validation. The Jackson backend annotates fields explicitly and
+disables automatic bean-property discovery to avoid duplicate properties after XML
+names are converted to Java identifiers. It requires Jackson 2.x XML/annotations;
+standard POJOs and direct codecs require only the JDK. No Jakarta Validation dependency
+is introduced.
+
+## Direct streaming XML codecs
+
+```bash
+polyxml generate schema.xsd --lang java --style pojo --builder --codec direct --out generated
+```
+
+`--codec annotation` is the default and emits only models. `direct` adds a companion
+`TypeNameCodec.java` for every generated type, with statically linked getters/setters,
+constructors, and nested codecs. It works with either record or POJO models and can
+be combined with Jackson annotations. It uses StAX from the JDK, without reflection
+or a native library:
+
+```java
+try (var input = java.nio.file.Files.newInputStream(path)) {
+    EntityMt entity = EntityMtCodec.readXml(input);
+    entity.setStatus("PROCESSED");
+    try (var output = java.nio.file.Files.newOutputStream(destination)) {
+        EntityMtCodec.writeXml(entity, output);
+    }
+}
+```
+
+The stream overloads create and close their StAX reader/writer and leave ownership of
+the supplied stream with the caller. For reuse inside a larger stream, pass an
+`XMLStreamReader` positioned at a start element or an `XMLStreamWriter`. Reading leaves
+the cursor at the matching end element. The writer overload accepting `local` and `ns`
+selects a particular root element when a type has multiple XML roots. Otherwise, the
+first matching root declaration is used, or the type name if no root is declared.
+
+Supported bindings include attributes, text, nested and recursive models, enums,
+simple restrictions, nullable values, repeated elements, XML lexical lists in the IR,
+choice wrappers, namespaces, XML booleans, and binary values. Unknown elements are
+skipped as complete subtrees. Stream-based readers disable DTDs and external entities;
+callers supplying a StAX reader configure their own parser. The codecs follow the
+normalized IR: choice wrappers retain their generated wrapper representation, and
+this is not a general XSD validator or a replacement for missing schema-parser features.
+Wildcard fields and `xs:anyType` are rejected by the CLI in direct mode. Runtime
+`xsi:type` dispatch is rejected; use the concrete type's codec and XML without
+runtime type overrides. Passing a derived POJO to a base codec is also rejected
+instead of silently dropping derived fields. Rust API callers
+should call `validate_direct_codecs(&ir)` before generation. Models containing cycles
+are representable, but serializing an actual cyclic object graph is not supported.
+
+```toml
+[[generate]]
+target = "java"
+output = "generated/java"
+package = "com.enterprise.models"
+style = "pojo"
+builder = true
+backend = "jackson"
+codec = "direct"
+```
+
+The same options work under `[codegen.java]`. See the
+[Java benchmark harness](https://github.com/nth-bailey/PolyXML/tree/main/benchmarks/java)
+for JAXB, Jackson, direct POJO/record, and Panama comparisons. No throughput advantage
+is assumed; benchmark the relevant schema and workload.
+
+## Java 22+ native bindings
+
+The remaining sections describe the separate Panama runtime, which requires Java 22+
+and a native PolyXML library. Generated models and direct StAX codecs work on Java 21.
 
 PolyXML provides native C/Rust XML data-binding for the modern Java Virtual Machine using **Java 22+ Project Panama (Foreign Function & Memory API - JEP 454)**. It completely eliminates legacy JNI glue code, GC object pinning, and JNI transition overheads by leveraging native off-heap memory and downcall method handles.
 
