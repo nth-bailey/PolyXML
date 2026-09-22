@@ -127,5 +127,6 @@ Explore complete, production-ready example repositories showcasing PolyXML in mi
 
 - Check out the [5-Minute Multi-Language Quickstart](quickstart.md) to see PolyXML in action.
 - Read about our [XSD-to-Code Generator & CLI Toolchain](guides/compiler.md).
+- Learn how [Polymorphic Types & `xsi:type` Dispatch](guides/polymorphism.md) work at runtime.
 - Read about our [Architecture & Streaming Design](architecture.md).
 - Explore [Performance & Benchmarks](benchmarks.md).

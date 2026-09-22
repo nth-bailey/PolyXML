@@ -317,3 +317,35 @@ Python/Java/C# validators against values matching only one alternative, values
 satisfying two restriction steps, and reject lists/optionals carrying a bad
 element. The TS leg needs `POLYXML_TS_TEST_MODULES` pointing at a node_modules
 with `zod@3 valibot@1 @sinclair/typebox@0.34 typescript@5` and skips otherwise.
+
+## 11. Python Abstract Meta & Runtime Type Discovery (issue #53)
+
+`xsi:type` dispatch is a **dynamic-runtime feature** (see
+`polyxml-core-engine` skill §5 and `docs/guides/polymorphism.md`); the
+codegen only has to expose two facts to the PyO3 layer:
+
+- **`Meta.abstract = True`** is emitted for `is_abstract` structs in
+  `codegen/python/mod.rs` (inside the `emit_meta` block, after
+  `namespace`). PyO3 reads it in `extract_schema_from_class` →
+  `builder.is_abstract(true)`, which turns unknown `xsi:type` values into
+  loud errors instead of silent truncation. Only abstract types may emit
+  it — locked by `test_python_abstract_meta_emission`.
+- **Class inheritance must stay intact**: `emit_struct` already emits
+  `class Derived(Base):`, and PyO3 builds a derived class's schema from
+  `__dataclass_fields__`/`model_fields`, which include inherited fields —
+  do not flatten inheritance away or variant schemas will miss base fields.
+
+Key gotchas when touching this area:
+
+- Variant discovery (`discover_variants`) must run **after** both global
+  cache inserts in `get_or_create_schema_meta`, otherwise a subclass field
+  typed as the base class re-enters extraction and recurses infinitely.
+- Variant keys come from `Meta.name` (the XML type name), not the class
+  name — codegen may mangle class identifiers (`type_ident`) while
+  `xsi:type` always carries the wire QName local part.
+- `polyxml.serialize` takes an optional **`target_type`** (pyo3 + wrapper):
+  given the declared base, a concrete instance is converted against the
+  base schema and the variant's record triggers `xsi:type` re-emission at
+  the root; omitted, the instance's concrete schema is used (no selector).
+  Both branches are covered in `tests/test_xsi_type.py` (11 tests, kept at
+  100% statement/branch coverage).

@@ -394,8 +394,8 @@ fn issue51_item6_quick_xml_serde_skips_unknown_elements() {
 }
 
 // ---------------------------------------------------------------------------
-// Item 7: xsi:type polymorphic dispatch — intentionally untested here
-// (scoped as a separate enhancement issue; unsupported today).
+// Item 7: xsi:type polymorphic dispatch — implemented as issue #53;
+// see `tests/test_issue53_xsi_type.rs`.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyString, PyTuple, PyType};
 use pyo3::IntoPyObjectExt;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 use polyxml::schema::{FieldKind, FieldSchema, ModelSchema, ScalarType, ValueType};
@@ -228,6 +228,13 @@ fn extract_schema_from_class<'py>(
                 }
             }
         }
+        // Issue #53: abstract types raise a clear error when xsi:type names
+        // a derivation the runtime does not know.
+        if let Ok(abstract_val) = meta_cls.getattr("abstract") {
+            if abstract_val.extract::<bool>().unwrap_or(false) {
+                builder = builder.is_abstract(true);
+            }
+        }
     }
 
     let mut cached_fields = Vec::new();
@@ -432,7 +439,54 @@ fn get_or_create_schema_meta<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<Cach
         map.insert(schema.name.clone(), Arc::clone(&meta));
     }
 
+    // xsi:type dispatch (issue #53): register concrete subclasses as
+    // derivations of this type. Deliberately runs AFTER the cache inserts so
+    // a subclass field typed as this class resolves from cache instead of
+    // re-entering extraction.
+    let variants = discover_variants(cls);
+    if !variants.is_empty() {
+        meta.schema.set_variants(variants);
+    }
+
     Ok(meta)
+}
+
+/// Collect runtime schemas for every dataclass/Pydantic subclass of `cls`,
+/// transitively, to power `xsi:type` dispatch (issue #53).
+fn discover_variants(cls: &Bound<'_, PyType>) -> Vec<Arc<ModelSchema>> {
+    let mut out = Vec::new();
+    let mut seen: HashSet<usize> = HashSet::new();
+    collect_subclass_schemas(cls, &mut out, &mut seen);
+    out
+}
+
+fn collect_subclass_schemas(
+    cls: &Bound<'_, PyType>,
+    out: &mut Vec<Arc<ModelSchema>>,
+    seen: &mut HashSet<usize>,
+) {
+    let Ok(subclasses) = cls.call_method0("__subclasses__") else {
+        return;
+    };
+    let Ok(items) = subclasses.try_iter() else {
+        return;
+    };
+    for item in items.flatten() {
+        let Ok(sub) = item.cast::<PyType>() else {
+            continue;
+        };
+        if !seen.insert(sub.as_ptr() as usize) {
+            continue;
+        }
+        let usable = sub.hasattr("__dataclass_fields__").unwrap_or(false)
+            || sub.hasattr("model_fields").unwrap_or(false);
+        if usable {
+            if let Ok(meta) = get_or_create_schema_meta(sub) {
+                out.push(Arc::clone(&meta.schema));
+            }
+        }
+        collect_subclass_schemas(sub, out, seen);
+    }
 }
 
 fn get_or_create_schema<'py>(cls: &Bound<'py, PyType>) -> PyResult<(Arc<ModelSchema>, PyObject)> {
@@ -582,6 +636,19 @@ fn poly_value_to_py<'py>(
             schema: rec_schema,
             values,
         } => {
+            // xsi:type dispatch (issue #53): the record was parsed as a
+            // concrete derivation of the declared type, so construct it with
+            // the derivation's Python class.
+            if let ValueType::Nested(ref declared) = val_type {
+                if declared.matches_variant(rec_schema) {
+                    if let Some(variant_meta) = lookup_cached_meta(&rec_schema.name) {
+                        let variant_cls = variant_meta.py_cls.bind(py).clone();
+                        let variant_vt = ValueType::Nested(Arc::clone(rec_schema));
+                        return poly_value_to_py(py, val, &variant_vt, Some(&variant_cls), None);
+                    }
+                }
+            }
+
             let meta_opt = if let ValueType::Nested(ref s) = val_type {
                 lookup_cached_meta(&s.name)
             } else {
@@ -856,6 +923,18 @@ fn py_to_poly_value<'py>(
     meta_opt: Option<&CachedSchemaMeta>,
 ) -> PyResult<PolyValue> {
     if let Some(meta) = meta_opt {
+        // xsi:type dispatch (issue #53): a concrete subclass instance in a
+        // field declared as the base type builds the derivation's record so
+        // the serializer re-emits xsi:type and keeps every concrete field.
+        let obj_type = obj.get_type();
+        if obj_type.as_ptr() != meta.py_cls.as_ptr() {
+            if let Ok(actual_meta) = get_or_create_schema_meta(&obj_type) {
+                if meta.schema.matches_variant(&actual_meta.schema) {
+                    return py_to_poly_value(py, obj, &actual_meta.schema, Some(&actual_meta));
+                }
+            }
+        }
+
         let mut values: Vec<Option<PolyValue>> = vec![None; schema.fields.len()];
 
         for (i, field) in schema.fields.iter().enumerate() {
@@ -1101,16 +1180,22 @@ impl XmlIterator {
 }
 
 #[pyfunction]
-#[pyo3(signature = (obj, indent=None, namespaces=None, ns_map=None))]
+#[pyo3(signature = (obj, target_type=None, indent=None, namespaces=None, ns_map=None))]
 fn serialize<'py>(
     py: Python<'py>,
     obj: Bound<'py, PyAny>,
+    target_type: Option<Bound<'py, PyType>>,
     indent: Option<usize>,
     namespaces: Option<bool>,
     ns_map: Option<Bound<'py, PyDict>>,
 ) -> PyResult<Bound<'py, PyBytes>> {
-    let cls = obj.get_type();
-    let meta = get_or_create_schema_meta(&cls)?;
+    // With `target_type`, serialize against the declared base type so
+    // xsi:type dispatch round-trips the element name (issue #53); without
+    // it, the instance's own concrete type is used.
+    let meta = match &target_type {
+        Some(t) => get_or_create_schema_meta(t)?,
+        None => get_or_create_schema_meta(&obj.get_type())?,
+    };
 
     let poly_val = py_to_poly_value(py, &obj, &meta.schema, Some(&meta))?;
     let root_name = std::str::from_utf8(&meta.schema.xml_name).unwrap_or(meta.schema.name.as_str());

@@ -101,6 +101,73 @@ fn is_nil_element(e: &BytesStart) -> bool {
     false
 }
 
+/// Raw unescaped value of the `xsi:type` attribute on `e`, if present.
+///
+/// Matching follows this parser's namespace-blind convention (like
+/// `is_nil_element`): the attribute's local name must be `type`, so
+/// `xsi:type`, any other prefixed `*:type`, or a bare `type` all match.
+fn xsi_type_value(e: &BytesStart) -> Result<Option<Vec<u8>>> {
+    for attr in e.attributes().flatten() {
+        let raw_key = attr.key.as_ref();
+        if raw_key == "xmlns" || raw_key.starts_with("xmlns:") {
+            continue;
+        }
+        if attr.key.local_name().as_ref() == "type" {
+            let unescaped = quick_xml::escape::unescape(attr.value.as_ref())?;
+            return Ok(Some(unescaped.into_owned().into_bytes()));
+        }
+    }
+    Ok(None)
+}
+
+/// Resolve the concrete schema an element should be parsed with (issue #53).
+///
+/// When the declared type has `xsi:type` derivations registered (or is
+/// abstract), the wire attribute selects one; unknown types on an abstract
+/// base error loudly instead of silently dropping concrete fields. Types
+/// without dispatch information keep today's behavior of parsing as
+/// declared, so a plain content attribute named `type` is never mistaken
+/// for dispatch on a non-abstract type.
+fn resolve_record_schema(declared: &Arc<ModelSchema>, e: &BytesStart) -> Result<Arc<ModelSchema>> {
+    if !declared.is_abstract && !declared.has_variants() {
+        return Ok(Arc::clone(declared));
+    }
+    let raw = match xsi_type_value(e)? {
+        Some(raw) => raw,
+        None => return Ok(Arc::clone(declared)),
+    };
+    let local: &[u8] = match raw.iter().rposition(|&b| b == b':') {
+        Some(i) => &raw[i + 1..],
+        None => &raw[..],
+    };
+    if let Some(variant) = declared.find_variant(local) {
+        return Ok(variant);
+    }
+    if declared.is_abstract {
+        let value = String::from_utf8_lossy(&raw);
+        return Err(PolyXmlError::SchemaError(if declared.has_variants() {
+            let known: Vec<String> = declared
+                .variants()
+                .iter()
+                .map(|v| String::from_utf8_lossy(&v.xml_name).into_owned())
+                .collect();
+            format!(
+                "xsi:type=\"{}\" does not match any known derivation of '{}' (known: {})",
+                value,
+                declared.name,
+                known.join(", ")
+            )
+        } else {
+            format!(
+                "xsi:type=\"{}\" targets abstract type '{}', which has no registered \
+                 derivations; deserialize the concrete type directly (escape hatch)",
+                value, declared.name
+            )
+        }));
+    }
+    Ok(Arc::clone(declared))
+}
+
 fn append_general_ref(
     e: &quick_xml::events::BytesRef,
     active_scalar: bool,
@@ -149,7 +216,8 @@ impl XmlDeserializer {
                     return Self::parse_sub_tree(&mut reader, root_schema, e, max_depth);
                 }
                 Ok(Event::Empty(ref e)) => {
-                    let mut frame = StackFrame::new(Arc::clone(&root_schema));
+                    let schema = resolve_record_schema(&root_schema, e)?;
+                    let mut frame = StackFrame::new(schema);
                     Self::parse_attributes(e, &mut frame)?;
                     return frame.finish();
                 }
@@ -177,7 +245,8 @@ impl XmlDeserializer {
         max_depth: usize,
     ) -> Result<PolyValue> {
         let mut stack: Vec<StackFrame> = Vec::with_capacity(16);
-        let mut root_frame = StackFrame::new(Arc::clone(&root_schema));
+        let root_schema = resolve_record_schema(&root_schema, root_start)?;
+        let mut root_frame = StackFrame::new(root_schema);
         Self::parse_attributes(root_start, &mut root_frame)?;
         stack.push(root_frame);
 
@@ -235,14 +304,16 @@ impl XmlDeserializer {
                                     }
                                 }
                                 ValueType::Nested(sub_schema) => {
-                                    let mut frame = StackFrame::new(Arc::clone(sub_schema));
+                                    let frame_schema = resolve_record_schema(sub_schema, e)?;
+                                    let mut frame = StackFrame::new(frame_schema);
                                     Self::parse_attributes(e, &mut frame)?;
                                     stack.push(frame);
                                 }
                                 _ => {}
                             },
                             ValueType::Nested(sub_schema) => {
-                                let mut frame = StackFrame::new(Arc::clone(sub_schema));
+                                let frame_schema = resolve_record_schema(sub_schema, e)?;
+                                let mut frame = StackFrame::new(frame_schema);
                                 Self::parse_attributes(e, &mut frame)?;
                                 stack.push(frame);
                             }
@@ -283,7 +354,8 @@ impl XmlDeserializer {
                                     stack.last_mut().unwrap().push_list_item(field_idx, val);
                                 }
                                 ValueType::Nested(sub_schema) => {
-                                    let mut frame = StackFrame::new(Arc::clone(sub_schema));
+                                    let frame_schema = resolve_record_schema(sub_schema, e)?;
+                                    let mut frame = StackFrame::new(frame_schema);
                                     Self::parse_attributes(e, &mut frame)?;
                                     let instance = frame.finish()?;
                                     stack
@@ -294,7 +366,8 @@ impl XmlDeserializer {
                                 _ => {}
                             },
                             ValueType::Nested(sub_schema) => {
-                                let mut frame = StackFrame::new(Arc::clone(sub_schema));
+                                let frame_schema = resolve_record_schema(sub_schema, e)?;
+                                let mut frame = StackFrame::new(frame_schema);
                                 Self::parse_attributes(e, &mut frame)?;
                                 let instance = frame.finish()?;
                                 stack.last_mut().unwrap().values[field_idx] = Some(instance);
@@ -475,7 +548,8 @@ impl<R: std::io::BufRead> XmlItemStream<R> {
                     if local.as_ref().as_bytes() == target_local
                         || e.name().as_ref().as_bytes() == self.target_tag.as_slice()
                     {
-                        let mut frame = StackFrame::new(Arc::clone(&self.schema));
+                        let schema = resolve_record_schema(&self.schema, e)?;
+                        let mut frame = StackFrame::new(schema);
                         XmlDeserializer::parse_attributes(e, &mut frame)?;
                         return Ok(Some(frame.finish()?));
                     }

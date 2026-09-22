@@ -568,6 +568,12 @@ impl PythonCodegen {
             if let Some(ref ns) = s.qname.namespace {
                 let _ = writeln!(out, "        namespace = \"{}\"", ns);
             }
+            // Marks the type as a dispatch base: the runtime raises a clear
+            // error when xsi:type targets an abstract type with no registered
+            // derivations (issue #53).
+            if s.is_abstract {
+                out.push_str("        abstract = True\n");
+            }
             has_body = true;
         }
 

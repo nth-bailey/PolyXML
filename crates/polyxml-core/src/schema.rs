@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldKind {
@@ -80,11 +80,50 @@ pub struct ModelSchema {
     pub element_map: HashMap<Vec<u8>, usize>,
     pub attribute_map: HashMap<Vec<u8>, usize>,
     pub text_field: Option<usize>,
+    /// Declared `abstract="true"` in the source schema (issue #53).
+    pub is_abstract: bool,
+    /// Concrete derivations eligible for `xsi:type` dispatch, each keyed by
+    /// its type QName local part (stored in `xml_name`). Set once after the
+    /// schema is created: from `SchemaIR` extension chains in `from_ir`, or
+    /// from Python subclass hierarchies in the PyO3 layer.
+    variants: OnceLock<Vec<Arc<ModelSchema>>>,
 }
 
 impl ModelSchema {
     pub fn builder(name: impl Into<String>) -> ModelSchemaBuilder {
         ModelSchemaBuilder::new(name)
+    }
+
+    /// Register the concrete derivations eligible for `xsi:type` dispatch.
+    /// Ignored on a second call (`OnceLock` semantics).
+    pub fn set_variants(&self, variants: Vec<Arc<ModelSchema>>) {
+        let _ = self.variants.set(variants);
+    }
+
+    /// Registered derivations for `xsi:type` dispatch (empty when none).
+    pub fn variants(&self) -> &[Arc<ModelSchema>] {
+        self.variants.get().map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// Whether any `xsi:type` derivations are registered for this type.
+    pub fn has_variants(&self) -> bool {
+        !self.variants().is_empty()
+    }
+
+    /// Look up a derivation by the QName local part of an `xsi:type` value.
+    pub fn find_variant(&self, local: &[u8]) -> Option<Arc<ModelSchema>> {
+        self.variants()
+            .iter()
+            .find(|v| v.xml_name.as_slice() == local)
+            .cloned()
+    }
+
+    /// Whether `candidate` is a registered derivation of `self`.
+    pub fn matches_variant(&self, candidate: &ModelSchema) -> bool {
+        self.variants().iter().any(|v| {
+            std::ptr::eq(v.as_ref(), candidate)
+                || (v.xml_name == candidate.xml_name && v.namespace == candidate.namespace)
+        })
     }
 
     /// Construct a runtime `ModelSchema` from a compiled `SchemaIR`.
@@ -207,6 +246,56 @@ impl ModelSchema {
             }
         }
 
+        fn build_field(
+            f: &crate::ir::FieldDef,
+            ir: &crate::ir::SchemaIR,
+            visited: &mut HashSet<crate::ir::QName>,
+        ) -> FieldSchema {
+            let kind = match f.kind {
+                crate::ir::FieldKind::Attribute => FieldKind::Attribute,
+                crate::ir::FieldKind::Element => FieldKind::Element,
+                crate::ir::FieldKind::Text => FieldKind::Text,
+                _ => FieldKind::Element,
+            };
+
+            let mut val_type = build_type(&f.type_ref, ir, visited);
+            if f.cardinality.is_list() && !matches!(val_type, ValueType::List(_)) {
+                val_type = ValueType::List(Box::new(val_type));
+            }
+
+            let mut field_schema = FieldSchema::new(&f.name, f.xml_name.as_bytes(), kind, val_type);
+            if let Some(ref ns) = f.namespace {
+                field_schema = field_schema.namespace(ns);
+            }
+            if f.cardinality.min_occurs > 0 && !f.cardinality.is_optional() {
+                field_schema = field_schema.required();
+            }
+            field_schema
+        }
+
+        /// Whether `d` transitively extends `base` via `xs:extension` (issue #53).
+        fn derives_from(
+            ir: &crate::ir::SchemaIR,
+            d: &crate::ir::StructDef,
+            base: &crate::ir::QName,
+        ) -> bool {
+            let mut seen: HashSet<crate::ir::QName> = HashSet::new();
+            let mut cur = d.base_type.as_ref();
+            while let Some(q) = cur {
+                if q == base {
+                    return true;
+                }
+                if !seen.insert(q.clone()) {
+                    break;
+                }
+                cur = match ir.types.get(q) {
+                    Some(TypeDef::Struct(b)) => b.base_type.as_ref(),
+                    _ => None,
+                };
+            }
+            false
+        }
+
         fn build_struct(
             s: &crate::ir::StructDef,
             ir: &crate::ir::SchemaIR,
@@ -216,33 +305,65 @@ impl ModelSchema {
             if let Some(ref ns) = s.qname.namespace {
                 builder = builder.namespace(ns);
             }
+            builder = builder.is_abstract(s.is_abstract);
 
+            // Flatten the xs:extension content model: base-chain fields
+            // precede the struct's own fields (mirrors the Java codegen).
+            let mut seen_bases: HashSet<crate::ir::QName> = HashSet::new();
+            seen_bases.insert(s.qname.clone());
+            let mut chain: Vec<&crate::ir::StructDef> = Vec::new();
+            let mut cur = s.base_type.as_ref();
+            while let Some(base_q) = cur {
+                if !seen_bases.insert(base_q.clone()) {
+                    break;
+                }
+                match ir.types.get(base_q) {
+                    Some(TypeDef::Struct(base_s)) => {
+                        chain.push(base_s);
+                        cur = base_s.base_type.as_ref();
+                    }
+                    _ => break,
+                }
+            }
+            for base_s in chain.into_iter().rev() {
+                for f in &base_s.fields {
+                    builder = builder.field(build_field(f, ir, visited));
+                }
+            }
             for f in &s.fields {
-                let kind = match f.kind {
-                    crate::ir::FieldKind::Attribute => FieldKind::Attribute,
-                    crate::ir::FieldKind::Element => FieldKind::Element,
-                    crate::ir::FieldKind::Text => FieldKind::Text,
-                    _ => FieldKind::Element,
-                };
-
-                let mut val_type = build_type(&f.type_ref, ir, visited);
-                if f.cardinality.is_list() && !matches!(val_type, ValueType::List(_)) {
-                    val_type = ValueType::List(Box::new(val_type));
-                }
-
-                let mut field_schema =
-                    FieldSchema::new(&f.name, f.xml_name.as_bytes(), kind, val_type);
-                if let Some(ref ns) = f.namespace {
-                    field_schema = field_schema.namespace(ns);
-                }
-                if f.cardinality.min_occurs > 0 && !f.cardinality.is_optional() {
-                    field_schema = field_schema.required();
-                }
-
-                builder = builder.field(field_schema);
+                builder = builder.field(build_field(f, ir, visited));
             }
 
-            builder.build()
+            let schema = builder.build();
+
+            // xsi:type dispatch registry (issue #53): every transitive
+            // derivation of this type, keyed by QName local part.
+            let derived: Vec<crate::ir::QName> = ir
+                .types
+                .iter()
+                .filter_map(|(q, td)| match td {
+                    TypeDef::Struct(d) if d.qname != s.qname && derives_from(ir, d, &s.qname) => {
+                        Some(q.clone())
+                    }
+                    _ => None,
+                })
+                .collect();
+            let mut variants = Vec::with_capacity(derived.len());
+            for dq in derived {
+                if visited.contains(&dq) {
+                    continue;
+                }
+                visited.insert(dq.clone());
+                if let Some(TypeDef::Struct(d)) = ir.types.get(&dq) {
+                    variants.push(build_struct(d, ir, visited));
+                }
+                visited.remove(&dq);
+            }
+            if !variants.is_empty() {
+                schema.set_variants(variants);
+            }
+
+            schema
         }
 
         let mut visited = HashSet::new();
@@ -284,6 +405,7 @@ pub struct ModelSchemaBuilder {
     xml_name: Option<Vec<u8>>,
     namespace: Option<String>,
     fields: Vec<FieldSchema>,
+    is_abstract: bool,
 }
 
 impl ModelSchemaBuilder {
@@ -293,7 +415,14 @@ impl ModelSchemaBuilder {
             xml_name: None,
             namespace: None,
             fields: Vec::new(),
+            is_abstract: false,
         }
+    }
+
+    /// Mark the type as `abstract="true"` (issue #53).
+    pub fn is_abstract(mut self, is_abstract: bool) -> Self {
+        self.is_abstract = is_abstract;
+        self
     }
 
     pub fn xml_name(mut self, xml_name: &[u8]) -> Self {
@@ -353,6 +482,8 @@ impl ModelSchemaBuilder {
             element_map,
             attribute_map,
             text_field,
+            is_abstract: self.is_abstract,
+            variants: OnceLock::new(),
         })
     }
 }
