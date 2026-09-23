@@ -44,12 +44,18 @@ pub struct WorkspaceSection {
 }
 
 /// Target configuration from either `[[generate]]` or `[codegen.<target>]`.
+/// Unknown keys are rejected so removed legacy fields (`zod`, `source_gen`,
+/// `record_kind`, `builder`, `codec`, `rkyv`) fail loudly instead of being
+/// silently ignored.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TargetConfig {
     pub target: String,
     pub output: String,
     pub enabled: Option<bool>,
     pub backend: Option<String>,
+    #[serde(default)]
+    pub features: Vec<String>,
     pub package: Option<String>,
     pub namespace: Option<String>,
     pub strict_facets: Option<bool>,
@@ -63,21 +69,18 @@ pub struct TargetConfig {
     pub modules: Option<bool>,
     pub mode: Option<String>,
     pub serializer: Option<String>,
-    pub zod: Option<bool>,
-    pub source_gen: Option<bool>,
-    pub record_kind: Option<String>,
     pub style: Option<String>,
-    pub builder: Option<bool>,
-    pub codec: Option<String>,
-    pub rkyv: Option<bool>,
     pub custom_header: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CodegenTargetConfig {
     pub enabled: Option<bool>,
     pub output: Option<String>,
     pub backend: Option<String>,
+    #[serde(default)]
+    pub features: Vec<String>,
     pub package: Option<String>,
     pub namespace: Option<String>,
     pub strict_facets: Option<bool>,
@@ -91,13 +94,7 @@ pub struct CodegenTargetConfig {
     pub modules: Option<bool>,
     pub mode: Option<String>,
     pub serializer: Option<String>,
-    pub zod: Option<bool>,
-    pub source_gen: Option<bool>,
-    pub record_kind: Option<String>,
     pub style: Option<String>,
-    pub builder: Option<bool>,
-    pub codec: Option<String>,
-    pub rkyv: Option<bool>,
     pub custom_header: Option<String>,
 }
 
@@ -151,6 +148,7 @@ impl WorkspaceManifest {
                         output,
                         enabled: cfg.enabled,
                         backend: cfg.backend.clone(),
+                        features: cfg.features.clone(),
                         package: cfg.package.clone(),
                         namespace: cfg.namespace.clone(),
                         strict_facets: cfg.strict_facets,
@@ -164,13 +162,7 @@ impl WorkspaceManifest {
                         modules: cfg.modules,
                         mode: cfg.mode.clone(),
                         serializer: cfg.serializer.clone(),
-                        zod: cfg.zod,
-                        source_gen: cfg.source_gen,
-                        record_kind: cfg.record_kind.clone(),
                         style: cfg.style.clone(),
-                        builder: cfg.builder,
-                        codec: cfg.codec.clone(),
-                        rkyv: cfg.rkyv,
                         custom_header: cfg.custom_header.clone().or_else(|| ws_header.clone()),
                     });
                 }

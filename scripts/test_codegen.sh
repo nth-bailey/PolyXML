@@ -26,7 +26,8 @@ cargo test -p polyxml \
   --test test_java_codegen \
   --test test_ts_codegen \
   --test test_go_codegen \
-  --test test_csharp_codegen
+  --test test_csharp_codegen \
+  --test test_pattern_codegen
 
 echo -e "${BLUE}==> [3/3] Running PolyXML CLI code generation & manifest integration tests...${NC}"
 cargo test -p polyxml-cli --test test_cli

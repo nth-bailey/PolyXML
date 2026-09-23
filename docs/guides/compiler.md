@@ -50,7 +50,7 @@ polyxml generate --lang python --out ./generated/python schema.xsd
 polyxml generate --lang python --backend pydantic-v2 --out ./generated/python schema.xsd
 
 # Generate zero-copy Rust models with inherent streaming codecs
-polyxml generate --lang rust --zero-copy --codecs --out ./generated/rust schema.xsd
+polyxml generate --lang rust --feature zero-copy --codecs --out ./generated/rust schema.xsd
 
 # Generate all 7 languages simultaneously
 polyxml generate \
@@ -69,25 +69,68 @@ polyxml generate \
 
 | Option | Flag | Description | Default |
 |---|---|---|---|
-| **Target Language** | `-l`, `--lang` | Target language (`python`, `rust`, `cpp`, `java`, `typescript`, `go`, `csharp`). Can be specified multiple times. | Required |
-| **Output Directory** | `-o`, `--out` | Target directory for generated source files. | `.` |
+| **Target Language** | `-l`, `--lang` | Target language (`python`, `rust`, `cpp`, `java`, `typescript`, `go`, `csharp`). Can be specified multiple times. | `python` |
+| **Output Directory** | `-o`, `--out` | Target directory for generated source files. | `generated` |
+| **Model Style** | `--style` | Target-specific type representation; see the table below. | Existing target default |
+| **Enhancements** | `--feature NAME` | Repeatable; also accepts comma-separated names. | None added |
 | **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic-v2` for Python; `standard`/`jackson` for Java; `standard`/`glaze` for C++; `none`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
 | **Compilation Mode** | `-m`, `--mode` | Target packaging mode (`header` or `modules` for C++). | Target default |
-| **Rust Zero-Copy** | `--zero-copy` | Use `Cow<'a, str>` string slices instead of owned `String`. | `true` |
-| **Rust rkyv** | `--rkyv` | Derive `rkyv::{Archive, Serialize, Deserialize}` for zero-copy wire format serialization. | `false` |
 | **Streaming Codecs**| `--codecs` | Emit inherent zero-copy streaming XML serializers and deserializers. | `true` |
-| **Validation Schemas** | `--zod` | Emit runtime Zod validation schemas for TypeScript (equivalent to `--backend zod`). | `false` |
-| **C# Source-Gen** | `--source-gen` | Emit Native AOT compile-time `JsonSerializerContext` for C#. | `false` |
-| **C# Record Kind** | `--record-kind` | C# record representation (`class` or `struct`). | `class` |
-| **Model Style (Java/C#)** | `--style` | Model representation: `record` (default), `pojo` for JavaBeans (alias `class`), or `class` for mutable C# classes. | `record` |
-| **Java Builders** | `--builder` | Emit fluent `Type.builder()...build()` factories for Java models (records and POJOs alike). | `false` |
-| **Java Codec** | `--codec` | Java XML binding: `annotation` (default) or `direct`, which adds reflection-free StAX companion `TypeCodec` classes. Rejects wildcards, `xs:anyType`, and runtime `xsi:type` dispatch. | `annotation` |
 | **Package / Namespace** | `-p`, `--package` | Namespace or package name for Java, Go, C#, or C++. | Target default |
 | **Custom Header** | `--custom-header` | Custom comment, license, or linter directive text to prepend to generated files. | `None` |
-| **Dry Run** | `--dry-run` | Parse and print generated output without writing to disk. | `false` |
-| **Format** | `--format` | Automatically format generated code using host toolchains (`ruff`, `cargo fmt`, `clang-format`, `gofmt`). | `true` |
+| **Dry Run** | `--dry-run` | Validate options and parse schemas without writing to disk. | `false` |
+| **Format** | `--format` | Automatically format generated code using host toolchains (`ruff`, `cargo fmt`, `clang-format`, `gofmt`). | `false` |
 
 ---
+
+### Backend, style, and feature compatibility
+
+Options apply to every language selected in one invocation. Use `polyxml.toml`
+when targets need different options. Invalid values, unsupported combinations,
+and conflicting options fail before schema parsing or output creation,
+including with `--dry-run`.
+
+| Target | Backends (first is default) | Styles | Features |
+| --- | --- | --- | --- |
+| Python | `dataclass`, `pydantic` | `dataclass` (dataclass backend only) | `slots`, `kw-only` (dataclass backend only) |
+| Rust | `standard` | — | `zero-copy`, `rkyv`, `phf` |
+| TypeScript | `interfaces`, `zod`, `valibot`, `typebox` | — | — |
+| Java | `standard`, `jackson` | `record` (default), `pojo` (alias `class`) | `builder`, `direct-codec` |
+| C# | `standard`, `source-gen` | `record-class` (default), `record-struct`, `class` (mutable); legacy aliases `record`, `pojo` | — |
+| C++ | `standard`, `glaze` | — | — |
+| Go | `standard`, `easyjson`, `sonic` | — | — |
+
+Defaults are unchanged: Rust zero-copy and Python slots/keyword-only fields are
+already enabled. Future features such as `aot`, Python plain `class`,
+and C# mutable `struct` are rejected until their generators support them.
+
+```bash
+polyxml generate schema.xsd --lang rust --feature zero-copy --feature rkyv
+polyxml generate schema.xsd --lang java --style pojo --feature builder,direct-codec
+polyxml generate schema.xsd --lang csharp --backend source-gen --style record-struct
+```
+
+The same options work in both `[[generate]]` and `[codegen.<target>]`:
+
+```toml
+[codegen.java]
+output = "generated/java"
+backend = "jackson"
+style = "pojo"
+features = ["builder", "direct-codec"]
+```
+
+The legacy hidden flags `--zod`, `--source-gen`, `--record-kind`, `--rkyv`,
+`--builder`, and `--codec`, along with their `polyxml.toml` counterparts, have
+been removed: clap rejects the flags outright and unknown manifest fields are
+errors, so the unified options above are the only spellings. For owned Rust
+strings, `--zero-copy=false` (or `zero_copy = false` in the manifest) remains
+available as a first-class option; combining it with `--feature zero-copy` is
+an error.
+
+`polyxml generate` without schema paths delegates to the manifest. Put target
+options in that manifest; command-line generation overrides are rejected rather
+than silently ignored.
 
 ### 2. `polyxml build`
 
@@ -116,9 +159,8 @@ codecs = true
 [[generate]]
 target = "rust"
 output = "src/generated/rust"
-zero_copy = true
+features = ["zero-copy", "rkyv"]
 codecs = true
-rkyv = true
 
 [[generate]]
 target = "java"
@@ -126,8 +168,7 @@ output = "src/generated/java"
 package = "com.enterprise.banking.iso20022"
 backend = "jackson"
 # style = "pojo"        # record (default) | pojo (JavaBeans, alias class)
-# builder = true         # fluent Java builders
-# codec = "direct"       # reflection-free StAX companion codecs
+# features = ["builder", "direct-codec"]
 
 [[generate]]
 target = "typescript"
@@ -150,8 +191,8 @@ backend = "sonic"
 target = "csharp"
 output = "src/generated/csharp"
 namespace = "Enterprise.Banking.Iso20022"
-source_gen = true
-record_kind = "struct"
+backend = "source-gen"
+style = "record-struct"
 ```
 
 ---
@@ -240,3 +281,32 @@ Explore full-scale enterprise examples demonstrating `polyxml.toml` manifests an
   Compiles the European **CEN SIRI v2.0** and **NeTEx** schemas and bridges live Google GTFS-Realtime feeds across all 7 languages.
 
 
+
+### Shell completion
+
+Generate and install a completion script for your shell:
+
+```bash
+# Bash: add this to ~/.bashrc
+source <(polyxml completions bash)
+
+# Zsh: save _polyxml into a directory already on $fpath, then run compinit
+polyxml completions zsh > /your/completion/directory/_polyxml
+
+# Fish
+mkdir -p ~/.config/fish/completions
+polyxml completions fish > ~/.config/fish/completions/polyxml.fish
+```
+
+Backend, style, and feature suggestions use the CLI's validation rules and the
+selected `--lang` (including aliases). With multiple languages, completion only
+suggests values accepted by every selected target. Without `--lang`, it uses the
+Python default. Hidden deprecated flags are not suggested. Bash also completes
+comma-separated features; repeat `--feature` for portable completion across shells.
+
+### CLI startup benchmark
+
+Run `./benchmarks/cli/benchmark.sh` with `hyperfine` installed. It builds the
+release CLI and measures help rendering plus argument validation and parsing of
+an empty schema. See [the benchmark methodology](../../benchmarks/cli/README.md)
+for measurement limits and output location.

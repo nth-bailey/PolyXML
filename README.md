@@ -64,17 +64,15 @@ curl -fsSL https://raw.githubusercontent.com/nth-bailey/PolyXML/main/scripts/ins
 Generate strongly-typed code for all 7 languages from any W3C XML Schema in a single command:
 
 ```bash
-# 1. Multi-target compilation in a single invocation
-polyxml generate \
-  --lang python --backend pydantic-v2 \
-  --lang rust --zero-copy --codecs \
-  --lang csharp --namespace Enterprise.Banking \
-  --lang java --backend jackson --package com.enterprise.banking \
-  --lang typescript --zod \
-  --lang go --package payments \
-  --lang cpp --mode modules --backend glaze \
-  --out ./generated \
-  schemas/pain.001.001.09.xsd
+# 1. Generate all targets with their defaults
+polyxml generate schemas/pain.001.001.09.xsd \
+  --lang python --lang rust --lang csharp --lang java \
+  --lang typescript --lang go --lang cpp --out ./generated
+
+# Target-specific backend, style, and enhancements
+polyxml generate schemas/pain.001.001.09.xsd --lang java \
+  --backend jackson --style pojo --feature builder --feature direct-codec \
+  --package com.enterprise.banking --out ./generated/java
 
 # 2. Or build an entire enterprise project declaratively
 polyxml build --config polyxml.toml

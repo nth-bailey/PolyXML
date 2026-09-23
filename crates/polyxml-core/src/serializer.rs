@@ -9,6 +9,9 @@ use crate::error::{PolyXmlError, Result};
 use crate::schema::{FieldKind, ModelSchema, ValueType};
 use crate::value::PolyValue;
 
+/// XML Schema Instance namespace, needed to write `xsi:type` selectors.
+const XSI_NS: &str = "http://www.w3.org/2001/XMLSchema-instance";
+
 #[derive(Debug, Clone)]
 pub struct NamespaceContext {
     pub uri_to_prefix: HashMap<String, String>,
@@ -101,6 +104,19 @@ impl NamespaceContext {
                     }
                 }
                 _ => {}
+            }
+        }
+
+        // xsi:type dispatch (issue #53): variant namespaces must be in
+        // scope, and the XML Schema Instance namespace is required to
+        // write the xsi:type selector itself.
+        let variants = schema.variants();
+        if !variants.is_empty() {
+            if !uris.iter().any(|u| u == XSI_NS) {
+                uris.push(XSI_NS.to_string());
+            }
+            for variant in variants {
+                Self::collect_namespaces(&variant, uris);
             }
         }
     }
@@ -221,6 +237,30 @@ impl XmlSerializer {
             }
         }
 
+        // xsi:type dispatch (issue #53): when the value is a Record built
+        // from a registered derivation of the declared schema, write the
+        // concrete variant's fields and re-emit the xsi:type selector.
+        let mut xsi_type: Option<String> = None;
+        let schema = if let PolyValue::Record { schema: rec, .. } = value {
+            if schema.matches_variant(rec) {
+                xsi_type = match ns_ctx {
+                    Some(ctx) => {
+                        let name = std::str::from_utf8(&rec.xml_name)?;
+                        Some(
+                            ctx.qualify_element(name, rec.namespace.as_deref())
+                                .into_owned(),
+                        )
+                    }
+                    None => Some(String::from_utf8_lossy(&rec.xml_name).into_owned()),
+                };
+                rec.as_ref()
+            } else {
+                schema
+            }
+        } else {
+            schema
+        };
+
         let get_field = |idx: usize, name: &str| -> Option<&PolyValue> {
             match value {
                 PolyValue::Record { values, .. } => values.get(idx).and_then(|v| v.as_ref()),
@@ -270,6 +310,27 @@ impl XmlSerializer {
                     }
                 }
             }
+        }
+
+        // Re-emit the xsi:type selector after content attributes (issue #53).
+        if let Some(ref xsi_val) = xsi_type {
+            let attr_key = match ns_ctx {
+                Some(ctx) => {
+                    let key = ctx.qualify_attribute("type", Some(XSI_NS));
+                    if key.as_ref() == "type" {
+                        return Err(PolyXmlError::SerializationError(
+                            "xsi:type requires a namespace prefix".into(),
+                        ));
+                    }
+                    key.into_owned()
+                }
+                None => {
+                    return Err(PolyXmlError::SerializationError(
+                        "xsi:type requires namespaces to be enabled".into(),
+                    ))
+                }
+            };
+            elem.push_attribute((attr_key.as_str(), xsi_val.as_str()));
         }
 
         writer

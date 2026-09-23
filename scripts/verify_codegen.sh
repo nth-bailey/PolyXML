@@ -57,10 +57,11 @@ EOF
 
 echo -e "${BLUE}==> Testing code generation across all 7 target ecosystems...${NC}"
 
-# 1. Rust (zero-copy + rkyv)
-echo -n "  • Rust (--zero-copy --rkyv)... "
-"${POLYXML_BIN}" generate --lang rust --zero-copy --rkyv --out "${TMP_DIR}/rs" "${SCHEMA_FILE}" >/dev/null
+# 1. Rust (zero-copy + rkyv + perfect-hash dispatch)
+echo -n "  • Rust (--feature zero-copy,rkyv,phf)... "
+"${POLYXML_BIN}" generate --lang rust --feature zero-copy,rkyv,phf --out "${TMP_DIR}/rs" "${SCHEMA_FILE}" >/dev/null
 test -f "${TMP_DIR}/rs/test_schema.rs"
+grep -q "ELEMENT_DISPATCH" "${TMP_DIR}/rs/test_schema.rs"
 echo -e "${GREEN}OK${NC}"
 
 # 2. Python (dataclass & pydantic)
@@ -98,7 +99,7 @@ echo -e "${GREEN}OK${NC}"
 
 # Mutable Java models and direct codecs.
 echo -n "  • Java (POJO + builder + direct codec)... "
-"${POLYXML_BIN}" generate --lang java --style pojo --builder --codec direct --out "${TMP_DIR}/java_pojo" "${SCHEMA_FILE}" >/dev/null
+"${POLYXML_BIN}" generate --lang java --style pojo --feature builder,direct-codec --out "${TMP_DIR}/java_pojo" "${SCHEMA_FILE}" >/dev/null
 test -f "${TMP_DIR}/java_pojo/TreeNodeCodec.java"
 if command -v javac >/dev/null 2>&1; then
     javac -d "${TMP_DIR}/java_classes" "${TMP_DIR}/java_pojo/"*.java
@@ -144,13 +145,13 @@ test -f "${TMP_DIR}/cs_class/TestSchema.cs"
 echo -e "${GREEN}OK${NC}"
 
 echo -n "  • C# (record struct + source-gen)... "
-"${POLYXML_BIN}" generate --lang csharp --record-kind struct --source-gen --namespace Smoke --out "${TMP_DIR}/cs_struct" "${SCHEMA_FILE}" >/dev/null
+"${POLYXML_BIN}" generate --lang csharp --style record-struct --backend source-gen --namespace Smoke --out "${TMP_DIR}/cs_struct" "${SCHEMA_FILE}" >/dev/null
 test -f "${TMP_DIR}/cs_struct/TestSchema.cs"
 echo -e "${GREEN}OK${NC}"
 
 
 echo -n "  • C# (mutable class + source-gen)... "
-"${POLYXML_BIN}" generate --lang csharp --style class --source-gen --out "${TMP_DIR}/cs_class" "${SCHEMA_FILE}" >/dev/null
+"${POLYXML_BIN}" generate --lang csharp --style class --backend source-gen --out "${TMP_DIR}/cs_class" "${SCHEMA_FILE}" >/dev/null
 test -f "${TMP_DIR}/cs_class/TestSchema.cs"
 echo -e "${GREEN}OK${NC}"
 echo -e "${GREEN}✨ Multi-target smoke verification passed completely across all 7 ecosystems!${NC}"

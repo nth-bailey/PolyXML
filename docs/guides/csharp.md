@@ -48,7 +48,7 @@ namespace = "Enterprise.Banking.Iso20022"
 ## Mutable classes
 
 ```bash
-polyxml generate schema.xsd --lang csharp --style class --source-gen --out generated
+polyxml generate schema.xsd --lang csharp --style class --backend source-gen --out generated
 ```
 
 `--style pojo` is an alias for `class`; `--style record` retains the default.
@@ -70,12 +70,13 @@ entity.Status = "PROCESSED";
 output = "generated/csharp"
 namespace = "Enterprise.Models"
 style = "class"
-source_gen = true
+backend = "source-gen"
 ```
 
-These fields also work in `[[generate]]`. `--record-kind struct` cannot be
-combined with mutable class style. `--builder` and `--codec` apply to Java;
-C# uses object initializers and its standard XML/JSON serializers.
+These fields also work in `[[generate]]`. `--style record-struct` and
+`--style class` are mutually exclusive values of the same option. Java's
+`--feature builder,direct-codec` options do not apply; C# uses object
+initializers and its standard XML/JSON serializers.
 
 ---
 
@@ -208,12 +209,12 @@ Customer restored = JsonSerializer.Deserialize<Customer>(jsonString)!;
 assert(restored.Name == customer.Name);
 ```
 
-### Compile-Time Source Generation (`--source-gen`)
+### Compile-Time Source Generation (`--backend source-gen`)
 
 For Native AOT, high-throughput microservices, and reflection-free environments, PolyXML can emit a compile-time `JsonSerializerContext`:
 
 ```bash
-polyxml generate --lang csharp --source-gen --record-kind struct --out ./src/Generated schema.xsd
+polyxml generate --lang csharp --backend source-gen --style record-struct --out ./src/Generated schema.xsd
 ```
 
 This generates `[JsonSourceGenerationOptions]` and `[JsonSerializable(typeof(T))]` annotations:
@@ -234,9 +235,9 @@ string json = JsonSerializer.Serialize(customer, CustomerJsonContext.Default.Cus
 Customer restored = JsonSerializer.Deserialize(json, CustomerJsonContext.Default.Customer);
 ```
 
-### Record Structs (`--record-kind struct`)
+### Record Structs (`--style record-struct`)
 
-By default, PolyXML emits reference `record class` types. For zero-allocation, cache-friendly scenarios where data contracts are small or short-lived, pass `--record-kind struct`:
+By default, PolyXML emits reference `record class` types. For zero-allocation, cache-friendly scenarios where data contracts are small or short-lived, pass `--style record-struct`:
 
 ```csharp
 public readonly record struct Customer(

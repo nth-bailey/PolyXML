@@ -1,10 +1,13 @@
+mod completions;
 pub mod config;
+mod options;
+use options::target_options;
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand};
 use config::WorkspaceManifest;
 use heck::AsPascalCase;
 use polyxml::codegen::cpp::{CppBackend, CppCodegen, CppMode, CppOptions};
@@ -42,6 +45,19 @@ pub enum Commands {
 
     /// Bidirectionally transcode XML ↔ JSON with zero-copy streaming
     Transcode(TranscodeArgs),
+
+    /// Print a shell completion script with target-aware option suggestions
+    Completions {
+        #[arg(value_enum)]
+        shell: completions::Shell,
+    },
+
+    #[command(name = "__complete", hide = true)]
+    Complete {
+        kind: String,
+        #[arg(last = true)]
+        words: Vec<String>,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -58,6 +74,10 @@ pub struct GenerateArgs {
     #[arg(short = 'b', long = "backend", value_name = "BACKEND")]
     pub backend: Option<String>,
 
+    /// Opt-in target enhancement (repeatable; see compiler guide for supported values)
+    #[arg(long = "feature", value_name = "NAME", value_delimiter = ',')]
+    pub features: Vec<String>,
+
     /// Package or namespace for generated code (e.g. 'com.example.models' for Java, 'polyxml::models' for C++)
     #[arg(short = 'p', long = "package", alias = "namespace", value_name = "PKG")]
     pub package: Option<String>,
@@ -66,7 +86,7 @@ pub struct GenerateArgs {
     #[arg(short = 'm', long = "mode", value_name = "MODE")]
     pub mode: Option<String>,
 
-    /// Zero-copy mode for Rust models (borrow Cow<'a, str> instead of owned String)
+    /// Zero-copy mode for Rust models (borrow Cow<'a, str>); pass 'false' for owned String fields (default: true)
     #[arg(long = "zero-copy", default_missing_value = "true", num_args = 0..=1)]
     pub zero_copy: Option<bool>,
 
@@ -74,33 +94,9 @@ pub struct GenerateArgs {
     #[arg(long = "codecs", default_missing_value = "true", num_args = 0..=1)]
     pub codecs: Option<bool>,
 
-    /// Emit runtime Zod validation schemas for TypeScript (default: false)
-    #[arg(long = "zod", default_missing_value = "true", num_args = 0..=1)]
-    pub zod: Option<bool>,
-
-    /// C# System.Text.Json compile-time source generation context (default: false)
-    #[arg(long = "source-gen", default_missing_value = "true", num_args = 0..=1)]
-    pub source_gen: Option<bool>,
-
-    /// C# record representation ('class' or 'struct', default: 'class')
-    #[arg(long = "record-kind", value_name = "KIND")]
-    pub record_kind: Option<String>,
-
-    /// Java/C# model style: record (default), pojo, or class
-    #[arg(long, value_parser = ["record", "pojo", "class"])]
+    /// Target model style (e.g. record, pojo, class, record-class, record-struct)
+    #[arg(long, value_name = "STYLE")]
     pub style: Option<String>,
-
-    /// Emit fluent Java builders
-    #[arg(long, default_missing_value = "true", num_args = 0..=1)]
-    pub builder: Option<bool>,
-
-    /// Java XML binding: annotation (default) or direct StAX companion codecs
-    #[arg(long, value_parser = ["annotation", "direct"])]
-    pub codec: Option<String>,
-
-    /// Rust rkyv zero-copy binary wire format serialization (default: false)
-    #[arg(long = "rkyv", default_missing_value = "true", num_args = 0..=1)]
-    pub rkyv: Option<bool>,
 
     /// Output directory for generated source files
     #[arg(short = 'o', long = "out", alias = "out-dir", value_name = "DIR")]
@@ -193,9 +189,27 @@ fn main() {
         Commands::Build(args) => run_build(args),
         Commands::Validate(args) => run_validate(args),
         Commands::Transcode(args) => run_transcode(args),
+        Commands::Completions { shell } => {
+            completions::print_script(shell);
+            Ok(())
+        }
+        Commands::Complete { kind, words } => {
+            for value in completions::candidates(&kind, &words) {
+                println!("{value}");
+            }
+            Ok(())
+        }
     };
 
     if let Err(err) = result {
+        if err
+            .downcast_ref::<std::io::Error>()
+            .is_some_and(|error| error.kind() == std::io::ErrorKind::InvalidInput)
+        {
+            Cli::command()
+                .error(clap::error::ErrorKind::InvalidValue, err.to_string())
+                .exit();
+        }
         eprintln!("Error: {}", err);
         process::exit(1);
     }
@@ -204,6 +218,20 @@ fn main() {
 fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
     // If no schemas are passed directly, check for polyxml.toml config
     if args.schemas.is_empty() {
+        if !args.lang.is_empty()
+            || args.backend.is_some()
+            || args.style.is_some()
+            || !args.features.is_empty()
+            || args.package.is_some()
+            || args.mode.is_some()
+            || args.zero_copy.is_some()
+            || args.codecs.is_some()
+            || args.out.is_some()
+            || args.custom_header.is_some()
+            || args.strict_facets
+        {
+            return Err("Generation options require explicit schema paths. For manifest builds, set target options in polyxml.toml.".into());
+        }
         let config_path = args.config.unwrap_or_else(|| PathBuf::from("polyxml.toml"));
         if config_path.exists() {
             return run_build(BuildArgs {
@@ -217,6 +245,33 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
             process::exit(1);
         }
     }
+
+    let languages = if args.lang.is_empty() {
+        vec!["python".to_string()]
+    } else {
+        args.lang.clone()
+    };
+
+    let emit_opts = TargetEmitOptions {
+        backend: args.backend.as_deref(),
+        features: &args.features,
+        slots: None,
+        kw_only: None,
+        package: args.package.as_deref(),
+        mode: args.mode.as_deref(),
+        zero_copy: args.zero_copy,
+        codecs: args.codecs,
+        style: args.style.as_deref(),
+        builder: None,
+        codec: None,
+        rkyv: None,
+        phf: None,
+        custom_header: args.custom_header.as_deref(),
+    };
+    let resolved_options = languages
+        .iter()
+        .map(|lang| emit_opts.resolve(lang))
+        .collect::<std::io::Result<Vec<_>>>()?;
 
     let mut parser = XsdParser::new();
     let mut compiled_schemas = Vec::new();
@@ -237,15 +292,9 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let languages = if args.lang.is_empty() {
-        vec!["python".to_string()]
-    } else {
-        args.lang
-    };
-
     let base_out = args.out.unwrap_or_else(|| PathBuf::from("generated"));
 
-    for lang in &languages {
+    for (lang, emit_opts) in languages.iter().zip(resolved_options) {
         let lang_out = if languages.len() > 1 {
             base_out.join(lang)
         } else {
@@ -253,21 +302,6 @@ fn run_generate(args: GenerateArgs) -> Result<(), Box<dyn std::error::Error>> {
         };
 
         fs::create_dir_all(&lang_out)?;
-        let emit_opts = TargetEmitOptions {
-            backend: args.backend.as_deref(),
-            package: args.package.as_deref(),
-            mode: args.mode.as_deref(),
-            zero_copy: args.zero_copy,
-            codecs: args.codecs,
-            zod: args.zod,
-            source_gen: args.source_gen,
-            record_kind: args.record_kind.as_deref(),
-            style: args.style.as_deref(),
-            builder: args.builder,
-            codec: args.codec.as_deref(),
-            rkyv: args.rkyv,
-            custom_header: args.custom_header.as_deref(),
-        };
 
         for (schema_path, ir) in &compiled_schemas {
             emit_target_code(lang, emit_opts, &lang_out, schema_path, ir)?;
@@ -291,6 +325,11 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
     let manifest = WorkspaceManifest::from_file(&args.config)?;
     let base_dir = args.config.parent().unwrap_or_else(|| Path::new("."));
 
+    let targets = manifest.resolved_targets();
+    for target in &targets {
+        target_options(target).resolve(&target.target)?;
+    }
+
     let schema_files = manifest.expand_schemas(base_dir)?;
     if schema_files.is_empty() {
         println!("No schema files matched workspace schema patterns.");
@@ -307,7 +346,6 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
         compiled_schemas.push((schema_path.clone(), ir));
     }
 
-    let targets = manifest.resolved_targets();
     if targets.is_empty() {
         println!("No generation targets configured in manifest.");
         return Ok(());
@@ -344,29 +382,7 @@ fn run_build(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
             target_dir.display()
         );
 
-        let mode_str = target.mode.as_deref().or_else(|| {
-            if target.modules.unwrap_or(false) {
-                Some("modules")
-            } else {
-                None
-            }
-        });
-
-        let emit_opts = TargetEmitOptions {
-            backend: target.backend.as_deref(),
-            package: target.package.as_deref().or(target.namespace.as_deref()),
-            mode: mode_str,
-            zero_copy: target.zero_copy,
-            codecs: target.codecs,
-            zod: target.zod,
-            source_gen: target.source_gen,
-            record_kind: target.record_kind.as_deref(),
-            style: target.style.as_deref(),
-            builder: target.builder,
-            codec: target.codec.as_deref(),
-            rkyv: target.rkyv,
-            custom_header: target.custom_header.as_deref(),
-        };
+        let emit_opts = target_options(target).resolve(&target.target)?;
 
         for (schema_path, ir) in &compiled_schemas {
             emit_target_code(&target.target, emit_opts, &target_dir, schema_path, ir)?;
@@ -456,17 +472,18 @@ fn report_schema_ir(ir: &SchemaIR) {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct TargetEmitOptions<'a> {
     pub backend: Option<&'a str>,
+    pub features: &'a [String],
+    pub slots: Option<bool>,
+    pub kw_only: Option<bool>,
     pub package: Option<&'a str>,
     pub mode: Option<&'a str>,
     pub zero_copy: Option<bool>,
     pub codecs: Option<bool>,
-    pub zod: Option<bool>,
-    pub source_gen: Option<bool>,
-    pub record_kind: Option<&'a str>,
     pub style: Option<&'a str>,
     pub builder: Option<bool>,
     pub codec: Option<&'a str>,
     pub rkyv: Option<bool>,
+    pub phf: Option<bool>,
     pub custom_header: Option<&'a str>,
 }
 
@@ -477,33 +494,9 @@ fn emit_target_code(
     schema_path: &Path,
     ir: &SchemaIR,
 ) -> std::io::Result<()> {
-    let use_records = match opts.style.unwrap_or("record") {
-        "record" => true,
-        "pojo" | "class" => false,
-        value => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("Unknown style: {value}"),
-            ))
-        }
-    };
-    let direct_codec = match opts.codec.unwrap_or("annotation") {
-        "annotation" => false,
-        "direct" => true,
-        value => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("Unknown codec: {value}"),
-            ))
-        }
-    };
+    let use_records = !matches!(opts.style, Some("pojo" | "class" | "dataclass"));
+    let direct_codec = opts.codec == Some("direct");
     let language = lang.to_lowercase();
-    if (opts.style.is_some() && !matches!(language.as_str(), "java" | "csharp" | "cs" | "c#"))
-        || ((opts.builder.unwrap_or(false) || opts.codec.is_some()) && language != "java")
-        || (!use_records && opts.record_kind.is_some_and(|k| k != "class"))
-    {
-        return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "style is Java/C# only; builder and codec are Java only; mutable classes cannot use record structs"));
-    }
     match language.as_str() {
         "python" | "py" => {
             let py_backend = opts
@@ -513,8 +506,8 @@ fn emit_target_code(
 
             let options = PythonOptions {
                 backend: py_backend,
-                slots: true,
-                kw_only: true,
+                slots: opts.slots.unwrap_or(true),
+                kw_only: opts.kw_only.unwrap_or(true),
                 pep695_aliases: true,
                 emit_meta: true,
                 emit_root_aliases: true,
@@ -549,6 +542,7 @@ fn emit_target_code(
                 emit_root_aliases: true,
                 emit_codecs: opts.codecs.unwrap_or(true),
                 emit_rkyv: opts.rkyv.unwrap_or(false),
+                phf: opts.phf.unwrap_or(false),
                 custom_header: opts.custom_header.map(|s| s.to_string()),
             };
 
@@ -580,7 +574,9 @@ fn emit_target_code(
 
             let options = TypeScriptOptions {
                 backend: ts_backend,
-                emit_zod: opts.zod.unwrap_or(false),
+                // Zod emission is selected via `--backend zod`; the removed
+                // legacy `--zod` switch was the only other way to set this.
+                emit_zod: false,
                 use_interface: true,
                 readonly_fields: false,
                 emit_root_aliases: true,
@@ -715,10 +711,11 @@ fn emit_target_code(
                 .map(|s| s.to_string_lossy())
                 .unwrap_or_else(|| "Models".into());
 
-            let record_kind = opts
-                .record_kind
-                .and_then(CSharpRecordKind::from_str_loose)
-                .unwrap_or(CSharpRecordKind::Class);
+            let record_kind = if matches!(opts.style, Some("record-struct")) {
+                CSharpRecordKind::Struct
+            } else {
+                CSharpRecordKind::Class
+            };
 
             let options = CSharpOptions {
                 namespace: ns.to_string(),
@@ -729,7 +726,7 @@ fn emit_target_code(
                 use_records,
                 use_file_scoped_namespaces: true,
                 emit_root_records: true,
-                emit_source_gen: opts.source_gen.unwrap_or(false),
+                emit_source_gen: opts.backend == Some("source-gen"),
                 source_gen_context_name: format!("{}JsonContext", AsPascalCase(&file_stem)),
                 custom_header: opts.custom_header.map(|s| s.to_string()),
             };
@@ -743,76 +740,11 @@ fn emit_target_code(
             }
             Ok(())
         }
-        _ => emit_target_placeholder(lang, opts, out_dir, schema_path, ir),
+        _ => Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("Unknown target: {lang}"),
+        )),
     }
-}
-
-fn emit_target_placeholder(
-    lang: &str,
-    opts: TargetEmitOptions<'_>,
-    out_dir: &Path,
-    schema_path: &Path,
-    ir: &SchemaIR,
-) -> std::io::Result<()> {
-    let file_stem = schema_path
-        .file_stem()
-        .map(|s| s.to_string_lossy())
-        .unwrap_or_else(|| "models".into());
-
-    let (filename, header) = match lang.to_lowercase().as_str() {
-        "python" | "py" => (
-            format!("{}.py", file_stem),
-            "# @generated by PolyXML Compiler (https://github.com/nth-bailey/PolyXML)\nfrom __future__ import annotations\n",
-        ),
-        "rust" | "rs" => (
-            format!("{}.rs", file_stem),
-            "// @generated by PolyXML Compiler (https://github.com/nth-bailey/PolyXML)\nuse polyxml::ir::*;\n",
-        ),
-        "cpp" | "c++" => (
-            format!("{}.hpp", file_stem),
-            "// @generated by PolyXML Compiler (https://github.com/nth-bailey/PolyXML)\n#pragma once\n",
-        ),
-        "java" => (
-            format!("{}.java", heck::AsPascalCase(file_stem.as_ref())),
-            "// @generated by PolyXML Compiler (https://github.com/nth-bailey/PolyXML)\n",
-        ),
-        "ts" | "typescript" => (
-            format!("{}.ts", file_stem),
-            "// @generated by PolyXML Compiler (https://github.com/nth-bailey/PolyXML)\n",
-        ),
-        "go" => (
-            format!("{}.go", file_stem),
-            "// Code generated by PolyXML Compiler (https://github.com/nth-bailey/PolyXML). DO NOT EDIT.\n// @generated by PolyXML Compiler (https://github.com/nth-bailey/PolyXML)\npackage models\n",
-        ),
-        "csharp" | "c#" | "cs" => (
-            format!("{}.cs", heck::AsPascalCase(file_stem.as_ref())),
-            "// <auto-generated/>\n// @generated by PolyXML Compiler (https://github.com/nth-bailey/PolyXML)\nnamespace Generated;\n",
-        ),
-        _ => (
-            format!("{}.txt", file_stem),
-            "// @generated by PolyXML Compiler\n",
-        ),
-    };
-
-    let file_path = out_dir.join(filename);
-    let mut content = String::new();
-    if let Some(custom) = opts.custom_header {
-        let trimmed = custom.trim();
-        if !trimmed.is_empty() {
-            content.push_str(trimmed);
-            content.push_str("\n\n");
-        }
-    }
-    content.push_str(header);
-    content.push_str(&format!(
-        "\n// Schema: {}\n// Target Namespace: {}\n// Total Types: {}\n",
-        schema_path.display(),
-        ir.target_namespace.as_deref().unwrap_or("None"),
-        ir.types.len()
-    ));
-
-    fs::write(file_path, content)?;
-    Ok(())
 }
 
 fn run_language_formatter(lang: &str, dir: &Path) {

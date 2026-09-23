@@ -296,7 +296,7 @@ fn test_ts_zod_schema_generation() {
     assert!(code.contains("import { z } from \"zod\";"));
 
     // Verify PostalCodeSchema
-    assert!(code.contains("export const PostalCodeSchema = z.string().min(3).max(10).regex(new RegExp(\"^[A-Z0-9]+$\"));"));
+    assert!(code.contains("export const PostalCodeSchema = z.string().min(3).max(10).regex(new RegExp(\"^(?:^[A-Z0-9]+$)(?![\\\\s\\\\S])\"));"));
 
     // Verify AgeSchema
     assert!(code.contains("export const AgeSchema = z.number().int().gte(18).lte(120);"));
@@ -501,7 +501,7 @@ fn test_ts_valibot_schema_generation() {
     assert!(code.contains("import * as v from \"valibot\";"));
 
     // Verify simple type facets with v.pipe
-    assert!(code.contains("export const PostalCodeSchema = v.pipe(v.string(), v.minLength(3), v.maxLength(10), v.regex(/^[A-Z0-9]+$/));"));
+    assert!(code.contains("export const PostalCodeSchema = v.pipe(v.string(), v.minLength(3), v.maxLength(10), v.regex(/^(?:^[A-Z0-9]+$)(?![\\s\\S])/));"));
 
     // Verify enum picklist
     assert!(code.contains("export const StatusSchema = v.picklist([\"active\", \"inactive\"]);"));

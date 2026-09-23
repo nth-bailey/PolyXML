@@ -21,7 +21,7 @@ const PATTERN_VALIDATOR_HELPER: &str = r#"def _polyxml_patterns(*patterns: str):
 
     def _validate(value: str) -> str:
         for regex in _compiled:
-            if regex.search(value) is None:
+            if regex.fullmatch(value) is None:
                 raise ValueError(f"string_pattern_mismatch: {regex.pattern!r}")
         return value
 
@@ -568,6 +568,12 @@ impl PythonCodegen {
             if let Some(ref ns) = s.qname.namespace {
                 let _ = writeln!(out, "        namespace = \"{}\"", ns);
             }
+            // Marks the type as a dispatch base: the runtime raises a clear
+            // error when xsi:type targets an abstract type with no registered
+            // derivations (issue #53).
+            if s.is_abstract {
+                out.push_str("        abstract = True\n");
+            }
             has_body = true;
         }
 
@@ -883,7 +889,7 @@ impl PythonCodegen {
             clauses.push(format!("min_length={}, max_length={}", l, l));
         }
         if let Some(pat) = facets.patterns.first() {
-            clauses.push(format!("pattern=r\"{}\"", pat));
+            clauses.push(format!("pattern=r\"\\A(?:{})\\z\"", pat));
         }
 
         clauses.join(", ")

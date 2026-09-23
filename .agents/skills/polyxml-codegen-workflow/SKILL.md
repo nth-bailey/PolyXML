@@ -128,12 +128,55 @@ If external compilers are installed on the development machine, run the E2E veri
 5. **Never Derive Type Identifiers from `qname.local` Directly**: all named-type
    identifiers must flow through the language's `type_ident` helper (see
    section 7) so cross-namespace collisions stay disambiguated.
+6. **`xsd:extension` Base-Field Flattening (Rust + Java records)**: targets
+   without inheritance must inline the base chain via the shared
+   `codegen/mod.rs::flatten_fields(s, ir)` (root first, cycle-cut on revisit,
+   most-derived declaration of a schema name shadows inherited duplicates so
+   the simpleContent `value` field stays singular). For Rust it is required at
+   EVERY field-iteration site: `compute_types_with_lifetime`, `emit_struct`,
+   the `has_patterns` probe, and the decode `field_metas` build —
+   `encode_xml`/`validate_patterns` follow `field_metas` automatically.
+   Missing the lifetime site emits `Cow<'a, str>` in a struct without `<'a>`
+   (generated code fails to compile); missing codec sites silently drops
+   inherited data. Java's `model_fields` returns the flattened list for every
+   mode — records declare it as components, classes re-slice the own-fields
+   tail because they `extends` instead. Backends with real inheritance (TS
+   `extends`, Go embed, C++/C# `: Base`, Python `class Derived(Base)`) must
+   NOT flatten — Python leans on `__dataclass_fields__` (see §11).
+7. **simpleContent `FieldKind::Text` codecs (fixed 2026-09-22)**: generated
+   Rust codecs now consume `FieldKind::Text` — `emit_text_content_parse`
+   reads the element content via `read_element_text` and runs it through the
+   same scalar/facet path as elements (`var_value = Some(...)`; patterns from
+   the extension base are enforced via `validate_patterns`), and
+   `emit_text_content_serialize` writes the value between Start/End. Only
+   scalar-backed Text is emitted: a struct-typed value (`value: Measurement`)
+   stays a documented cross-backend gap pending issue #51 item 4 IR modeling.
+   The module allow-header includes `unused_assignments` because the text path
+   assigns its slot unconditionally. The companion Java gap — plain record
+   mode dropping inherited fields — was fixed the same day: records cannot
+   `extends`, so `model_fields` now always inlines `flatten_fields`.
+   Regression-locked by `test_rust_simple_content_text_codec` plus runtime
+   round-trips (numeric, patterned, string, bad-number rejection).
+8. **Text events arrive split — readers must accumulate**: quick-xml emits
+   `a &amp; b` as `Text("a ")` + `GeneralRef("amp")` + `Text(" b")` and CDATA
+   as its own event, so `read_element_text` (both `zero_copy` variants)
+   appends every segment and resolves refs exactly like
+   `parser.rs::append_general_ref` (char refs → `resolve_char_ref()`,
+   predefined → `escape::resolve_xml_entity()`, otherwise the raw name —
+   lenient, never an error). Never overwrite the accumulator per event (the
+   pre-fix last-wins helper silently dropped data) and never pair split-text
+   assembly with `trim_text(true)` — per-segment trimming eats spaces adjacent
+   to refs (`x &amp; y` → `x&y`); trim once on the assembled buffer (see
+   `transcoder.rs`, which now also unescapes attribute values and resolves
+   general refs instead of dropping them via `_ => {}`). Regression-locked by
+   `test_rust_read_element_text_accumulates_refs_and_cdata` and
+   `test_schemaless_preserves_refs_cdata_and_attr_entities`.
 
 ## 6. Java/C# Model Styles and Direct Java Codecs
 
 - `--style record|pojo|class` is shared by Java and C#. Records remain the default;
-  `pojo`/`class` select mutable models. Java `--builder` and
-  `--codec annotation|direct` must also be forwarded in both manifest forms.
+  `pojo`/`class` select mutable models. Java's `--feature builder,direct-codec`
+  must also be forwarded as `features = [...]` in both manifest forms.
 - Java mutable models/builders live in `java/models.rs`; StAX companions live in
   `java/codec.rs`. Inheritance must share field-name allocation between accessors,
   builders, and codecs. A derived builder extends its base builder and overrides
@@ -159,7 +202,7 @@ If external compilers are installed on the development machine, run the E2E veri
   all 7 targets from whichever local `target/{debug,release}/polyxml` is newer;
   a clean `git status` there proves byte-for-byte output parity after codegen
   changes. The same schema is the best large-schema smoke for
-  `--style pojo --builder --codec direct`: `javac` the output and round-trip
+  `--style pojo --feature builder,direct-codec`: `javac` the output and round-trip
   `data/pacs_008_customer_credit_transfer.xml` through the generated root codec.
 - `benchmarks/java -Ppanama` needs JDK 22+, but the host default can be JDK 21.
   Set `JAVA_HOME`/`PATH` to a downloaded JDK (Temurin 25 worked) and run
@@ -216,12 +259,166 @@ derived types inherit their base's patterns at parse time):
 
 - `emit_simple_type` appends `AfterValidator(_polyxml_patterns(r"p1", r"p2"))`
   to the `Annotated[...]` alias (single-pattern types keep the plain
-  `Field(pattern=...)` kwarg, byte-identical to before).
+  `Field(pattern=...)` kwarg, anchored for full-value matching).
 - `needs_pattern_validator(ir)` gates emission of the module-level
   `_polyxml_patterns` factory helper, the `import re` line, and the
   `AfterValidator,` prefix on the pydantic import — keep these three in sync.
-- Semantics: unanchored `regex.search` per pattern, all must match (AND),
-  matching XSD pattern search semantics.
+- Semantics: each pattern must match the entire lexical value (`fullmatch`);
+  patterns inherited across derivation steps all apply (AND).
 - Field-level facets (`FieldDef.facets`) are never populated by the parser
   today, so `emit_struct`'s field path needs no `AfterValidator` wiring; if
   that ever changes, mirror the type-level handling there.
+
+## 9. Unified CLI Options (issue #50)
+
+- `polyxml-cli/src/options.rs` normalizes and validates backend/style/features
+  for direct generation and both manifest forms. Validate all targets before
+  schema parsing, dry-run success, or output creation. Core `from_str_loose`
+  parsers can still return `None`; the CLI must reject invalid values before
+  emitter defaults are applied.
+- New opt-ins belong in repeatable `--feature` and manifest `features` arrays.
+  The legacy hidden flags (`--zod`, `--source-gen`, `--record-kind`, `--rkyv`,
+  `--builder`, `--codec`) and their manifest keys were deleted outright: clap
+  rejects the flags as unexpected arguments, `#[serde(deny_unknown_fields)]`
+  rejects the keys, and the deprecation-warning loop no longer exists. Keep
+  CLI and manifest parity.
+- `--zero-copy` (and manifest `zero_copy`) stays a first-class bool because
+  `--feature` cannot express `false`; it alone selects owned Rust output, and
+  `--zero-copy=false --feature zero-copy` is still rejected as a contradiction.
+- Defaults remain unchanged, including C# record classes, Rust zero-copy, and
+  Python slots/kw-only. Expose only implemented styles/features. The issue's
+  future examples (aot, Python plain class, C# mutable struct) are not yet
+  generator capabilities.
+- Rust features today: `zero-copy`, `rkyv`, `phf`. `--feature phf` (issue #49)
+  emits a per-struct `__{Struct}ElementId` enum plus a
+  `__{STRUCT}_ELEMENT_DISPATCH: ::phf::Map<&'static str, ...>` static built with
+  `phf_codegen`, and routes both `Event::Start` and `Event::Empty` child arms
+  through `.get(e.local_name().as_ref())`; union branch tags all map to one
+  variant. Default (feature off) output must stay byte-identical — lock both
+  directions in the codegen test (`test_rust_phf_dispatch_emission`). Attr,
+  union, and enum-value `match` sites are intentionally left as `match`.
+  Consuming crates need `phf = "0.14"`. Benchmarks/docs live in
+  `benches/tag_dispatch.rs` (regenerate fixtures via
+  `scripts/gen_tag_dispatch_fixtures.py`) and
+  `docs/benchmarks/rust-phf-dispatch.md`; hardware counters on hosts without
+  the `perf` binary go through `scripts/perf_stat.sh` (`perf_event_open`).
+- **Cap heavy builds/benches with `scripts/memcap.sh`.** Benchmark entry
+  points (`benchmarks/run_all.sh`, `benchmarks/cli/benchmark.sh`,
+  `scripts/perf_stat.sh`) already re-exec through it; ad-hoc
+  `cargo bench`/`--release` builds of large generated crates should be
+  wrapped too. It caps the tree at `POLYXML_MEMCAP_PCT` (default 60%) of
+  available RAM in a systemd scope (`MemorySwapMax=0`, `ulimit -v`
+  fallback): an over-limit build gets OOM-killed inside its cgroup
+  (exit 137) instead of freezing the host — uncapped 1500-element builds
+  froze a 7.7-GiB WSL box repeatedly before this guard existed. Wrap
+  measure/compile-size scripts per build step (own scope each) so one
+  OOM kill doesn't abort the rest; `POLYXML_MEMCAP_LEVEL` (nesting depth)
+  is set automatically so wrapped scripts can't re-exec in a loop, and
+  `POLYXML_MEMCAP_DISABLE=1` opts out. Known datum: generated consumer
+  crates at **600 and 1500 elements need >=3.2 GiB for a single `rustc`**
+  (both the `match` and `phf` variants — it scales with field count, not
+  match-arm count), so compile-time/size measurements at those tiers are
+  deferred to #55 and must not be retried uncapped on
+  8-GiB-class hosts.
+- Shared CLI options apply to every `--lang`, not just the preceding one. Use
+  per-target manifest entries for heterogeneous configurations. Schema-less
+  `generate` must not silently ignore generation overrides.
+
+- Shell completion adapters live under `polyxml-cli/src/completions/`. Their
+  hidden `__complete` helper filters candidates through the same option resolver
+  used for generation; preserve multi-target intersection and language aliases.
+  Bash is exercised in CLI integration tests. Zsh/Fish tests run when those
+  shells are available on PATH, and skip otherwise.
+- `benchmarks/cli/benchmark.sh` uses hyperfine with `--shell=none` to avoid shell
+  calibration error for sub-5ms startup measurements. Results are fresh processes
+  with warm OS caches, not machine-reboot or cold-disk startup measurements.
+
+- Color diagnostics respect `NO_COLOR`. When checking terminal color in a PTY,
+  unset `NO_COLOR` in the test subprocess and use a color-capable `TERM`; test
+  the opt-out separately. This development environment sets `NO_COLOR=1`.
+
+## 10. Pattern OR/AND Semantics & Enforcement (issue #54)
+
+W3C XSD combines `xs:pattern` two ways: multiple patterns **within one
+`<xs:restriction>` are OR'd**; patterns inherited **across derivation steps are
+AND'd**. The IR keeps `RestrictionFacets.patterns: Vec<String>` flat — the
+parser encodes each restriction's alternatives as ONE regex group:
+
+- `schema_parser` collapses `patterns.len() > 1` per restriction into
+  `(alt1)|(alt2)` (a singleton stays verbatim), then inheritance prepends/appends
+  each derived step's entry. Downstream code just ANDs the flat list — each
+  entry is already an OR-group. **Never** AND the pre-collapse alternatives.
+- Round-trip tests must serialize `RestrictionFacets`, not the whole
+  `SchemaIR`: `SchemaIR.types` is a `BTreeMap<QName, _>` and serde_json rejects
+  struct map keys ("key must be a string"). This is pre-existing and unrelated
+  to facets.
+
+Shared helpers in `codegen/mod.rs` (use them; don't re-derive):
+
+- `primitive_base(ty, ir)` — resolves a simple alias chain to its primitive,
+  cycle-safe. Patterned simple types must emit their **primitive** base (e.g.
+  `std::string`, not the alias) so validators/codecs operate on real scalars.
+- `patterned_simple(ty, ir)` — the patterned `SimpleTypeDef` behind a field
+  type, unwrapping `Boxed`/`List`.
+
+Per-language enforcement (all gated so unpatterned schemas stay byte-identical):
+
+- **Rust**: free `validate_{Type}_patterns(&str)` fns with `OnceLock<Regex>`
+  per pattern; structs gain `validate_patterns()` called from `from_xml`/
+  `to_xml`, attributes/text/empty-element paths call the free fn directly.
+- **Go**: `Validate() error` on patterned aliases (+ `UnmarshalText`/
+  `MarshalText` for string bases so `encoding/xml` enforces on read/write);
+  struct `Validate` recurses into fields, lists, and pointers. Imports
+  `regexp`/`fmt` only when patterns exist.
+- **C++**: free `validate_{Type}_patterns(std::string_view)` with function-local
+  `static const std::regex`; struct `validate()` calls it. **Inline field
+  expressions into the call** — binding `const auto& value = <field>;`
+  self-references when the field is named `value` (range-for over a member named
+  `value` is fine). `#include <regex>` is conditional on `ir`.
+- **Java**: `Pattern.compile(p).matcher(v).matches()`; direct codecs resolve
+  patterned aliases through `primitive_base`.
+- **C#**: `Regex.IsMatch` with `\A(?:...)\z` full-value anchors;
+  escape `\` before `"` in the pattern string.
+- **TypeScript**: one pattern → `pattern:` option (zod/valibot) or single
+  `Type.String({pattern})`; multiple → `AfterValidator`-equivalent AND via
+  `_polyxml_patterns` (Python) / `Type.Intersect([...])` (TypeBox — duplicating
+  the `pattern:` key silently kept only one). Escape `/` inside regex literals.
+
+Execution tests live in `crates/polyxml-core/tests/test_pattern_codegen.rs`
+(wired into `scripts/test_codegen.sh`): they **run** generated Go/C++/Rust/
+Python/Java/C# validators against values matching only one alternative, values
+satisfying two restriction steps, and reject lists/optionals carrying a bad
+element. The TS leg needs `POLYXML_TS_TEST_MODULES` pointing at a node_modules
+with `zod@3 valibot@1 @sinclair/typebox@0.34 typescript@5` and skips otherwise.
+
+## 11. Python Abstract Meta & Runtime Type Discovery (issue #53)
+
+`xsi:type` dispatch is a **dynamic-runtime feature** (see
+`polyxml-core-engine` skill §5 and `docs/guides/polymorphism.md`); the
+codegen only has to expose two facts to the PyO3 layer:
+
+- **`Meta.abstract = True`** is emitted for `is_abstract` structs in
+  `codegen/python/mod.rs` (inside the `emit_meta` block, after
+  `namespace`). PyO3 reads it in `extract_schema_from_class` →
+  `builder.is_abstract(true)`, which turns unknown `xsi:type` values into
+  loud errors instead of silent truncation. Only abstract types may emit
+  it — locked by `test_python_abstract_meta_emission`.
+- **Class inheritance must stay intact**: `emit_struct` already emits
+  `class Derived(Base):`, and PyO3 builds a derived class's schema from
+  `__dataclass_fields__`/`model_fields`, which include inherited fields —
+  do not flatten inheritance away or variant schemas will miss base fields.
+
+Key gotchas when touching this area:
+
+- Variant discovery (`discover_variants`) must run **after** both global
+  cache inserts in `get_or_create_schema_meta`, otherwise a subclass field
+  typed as the base class re-enters extraction and recurses infinitely.
+- Variant keys come from `Meta.name` (the XML type name), not the class
+  name — codegen may mangle class identifiers (`type_ident`) while
+  `xsi:type` always carries the wire QName local part.
+- `polyxml.serialize` takes an optional **`target_type`** (pyo3 + wrapper):
+  given the declared base, a concrete instance is converted against the
+  base schema and the variant's record triggers `xsi:type` re-emission at
+  the root; omitted, the instance's concrete schema is used (no selector).
+  Both branches are covered in `tests/test_xsi_type.py` (11 tests, kept at
+  100% statement/branch coverage).

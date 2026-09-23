@@ -76,6 +76,14 @@ pub fn poly_value_to_json_value(
     schema: &ModelSchema,
     by_alias: bool,
 ) -> JsonValue {
+    // xsi:type dispatch (issue #53): a Record parsed as a concrete
+    // derivation iterates its own schema so variant-only fields survive
+    // transcoding (JSON carries no xsi:type marker).
+    let schema = match val {
+        PolyValue::Record { schema: rec, .. } if rec.name != schema.name => rec.as_ref(),
+        _ => schema,
+    };
+
     let get_field = |idx: usize, name: &str| -> Option<&PolyValue> {
         match val {
             PolyValue::Record { values, .. } => values.get(idx).and_then(|v| v.as_ref()),

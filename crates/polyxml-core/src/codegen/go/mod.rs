@@ -252,7 +252,16 @@ impl GoCodegen {
         set_type_name_map(build_type_name_map(ir, to_go_type_name));
         let mut body = String::new();
         let mut has_time = false;
-        let mut has_fmt = false;
+        let has_patterns = self.options.validate_facets
+            && ir.types.values().any(|t| match t {
+                TypeDef::Simple(s) => !s.facets.patterns.is_empty(),
+                TypeDef::Struct(s) => s
+                    .fields
+                    .iter()
+                    .any(|f| f.facets.as_ref().is_some_and(|f| !f.patterns.is_empty())),
+                _ => false,
+            });
+        let mut has_fmt = has_patterns;
         let mut has_io = false;
         let mut has_xml = self.options.emit_xml_tags;
 
@@ -329,6 +338,9 @@ impl GoCodegen {
         if has_io {
             imports.push("\"io\"");
         }
+        if has_patterns {
+            imports.push("\"regexp\"");
+        }
         if has_time {
             imports.push("\"time\"");
         }
@@ -370,7 +382,7 @@ impl GoCodegen {
         // Emit simple types
         for type_def in ir.types.values() {
             if let TypeDef::Simple(simple) = type_def {
-                self.emit_simple_type(out, simple);
+                self.emit_simple_type(out, simple, ir);
             }
         }
 
@@ -396,7 +408,7 @@ impl GoCodegen {
         }
     }
 
-    fn emit_simple_type(&self, out: &mut String, simple: &SimpleTypeDef) {
+    fn emit_simple_type(&self, out: &mut String, simple: &SimpleTypeDef, ir: &SchemaIR) {
         if let Some(ref doc) = simple.documentation {
             for line in doc.lines() {
                 writeln!(out, "// {}", line).unwrap();
@@ -406,6 +418,21 @@ impl GoCodegen {
         let type_name = type_ident(&simple.qname);
         let base_type = self.context.map_type_ref(&simple.base_type);
         writeln!(out, "type {} {}\n", type_name, base_type).unwrap();
+        if self.options.validate_facets && !simple.facets.patterns.is_empty() {
+            writeln!(out, "func (s {}) Validate() error {{", type_name).unwrap();
+            for pattern in &simple.facets.patterns {
+                writeln!(out, "    if matched, err := regexp.MatchString({:?}, fmt.Sprint(s)); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", format!("^(?:{pattern})$")).unwrap();
+            }
+            writeln!(out, "    return nil\n}}\n").unwrap();
+            if self
+                .context
+                .map_type_ref(super::primitive_base(&simple.base_type, ir))
+                == "string"
+            {
+                writeln!(out, "func (s *{}) UnmarshalText(text []byte) error {{\n    value := {}(text)\n    if err := value.Validate(); err != nil {{ return err }}\n    *s = value\n    return nil\n}}\n", type_name, type_name).unwrap();
+                writeln!(out, "func (s {}) MarshalText() ([]byte, error) {{\n    if err := s.Validate(); err != nil {{ return nil, err }}\n    return []byte(s), nil\n}}\n", type_name).unwrap();
+            }
+        }
     }
 
     fn emit_enum(&self, out: &mut String, enum_def: &EnumDef) {
@@ -678,7 +705,7 @@ impl GoCodegen {
         writeln!(out, "}}\n").unwrap();
 
         if self.options.validate_facets {
-            self.emit_struct_validator(out, s);
+            self.emit_struct_validator(out, s, ir);
         }
     }
 
@@ -752,7 +779,7 @@ impl GoCodegen {
         }
     }
 
-    fn emit_struct_validator(&self, out: &mut String, s: &StructDef) {
+    fn emit_struct_validator(&self, out: &mut String, s: &StructDef, ir: &SchemaIR) {
         let struct_name = type_ident(&s.qname);
         writeln!(out, "func (s {}) Validate() error {{", struct_name).unwrap();
 
@@ -761,6 +788,20 @@ impl GoCodegen {
             let field_name = to_go_field_name(&f.name);
             let is_opt = f.cardinality.is_optional() || f.nillable;
 
+            if super::patterned_simple(&f.type_ref, ir).is_some() {
+                if f.cardinality.is_list() || f.type_ref.is_list() {
+                    writeln!(out, "    for _, value := range s.{} {{ if err := value.Validate(); err != nil {{ return err }} }}", field_name).unwrap();
+                } else if is_opt {
+                    writeln!(out, "    if s.{} != nil {{ if err := s.{}.Validate(); err != nil {{ return err }} }}", field_name, field_name).unwrap();
+                } else {
+                    writeln!(
+                        out,
+                        "    if err := s.{}.Validate(); err != nil {{ return err }}",
+                        field_name
+                    )
+                    .unwrap();
+                }
+            }
             if let Some(ref facets) = f.facets {
                 if is_opt {
                     writeln!(out, "    if s.{} != nil {{", field_name).unwrap();
@@ -790,6 +831,9 @@ impl GoCodegen {
         target: &str,
         indent: &str,
     ) {
+        for pattern in &facets.patterns {
+            writeln!(out, "{}if matched, err := regexp.MatchString({:?}, fmt.Sprint({})); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", indent, format!("^(?:{pattern})$"), target).unwrap();
+        }
         if let Some(min_len) = facets.min_length {
             writeln!(
                 out,

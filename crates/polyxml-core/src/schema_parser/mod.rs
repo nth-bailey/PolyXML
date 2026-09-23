@@ -867,6 +867,11 @@ impl XsdParser {
                                 base_type = resolve_type_ref(&base, target_ns, prefixes);
                             }
                         }
+                        "pattern" => {
+                            if let Some(val) = get_attr_value(e, "value") {
+                                facets.patterns.push(val);
+                            }
+                        }
                         "enumeration" => {
                             if let Some(val) = get_attr_value(e, "value") {
                                 enum_values.push(EnumValue {
@@ -948,6 +953,18 @@ impl XsdParser {
                 _ => {}
             }
             buf.clear();
+        }
+
+        // XSD same-restriction alternatives form ONE pattern facet. Preserve
+        // each derivation boundary as a separate entry during inheritance.
+        if facets.patterns.len() > 1 {
+            let alternatives = facets
+                .patterns
+                .iter()
+                .map(|p| format!("({p})"))
+                .collect::<Vec<_>>()
+                .join("|");
+            facets.patterns = vec![alternatives];
         }
 
         // Issue #51 item 2: drop duplicate enumeration values (keep the first

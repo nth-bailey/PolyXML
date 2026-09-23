@@ -92,7 +92,10 @@ fn parse_dynamic_scalar(s: &str) -> Value {
 /// Schema-less dynamic XML -> JSON transcoder.
 pub fn xml_to_json_dynamic(xml: &[u8], indent: Option<usize>) -> Result<Vec<u8>> {
     let mut reader = Reader::from_reader(Cursor::new(xml));
-    reader.config_mut().trim_text(true);
+    // Do NOT enable `trim_text`: quick-xml trims *each* Text event, and text is
+    // split at entity references, so `x &amp; y` would become `x&y` — losing
+    // interior spaces around the reference. `End` trims the assembled buffer
+    // instead, which is the only correct place to normalize whitespace.
 
     let mut buf = Vec::new();
     let mut stack: Vec<DynamicFrame> = Vec::new();
@@ -110,7 +113,13 @@ pub fn xml_to_json_dynamic(xml: &[u8], indent: Option<usize>) -> Result<Vec<u8>>
                     })?;
                     let key = attr.key.local_name().as_ref().to_string();
                     let raw_val = attr.value.as_ref();
-                    attrs.insert(format!("@{}", key), parse_dynamic_scalar(raw_val));
+                    let unescaped = quick_xml::escape::unescape(raw_val).map_err(|err| {
+                        PolyXmlError::XmlSyntaxError {
+                            position: reader.buffer_position(),
+                            source: quick_xml::Error::Escape(err),
+                        }
+                    })?;
+                    attrs.insert(format!("@{}", key), parse_dynamic_scalar(&unescaped));
                 }
                 stack.push(DynamicFrame {
                     tag_name: tag,
@@ -135,6 +144,19 @@ pub fn xml_to_json_dynamic(xml: &[u8], indent: Option<usize>) -> Result<Vec<u8>>
                     frame.text_buf.push_str(e.as_ref());
                 }
             }
+            Ok(Event::GeneralRef(ref e)) => {
+                if let Some(frame) = stack.last_mut() {
+                    if e.is_char_ref() {
+                        if let Some(ch) = e.resolve_char_ref().map_err(PolyXmlError::XmlError)? {
+                            frame.text_buf.push(ch);
+                        }
+                    } else if let Some(val) = quick_xml::escape::resolve_xml_entity(e.as_ref()) {
+                        frame.text_buf.push_str(val);
+                    } else {
+                        frame.text_buf.push_str(e.as_ref());
+                    }
+                }
+            }
             Ok(Event::Empty(ref e)) => {
                 let tag = e.local_name().as_ref().to_string();
                 let mut attrs = Map::new();
@@ -145,7 +167,13 @@ pub fn xml_to_json_dynamic(xml: &[u8], indent: Option<usize>) -> Result<Vec<u8>>
                     })?;
                     let key = attr.key.local_name().as_ref().to_string();
                     let raw_val = attr.value.as_ref();
-                    attrs.insert(format!("@{}", key), parse_dynamic_scalar(raw_val));
+                    let unescaped = quick_xml::escape::unescape(raw_val).map_err(|err| {
+                        PolyXmlError::XmlSyntaxError {
+                            position: reader.buffer_position(),
+                            source: quick_xml::Error::Escape(err),
+                        }
+                    })?;
+                    attrs.insert(format!("@{}", key), parse_dynamic_scalar(&unescaped));
                 }
                 let val = if attrs.is_empty() {
                     Value::Null

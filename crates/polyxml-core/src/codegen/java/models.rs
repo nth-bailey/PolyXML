@@ -1,4 +1,5 @@
 use super::*;
+use crate::codegen::flatten_fields;
 use crate::ir::{FieldDef, FieldKind};
 
 impl JavaCodegen {
@@ -38,28 +39,11 @@ impl JavaCodegen {
         s: &'a StructDef,
         ir: &'a SchemaIR,
     ) -> Vec<(&'a FieldDef, String)> {
-        fn collect<'a>(
-            s: &'a StructDef,
-            ir: &'a SchemaIR,
-            seen: &mut HashSet<crate::ir::QName>,
-            fields: &mut Vec<&'a FieldDef>,
-        ) {
-            if !seen.insert(s.qname.clone()) {
-                return;
-            }
-            if let Some(TypeDef::Struct(base)) = s.base_type.as_ref().and_then(|q| ir.types.get(q))
-            {
-                collect(base, ir, seen, fields);
-            }
-            fields.extend(&s.fields);
-        }
-        let mut fields = Vec::new();
-        if self.options.use_records && !self.options.emit_builder && !self.options.emit_direct_codec
-        {
-            fields.extend(&s.fields);
-        } else {
-            collect(s, ir, &mut HashSet::new(), &mut fields);
-        }
+        // Records cannot `extends`, so every record mode must inline the base
+        // chain — a plain record previously declared only its own components
+        // and silently dropped inherited fields. Classes re-slice back to
+        // their own tail for field declarations because they inherit instead.
+        let fields = flatten_fields(s, ir);
         let mut seen = HashSet::new();
         fields
             .into_iter()

@@ -142,6 +142,7 @@ def iterparse[T](
 def serialize(
     obj: object,
     *,
+    target_type: type[object] | None = None,
     indent: int | None = None,
     namespaces: bool | None = None,
     ns_map: dict[str, str] | None = None,
@@ -150,6 +151,12 @@ def serialize(
 
     Args:
         obj: Python dataclass or Pydantic model instance.
+        target_type: Optional declared base type for ``xsi:type`` polymorphic
+            dispatch. When given, a concrete subclass instance is serialized
+            using the base type's element name and re-emits an ``xsi:type``
+            selector naming the concrete type, so polymorphic round trips
+            preserve the wire form. When None (default), the instance's own
+            concrete type is used.
         indent: Optional indentation size in spaces for pretty-printing.
         namespaces: Optional boolean toggle to enable or disable XML namespace prefix
             resolution and root xmlns attribute generation. When None (default),
@@ -160,7 +167,13 @@ def serialize(
     Returns:
         UTF-8 encoded XML bytes representing the model instance.
     """
-    return _serialize(obj, indent=indent, namespaces=namespaces, ns_map=ns_map)
+    return _serialize(
+        obj,
+        target_type=target_type,
+        indent=indent,
+        namespaces=namespaces,
+        ns_map=ns_map,
+    )
 
 
 def serialize_json(

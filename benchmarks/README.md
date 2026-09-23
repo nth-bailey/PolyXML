@@ -11,6 +11,7 @@ benchmarks/
 ├── README.md        # This index: catalog, methodology, conventions
 ├── run_all.sh       # Orchestrator: builds the extension, runs Rust + Python suites
 ├── __init__.py      # Package marker for `python -m benchmarks.python`
+├── cli/             # CLI startup and argument validation (hyperfine)
 ├── python/          # Python bindings vs the Python XML ecosystem (custom CLI suite)
 └── java/            # Java bindings vs JAXB, Jackson, and the Panama native binding (JMH)
 ```
@@ -24,7 +25,9 @@ equivalent) and never at this root.
 | Suite | Location | Tooling | How to run |
 | :--- | :--- | :--- | :--- |
 | Rust core engine | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) | `cargo bench --bench core_benchmarks` |
+| Rust tag dispatch | [`crates/polyxml-core/benches/`](../crates/polyxml-core/benches/) | [Criterion.rs](https://github.com/bheisler/criterion.rs) + `perf stat` | `cargo bench --bench tag_dispatch` ([results](../docs/benchmarks/rust-phf-dispatch.md)) |
 | Python comparative | [`python/`](python/README.md) | Custom CLI suite | `python -m benchmarks.python` or `./benchmarks/run_all.sh` |
+| CLI startup | [`cli/`](cli/README.md) | hyperfine | `./benchmarks/cli/benchmark.sh` |
 | Java four-runtime | [`java/`](java/README.md) | JMH (Maven) | See [`java/README.md`](java/README.md) |
 
 The Rust Criterion suite lives inside its crate because `cargo bench` requires
@@ -60,6 +63,15 @@ Suite READMEs document their own tooling; these rules apply to all of them:
    claim; a single run on a shared machine is noise.
 4. Published figures live in [`docs/benchmarks.md`](../docs/benchmarks.md) —
    update them from a full, idle-host run, not from a smoke.
+5. **Run under a memory cap on shared/small hosts.** Heavy builds and bench
+   runs go through [`scripts/memcap.sh`](../scripts/memcap.sh), which caps
+   the run at 60% of available RAM in an isolated cgroup (kernel OOM-kills
+   only the runaway process instead of freezing the host; `ulimit`
+   fallback where systemd is unavailable). The suite entry points
+   (`run_all.sh`, `cli/benchmark.sh`, `scripts/perf_stat.sh`) already
+   re-exec through it; wrap any ad-hoc `cargo bench`/`--release` build the
+   same way. Tune with `POLYXML_MEMCAP_PCT`, opt out with
+   `POLYXML_MEMCAP_DISABLE=1`.
 
 ## Adding a suite
 
