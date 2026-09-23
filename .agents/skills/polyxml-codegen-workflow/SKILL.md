@@ -332,6 +332,12 @@ derived types inherit their base's patterns at parse time):
 - `benchmarks/cli/benchmark.sh` uses hyperfine with `--shell=none` to avoid shell
   calibration error for sub-5ms startup measurements. Results are fresh processes
   with warm OS caches, not machine-reboot or cold-disk startup measurements.
+- For issue #62, `benchmarks/cli/startup.py` alternates warm `posix_spawn` runs
+  with runs after `POSIX_FADV_DONTNEED` on the CLI executable. Run a release
+  build under `scripts/memcap.sh` first, then check the recorded major-fault
+  counts before calling the second group executable-cache cold. The script
+  does not evict shared libraries or reproduce a post-reboot host; see
+  `benchmarks/cli/README.md` for results and limits.
 
 - Color diagnostics respect `NO_COLOR`. When checking terminal color in a PTY,
   unset `NO_COLOR` in the test subprocess and use a color-capable `TERM`; test
