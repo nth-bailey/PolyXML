@@ -120,7 +120,7 @@ style = "pojo"
 features = ["builder", "direct-codec"]
 ```
 
-The legacy hidden flags `--zod`, `--source-gen`, `--record-kind`, `--rkyv`,
+The former flags `--zod`, `--source-gen`, `--record-kind`, `--rkyv`,
 `--builder`, and `--codec`, along with their `polyxml.toml` counterparts, have
 been removed: clap rejects the flags outright and unknown manifest fields are
 errors, so the unified options above are the only spellings. For owned Rust
@@ -301,7 +301,7 @@ polyxml completions fish > ~/.config/fish/completions/polyxml.fish
 Backend, style, and feature suggestions use the CLI's validation rules and the
 selected `--lang` (including aliases). With multiple languages, completion only
 suggests values accepted by every selected target. Without `--lang`, it uses the
-Python default. Hidden deprecated flags are not suggested. Bash also completes
+Python default. Removed flags are not suggested. Bash also completes
 comma-separated features; repeat `--feature` for portable completion across shells.
 
 ### CLI startup benchmark
