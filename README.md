@@ -49,7 +49,7 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 2. **⚡ Ultra-Fast Streaming Runtime**: Direct-to-struct deserialization and serialization powered by `quick-xml` and `lexical-core`, executing **10x–24x faster than traditional tools** with **zero intermediate DOM allocations**.
 3. **🏛️ Official W3C XSTS Conformance Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests).
 4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
-5. **🛡️ Secure by Design (Immune to XXE & SSRF)**: Pure-Rust streaming engine with zero filesystem or network capabilities. Structurally immune to XML External Entity Injection (CWE-611 / XXE) and Billion Laughs expansion—unlike legacy parsers (`lxml`, `xsdata`) that require defensive configuration flags to prevent server file exfiltration.
+5. **🛡️ Controlled XML Entity Handling**: The native streaming runtime resolves standard and numeric character references in memory and does not fetch external entities while parsing XML. Schema compilation separately reads local XSD includes and imports.
 
 ---
 
@@ -104,7 +104,7 @@ Bridge legacy enterprise XML (ISO 20022 banking, HL7 healthcare, FIXM aviation) 
 
 ## 🚀 Performance Benchmarks
 
-Headline numbers ([full methodology & reproduction steps →](docs/benchmarks.md)):
+Headline numbers ([full methodology & reproduction steps →](docs/benchmarks/index.md)):
 
 - **10x–24x faster** than legacy Python bindings: 10.0x faster deserialization & 23.5x faster serialization than `xsdata` on 10,000-item catalogs.
 - **3.2 μs per telemetry packet** (13.9x vs pure Python) — neck-and-neck with the C-based `lxml.etree` while still returning fully typed dataclasses.

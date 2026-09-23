@@ -143,18 +143,17 @@ If external compilers are installed on the development machine, run the E2E veri
    tail because they `extends` instead. Backends with real inheritance (TS
    `extends`, Go embed, C++/C# `: Base`, Python `class Derived(Base)`) must
    NOT flatten — Python leans on `__dataclass_fields__` (see §11).
-7. **simpleContent `FieldKind::Text` codecs (fixed 2026-09-22)**: generated
+7. **simpleContent `FieldKind::Text` codecs**: generated
    Rust codecs now consume `FieldKind::Text` — `emit_text_content_parse`
    reads the element content via `read_element_text` and runs it through the
    same scalar/facet path as elements (`var_value = Some(...)`; patterns from
    the extension base are enforced via `validate_patterns`), and
    `emit_text_content_serialize` writes the value between Start/End. Only
-   scalar-backed Text is emitted: a struct-typed value (`value: Measurement`)
-   stays a documented cross-backend gap pending issue #51 item 4 IR modeling.
+   scalar-backed Text is emitted. Struct-typed text values are unsupported;
+   do not describe them as working without a generated round-trip test.
    The module allow-header includes `unused_assignments` because the text path
-   assigns its slot unconditionally. The companion Java gap — plain record
-   mode dropping inherited fields — was fixed the same day: records cannot
-   `extends`, so `model_fields` now always inlines `flatten_fields`.
+   assigns its slot unconditionally. Java records cannot `extends`, so
+   `model_fields` inlines `flatten_fields`.
    Regression-locked by `test_rust_simple_content_text_codec` plus runtime
    round-trips (numeric, patterned, string, bad-number rejection).
 8. **Text events arrive split — readers must accumulate**: quick-xml emits
@@ -184,8 +183,9 @@ If external compilers are installed on the development machine, run the E2E veri
 - Call `validate_direct_codecs` before CLI emission. Wildcards/dynamic `anyType`
   cannot be silently dropped. The direct reader must consume exactly one element
   and leave the cursor on END_ELEMENT; nested codecs rely on this contract.
-- C# mutable style must apply to structs, simple wrappers, union branches, and
-  root wrappers. Preserve XML/JSON attributes and invoke inherited validators.
+- C# mutable class style must apply to schema complex types, simple wrappers,
+  union branches, and root wrappers. Preserve XML/JSON attributes and invoke
+  inherited validators.
 - Real Java compilation/round trips run in `test_java_codegen`; C# mutable XML and
   source-generated JSON round trips run in `test_csharp_codegen`. Jackson/JAXB
   interoperability is tested by `mvn -f benchmarks/java/pom.xml clean test` after
@@ -195,23 +195,21 @@ If external compilers are installed on the development machine, run the E2E veri
   annotation-processor path or the jar lacks `META-INF/BenchmarkList`. Clean the
   Maven target when switching profiles. See its README for workload limits;
   synthetic scalar projections are not full ISO 20022/UCI schema benchmarks.
-- CLI help assertions must track `Cli`'s current `about` text. A stale assertion
-  expecting “Polyglot XML schema compiler” predates the current help description.
-- The sibling checkout `../polyxml-finance-examples` carries the real ISO 20022
+- If present, the sibling checkout `../polyxml-finance-examples` carries the ISO 20022
   `schemas/finance/pacs_008_core.xsd`. Its `scripts/generate_all.sh` regenerates
   all 7 targets from whichever local `target/{debug,release}/polyxml` is newer;
   a clean `git status` there proves byte-for-byte output parity after codegen
   changes. The same schema is the best large-schema smoke for
   `--style pojo --feature builder,direct-codec`: `javac` the output and round-trip
   `data/pacs_008_customer_credit_transfer.xml` through the generated root codec.
-- `benchmarks/java -Ppanama` needs JDK 22+, but the host default can be JDK 21.
-  Set `JAVA_HOME`/`PATH` to a downloaded JDK (Temurin 25 worked) and run
+- `benchmarks/java -Ppanama` needs JDK 22+.
+  Set `JAVA_HOME`/`PATH` to a suitable JDK and run
   `cargo build --release -p polyxml-c` first so `-Djava.library.path=target/release`
   resolves `libpolyxml.so`. `mvn clean` deletes `target/*.json`, so always rerun
   the JMH smoke (`-p batchSize=10 -wi 0 -i 1 -r 100ms -f 1 -foe true`) after a
   clean build; its JSON lands in the gitignored `benchmarks/java/target/`.
 
-## 7. Cross-Namespace Type-Name Disambiguation (issue #51 item 3)
+## 7. Cross-Namespace Type-Name Disambiguation
 
 Flat (single-file/module) output must survive two types that share a local name
 across namespaces (e.g. `urn:a|Address` + `urn:b|Address`). The mechanism lives
@@ -246,11 +244,10 @@ Rules when touching any codegen:
    collides: C++ `{enum}_from_string` uses the snake-of-local stem unless the
    disambiguated name differs; TypeScript `{name}Schema` refs swap the inner
    name only (declarations derive from the same `type_ident`).
-5. Regression lock: `issue51_item3_*` in
-   `crates/polyxml-core/tests/test_issue51_audit.rs` asserts both colliding
-   types surface as `Address` + `Address2` in all 7 languages.
+5. Regression lock: `crates/polyxml-core/tests/test_schema_audit.rs` asserts
+   both colliding types surface as `Address` + `Address2` in all 7 languages.
 
-## 8. Python Multi-Pattern Validation (issue #51 item 8)
+## 8. Python Multi-Pattern Validation
 
 Pydantic's `Field(pattern=...)` accepts a single regex, and multiple
 `StringConstraints(pattern=...)` annotations do NOT AND (the last one wins).
@@ -269,7 +266,7 @@ derived types inherit their base's patterns at parse time):
   today, so `emit_struct`'s field path needs no `AfterValidator` wiring; if
   that ever changes, mirror the type-level handling there.
 
-## 9. Unified CLI Options (issue #50)
+## 9. Unified CLI Options
 
 - `polyxml-cli/src/options.rs` normalizes and validates backend/style/features
   for direct generation and both manifest forms. Validate all targets before
@@ -277,19 +274,15 @@ derived types inherit their base's patterns at parse time):
   parsers can still return `None`; the CLI must reject invalid values before
   emitter defaults are applied.
 - New opt-ins belong in repeatable `--feature` and manifest `features` arrays.
-  The former flags (`--zod`, `--source-gen`, `--record-kind`, `--rkyv`,
-  `--builder`, `--codec`) and their manifest keys were deleted outright: clap
-  rejects the flags as unexpected arguments, `#[serde(deny_unknown_fields)]`
-  rejects the keys. No compatibility aliases or deprecation warnings are
-  planned (decision in #58). Keep CLI and manifest parity.
+  Keep CLI and manifest parity; unknown manifest keys and unsupported target
+  options must fail clearly.
 - `--zero-copy` (and manifest `zero_copy`) stays a first-class bool because
   `--feature` cannot express `false`; it alone selects owned Rust output, and
   `--zero-copy=false --feature zero-copy` is still rejected as a contradiction.
 - Defaults remain unchanged, including C# record classes, Rust zero-copy, and
-  Python slots/kw-only. Expose only implemented styles/features. The issue's
-  future examples (aot, Python plain class, C# mutable struct) are not yet
-  generator capabilities.
-- Rust features today: `zero-copy`, `rkyv`, `phf`. `--feature phf` (issue #49)
+  Python slots/kw-only. Expose only implemented styles/features. Python plain
+  classes and C# mutable structs are not yet generator capabilities.
+- Rust features today: `zero-copy`, `rkyv`, `phf`. `--feature phf`
   emits a per-struct `__{Struct}ElementId` enum plus a
   `__{STRUCT}_ELEMENT_DISPATCH: ::phf::Map<&'static str, ...>` static built with
   `phf_codegen`, and routes both `Event::Start` and `Event::Empty` child arms
@@ -332,7 +325,7 @@ derived types inherit their base's patterns at parse time):
 - `benchmarks/cli/benchmark.sh` uses hyperfine with `--shell=none` to avoid shell
   calibration error for sub-5ms startup measurements. Results are fresh processes
   with warm OS caches, not machine-reboot or cold-disk startup measurements.
-- For issue #62, `benchmarks/cli/startup.py` alternates warm `posix_spawn` runs
+- `benchmarks/cli/startup.py` alternates warm `posix_spawn` runs
   with runs after `POSIX_FADV_DONTNEED` on the CLI executable. Run a release
   build under `scripts/memcap.sh` first, then check the recorded major-fault
   counts before calling the second group executable-cache cold. The script
@@ -341,9 +334,9 @@ derived types inherit their base's patterns at parse time):
 
 - Color diagnostics respect `NO_COLOR`. When checking terminal color in a PTY,
   unset `NO_COLOR` in the test subprocess and use a color-capable `TERM`; test
-  the opt-out separately. This development environment sets `NO_COLOR=1`.
+  the opt-out separately.
 
-## 10. Pattern OR/AND Semantics & Enforcement (issue #54)
+## 10. Pattern OR/AND Semantics & Enforcement
 
 W3C XSD combines `xs:pattern` two ways: multiple patterns **within one
 `<xs:restriction>` are OR'd**; patterns inherited **across derivation steps are
@@ -385,10 +378,9 @@ Per-language enforcement (all gated so unpatterned schemas stay byte-identical):
   patterned aliases through `primitive_base`.
 - **C#**: `Regex.IsMatch` with `\A(?:...)\z` full-value anchors;
   escape `\` before `"` in the pattern string.
-- **TypeScript**: one pattern → `pattern:` option (zod/valibot) or single
-  `Type.String({pattern})`; multiple → `AfterValidator`-equivalent AND via
-  `_polyxml_patterns` (Python) / `Type.Intersect([...])` (TypeBox — duplicating
-  the `pattern:` key silently kept only one). Escape `/` inside regex literals.
+- **TypeScript**: Zod chains `.regex(...)` checks; Valibot chains
+  `v.regex(...)` checks; TypeBox emits one `Type.String({pattern})` or an
+  intersection of several such schemas. Escape `/` inside regex literals.
 
 Execution tests live in `crates/polyxml-core/tests/test_pattern_codegen.rs`
 (wired into `scripts/test_codegen.sh`): they **run** generated Go/C++/Rust/
@@ -397,7 +389,7 @@ satisfying two restriction steps, and reject lists/optionals carrying a bad
 element. The TS leg needs `POLYXML_TS_TEST_MODULES` pointing at a node_modules
 with `zod@3 valibot@1 @sinclair/typebox@0.34 typescript@5` and skips otherwise.
 
-## 11. Python Abstract Meta & Runtime Type Discovery (issue #53)
+## 11. Python Abstract Meta & Runtime Type Discovery
 
 `xsi:type` dispatch is a **dynamic-runtime feature** (see
 `polyxml-core-engine` skill §5 and `docs/guides/polymorphism.md`); the

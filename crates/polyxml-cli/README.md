@@ -69,7 +69,7 @@ Compile schemas directly into code for one or more target languages:
 polyxml generate --lang python --out ./generated/python schemas/order.xsd
 
 # Generate Pydantic v2 models with runtime validation
-polyxml generate --lang python --backend pydantic-v2 --out ./generated/python schemas/order.xsd
+polyxml generate --lang python --backend pydantic --out ./generated/python schemas/order.xsd
 
 # Generate Java 21 records with Enterprise Jackson annotations
 polyxml generate --lang java --backend jackson --package com.enterprise.banking --out ./generated/java schemas/order.xsd
@@ -135,7 +135,7 @@ output_base_dir = "./generated"
 [[generate]]
 target = "python"
 output = "src/generated/python"
-backend = "pydantic-v2"
+backend = "pydantic"
 codecs = true
 
 [[generate]]

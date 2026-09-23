@@ -574,8 +574,7 @@ fn emit_target_code(
 
             let options = TypeScriptOptions {
                 backend: ts_backend,
-                // Zod emission is selected via `--backend zod`; the removed
-                // legacy `--zod` switch was the only other way to set this.
+                // Backend selection controls Zod emission.
                 emit_zod: false,
                 use_interface: true,
                 readonly_fields: false,

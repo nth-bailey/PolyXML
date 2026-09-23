@@ -1,4 +1,4 @@
-//! Issue #54: execute generated validators, not just regex source assertions.
+//! Execute generated validators, not just regex source assertions.
 use polyxml::codegen::*;
 use polyxml::ir::{QName, RestrictionFacets, SchemaIR, TypeDef};
 use polyxml::schema_parser::XsdParser;

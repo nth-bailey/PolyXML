@@ -242,7 +242,7 @@ pub struct CppCodegen {
 }
 
 /// Emitted C++ identifier for a named type, disambiguated across namespaces
-/// for the IR currently being generated (issue #51 item 3).
+/// for the IR currently being generated.
 fn type_ident(q: &QName) -> String {
     lookup_type_name(q, || to_cpp_type_name(&q.local))
 }
@@ -704,7 +704,7 @@ concept XmlModel = requires(T a) {{
 
             // from_string — stem follows the disambiguated type name only when
             // it differs from the natural one, preserving the historical
-            // snake-of-local form otherwise (issue #51 item 3).
+            // snake-of-local form otherwise.
             let natural = to_cpp_type_name(&enum_def.qname.local);
             let stem = if enum_name == natural {
                 AsSnakeCase(&enum_def.qname.local).to_string()

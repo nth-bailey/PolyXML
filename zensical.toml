@@ -6,26 +6,7 @@ repo_url = "https://github.com/nth-bailey/PolyXML"
 repo_name = "nth-bailey/PolyXML"
 edit_uri = "edit/main/docs/"
 
-nav = [
-  { "Get Started" = [
-      { "Introduction" = "index.md" },
-      { "Multi-Language Quickstart" = "quickstart.md" },
-      { "Schema Compiler & CLI" = "guides/compiler.md" },
-      { "Why PolyXML? (Comparisons)" = "why-polyxml.md" },
-      { "Architecture & Design" = "architecture.md" },
-      { "Performance & Benchmarks" = "benchmarks.md" },
-  ]},
-  { "Language Guides" = [
-      { "Rust (Native Core)" = "guides/rust.md" },
-      { "Python (Dataclasses & Pydantic)" = "guides/python.md" },
-      { "Modern C++20" = "guides/cpp.md" },
-      { "Go (Cgo)" = "guides/go.md" },
-      { "TypeScript & Node.js" = "guides/node.md" },
-      { "Java 22 (Panama FFI)" = "guides/java.md" },
-      { "C# 12 / .NET 8+" = "guides/csharp.md" },
-  ]},
-]
-
+# Navigation follows the Markdown files and folders under docs/.
 [project.theme]
 language = "en"
 features = [

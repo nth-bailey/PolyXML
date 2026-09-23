@@ -1,7 +1,6 @@
 /* perf_stat: perf_event_open-based hardware counter harness for hosts without
- * the `perf` binary (issue #49: "Profile branch misses and IPC using perf
- * stat"). Counts for a command: cycles, instructions, branches, branch-misses,
- * and L1-icache-load-misses — the same events
+ * the `perf` binary. Counts cycles, instructions, branches, branch-misses,
+ * and L1-icache-load-misses for a command — the same events
  * `perf stat -e cycles,instructions,branches,branch-misses,L1-icache-load-misses`
  * would report. Userspace-only (perf_event_paranoid >= 2 compatible).
  *

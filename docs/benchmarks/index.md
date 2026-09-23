@@ -10,7 +10,7 @@ PolyXML is engineered to process gigabytes of XML per second by leveraging Rust'
 The repository includes fully reusable, automated benchmark suites covering the pure Rust Criterion tests, the Python comparative benchmarks, and the Java four-runtime JMH benchmarks.
 
 > 🚀 **Looking for architectural comparisons with legacy compilers?**
-> Check out **[Why PolyXML? (The Architecture of Modern XML)](why-polyxml.md)** for in-depth comparisons against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
+> Check out **[Why PolyXML? (The Architecture of Modern XML)](../why-polyxml.md)** for in-depth comparisons against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
 
 ---
 

@@ -55,4 +55,4 @@ use polyxml::{deserialize, serialize};
 - [Architecture & Design](architecture.md): Zero-allocation streaming pipeline and Schema IR.
 - [Python Guide](guides/python.md): Dataclasses and Pydantic v2 bindings.
 - [Rust Guide](guides/rust.md): Using the native core engine.
-- [Benchmarks](benchmarks.md): 300MB+ NeTEx transit benchmark comparing against pure-Python parsers.
+- [Benchmarks](benchmarks/index.md): 300MB+ NeTEx transit benchmark comparing against pure-Python parsers.

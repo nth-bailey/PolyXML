@@ -61,7 +61,7 @@ Suite READMEs document their own tooling; these rules apply to all of them:
    repository revision next to the numbers.
 3. **Inspect confidence intervals and repeat** before making any throughput
    claim; a single run on a shared machine is noise.
-4. Published figures live in [`docs/benchmarks.md`](../docs/benchmarks.md) —
+4. Published figures live in [`docs/benchmarks/index.md`](../docs/benchmarks/index.md) —
    update them from a full, idle-host run, not from a smoke.
 5. **Run under a memory cap on shared/small hosts.** Heavy builds and bench
    runs go through [`scripts/memcap.sh`](../scripts/memcap.sh), which caps
@@ -85,9 +85,9 @@ Suite READMEs document their own tooling; these rules apply to all of them:
 4. If `run_all.sh` should drive the suite, gate it on toolchain detection so
    machines without that toolchain still succeed.
 5. Add the suite to the catalog above and link it from
-   [`docs/benchmarks.md`](../docs/benchmarks.md).
+   [`docs/benchmarks/index.md`](../docs/benchmarks/index.md).
 
 ---
 
 Published methodology, result tables, and reproduction commands:
-[`docs/benchmarks.md`](../docs/benchmarks.md).
+[`docs/benchmarks/index.md`](../docs/benchmarks/index.md).

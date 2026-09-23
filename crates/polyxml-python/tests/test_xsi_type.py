@@ -1,4 +1,4 @@
-"""Issue #53: xsi:type polymorphic dispatch through the Python runtime.
+"""xsi:type polymorphic dispatch through the Python runtime.
 
 Covers both directions: parsing wire xsi:type selectors into concrete
 subclasses (discovered from the Python class hierarchy), and re-emitting

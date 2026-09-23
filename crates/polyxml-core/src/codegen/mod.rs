@@ -52,7 +52,7 @@ pub trait LanguageContext: Send + Sync {
 
 thread_local! {
     /// Disambiguated type identifiers for the IR currently being generated,
-    /// keyed by qualified name (issue #51 item 3). Refreshed at the start of
+    /// keyed by qualified name. Refreshed at the start of
     /// every `generate_module` call; lookups for names absent from the map
     /// (e.g. references to unloaded external types) fall back to the
     /// language's default local-name derivation.

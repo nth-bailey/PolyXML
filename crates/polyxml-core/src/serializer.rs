@@ -107,7 +107,7 @@ impl NamespaceContext {
             }
         }
 
-        // xsi:type dispatch (issue #53): variant namespaces must be in
+        // xsi:type dispatch: variant namespaces must be in
         // scope, and the XML Schema Instance namespace is required to
         // write the xsi:type selector itself.
         let variants = schema.variants();
@@ -237,7 +237,7 @@ impl XmlSerializer {
             }
         }
 
-        // xsi:type dispatch (issue #53): when the value is a Record built
+        // xsi:type dispatch: when the value is a Record built
         // from a registered derivation of the declared schema, write the
         // concrete variant's fields and re-emit the xsi:type selector.
         let mut xsi_type: Option<String> = None;
@@ -312,7 +312,7 @@ impl XmlSerializer {
             }
         }
 
-        // Re-emit the xsi:type selector after content attributes (issue #53).
+        // Re-emit the xsi:type selector after content attributes.
         if let Some(ref xsi_val) = xsi_type {
             let attr_key = match ns_ctx {
                 Some(ctx) => {

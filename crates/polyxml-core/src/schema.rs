@@ -80,7 +80,7 @@ pub struct ModelSchema {
     pub element_map: HashMap<Vec<u8>, usize>,
     pub attribute_map: HashMap<Vec<u8>, usize>,
     pub text_field: Option<usize>,
-    /// Declared `abstract="true"` in the source schema (issue #53).
+    /// Declared `abstract="true"` in the source schema.
     pub is_abstract: bool,
     /// Concrete derivations eligible for `xsi:type` dispatch. Python may
     /// refresh this registry when subclasses are defined after first use.
@@ -296,7 +296,7 @@ impl ModelSchema {
             field_schema
         }
 
-        /// Whether `d` transitively extends `base` via `xs:extension` (issue #53).
+        /// Whether `d` transitively extends `base` via `xs:extension`.
         fn derives_from(
             ir: &crate::ir::SchemaIR,
             d: &crate::ir::StructDef,
@@ -359,8 +359,8 @@ impl ModelSchema {
 
             let schema = builder.build();
 
-            // xsi:type dispatch registry (issue #53): every transitive
-            // derivation of this type, keyed by QName local part.
+            // xsi:type dispatch registry: every transitive
+            // derivation of this type, matched by namespace and local name.
             let derived: Vec<crate::ir::QName> = ir
                 .types
                 .iter()
@@ -442,7 +442,7 @@ impl ModelSchemaBuilder {
         }
     }
 
-    /// Mark the type as `abstract="true"` (issue #53).
+    /// Mark the type as `abstract="true"`.
     pub fn is_abstract(mut self, is_abstract: bool) -> Self {
         self.is_abstract = is_abstract;
         self

@@ -202,7 +202,7 @@ pub struct RustCodegen {
 }
 
 /// Emitted Rust identifier for a named type, disambiguated across
-/// namespaces for the IR currently being generated (issue #51 item 3).
+/// namespaces for the IR currently being generated.
 fn type_ident(q: &QName) -> String {
     lookup_type_name(q, || AsPascalCase(&q.local).to_string())
 }

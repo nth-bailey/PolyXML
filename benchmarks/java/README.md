@@ -75,7 +75,7 @@ The defaults use three warmup iterations, five measurement iterations, and two f
 For a quick executable smoke check, use `-p batchSize=10 -wi 0 -i 1 -r 100ms -f 1
 -foe true`. Such output is **not performance evidence**. Run on an otherwise idle host,
 record JDK/OS/CPU and CLI revision, inspect confidence intervals, and repeat before
-making a throughput claim. No issue #46 speedup hypothesis is assumed to be true.
+making a throughput claim.
 
 ## Allocation, JFR, and startup investigations
 

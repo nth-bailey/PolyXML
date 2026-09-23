@@ -15,7 +15,7 @@ use crate::ir::{
 /// Module-level helper emitted when a simple type carries multiple pattern
 /// facets: pydantic's `Field(pattern=...)` keeps only a single regex, so
 /// AND-combined patterns are enforced through an `AfterValidator` wrapping
-/// this factory instead (issue #51 item 8).
+/// this factory instead.
 const PATTERN_VALIDATOR_HELPER: &str = r#"def _polyxml_patterns(*patterns: str):
     _compiled = tuple(re.compile(p) for p in patterns)
 
@@ -209,7 +209,7 @@ pub struct PythonCodegen {
 }
 
 /// Emitted Python identifier for a named type, disambiguated across
-/// namespaces for the IR currently being generated (issue #51 item 3).
+/// namespaces for the IR currently being generated.
 fn type_ident(q: &QName) -> String {
     lookup_type_name(q, || AsPascalCase(&q.local).to_string())
 }
@@ -570,7 +570,7 @@ impl PythonCodegen {
             }
             // Marks the type as a dispatch base: the runtime raises a clear
             // error when xsi:type targets an abstract type with no registered
-            // derivations (issue #53).
+            // derivations.
             if s.is_abstract {
                 out.push_str("        abstract = True\n");
             }

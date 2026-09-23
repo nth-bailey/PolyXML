@@ -60,9 +60,8 @@ release CLI, 100 runs per case and mode on 2026-09-22 measured:
 | Invalid backend | Warm | 1.66 ms | 1.64 ms | 1.99 ms | 0/100 |
 | Invalid backend | Executable evicted | 7.75 ms | 7.71 ms | 8.43 ms | 100/100 |
 
-The original #50 proposal mentioned a <5 ms cold-start target without a
-supported-host requirement or user report behind it. These measurements do not
-identify a startup problem: even the executable-evicted median is under 8 ms
+These measurements do not identify a startup problem: even the
+executable-evicted median is under 8 ms
 on this host. The major faults and roughly 6 ms gap point to file loading as
 the main extra cost here; the measurement does not establish which part is
 inherent or what another storage system would do. No fixed cold-start target

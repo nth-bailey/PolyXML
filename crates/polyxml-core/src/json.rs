@@ -76,7 +76,7 @@ pub fn poly_value_to_json_value(
     schema: &ModelSchema,
     by_alias: bool,
 ) -> JsonValue {
-    // xsi:type dispatch (issue #53): a Record parsed as a concrete
+    // xsi:type dispatch: a Record parsed as a concrete
     // derivation iterates its own schema so variant-only fields survive
     // transcoding (JSON carries no xsi:type marker).
     let schema = match val {

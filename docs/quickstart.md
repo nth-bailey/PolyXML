@@ -257,7 +257,7 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     ```bash
     # Generate models for Python, Rust, and C# simultaneously
     polyxml generate \
-      --lang python --backend pydantic-v2 \
+      --lang python --backend pydantic \
       --lang rust --zero-copy --codecs \
       --lang csharp --namespace Sensors \
       --out ./generated \
@@ -433,5 +433,4 @@ Looking for production-grade project repositories with complete build setups acr
 | **Defense & Avionics** | [polyxml-defense-examples](https://github.com/nth-bailey/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (XML) |
 | **Banking & FinTech** | [polyxml-finance-examples](https://github.com/nth-bailey/polyxml-finance-examples) | **FinTech Payments** (FedNow, Stripe, Plaid) ↔ **ISO 20022 `pacs.008`** (XML) |
 | **Public Transit & Mobility** | [polyxml-transit-examples](https://github.com/nth-bailey/polyxml-transit-examples) | **Google GTFS-Realtime** (Protobuf/JSON) ↔ **European CEN SIRI & NeTEx** (XML) |
-
 

@@ -1,14 +1,14 @@
-//! Issue #49: tag-dispatch strategy comparison at schema scale tiers.
+//! Tag-dispatch strategy comparison at schema scale tiers.
 //!
-//! Baselines per the issue's benchmark setup:
+//! Baselines:
 //!   1. Standard Rust `match` on string literals (LLVM bucketed memcmp chains)
 //!   2. Runtime `HashMap<&str, u32>`
 //!   3. Compile-time `phf::Map<&str, u32>`
 //!
 //! Each iteration sweeps the full tier (hit path for every tag); Criterion's
 //! `Throughput::Elements` reports tags/second directly. Tokenization is
-//! intentionally isolated OUT of the bench: it is identical across dispatch
-//! strategies, so only the lookup is measured (see
+//! intentionally isolated OUT of the bench so lookup cost can be measured
+//! independently of parsing (see
 //! docs/benchmarks/rust-phf-dispatch.md).
 //!
 //! Regenerate the tag tables with scripts/gen_tag_dispatch_fixtures.py.

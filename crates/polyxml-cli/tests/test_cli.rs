@@ -1754,34 +1754,6 @@ features=["builder", "direct-codec"]
 }
 
 #[test]
-fn removed_legacy_flags_are_rejected() {
-    let dir = tempdir().unwrap();
-    let schema = dir.path().join("model.xsd");
-    fs::write(&schema, r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:complexType name="Item"><xs:sequence><xs:element name="name" type="xs:string"/></xs:sequence></xs:complexType></xs:schema>"#).unwrap();
-    for args in [
-        vec!["--zod"],
-        vec!["--source-gen"],
-        vec!["--record-kind", "struct"],
-        vec!["--rkyv"],
-        vec!["--builder"],
-        vec!["--codec", "direct"],
-    ] {
-        let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
-            .arg("generate")
-            .arg(&schema)
-            .arg("--out")
-            .arg(dir.path().join("out"))
-            .args(&args)
-            .output()
-            .unwrap();
-        assert!(!result.status.success(), "{args:?}");
-        let stderr = String::from_utf8_lossy(&result.stderr);
-        assert!(stderr.contains("unexpected argument"), "{args:?}: {stderr}");
-        assert!(!dir.path().join("out").exists());
-    }
-}
-
-#[test]
 fn unified_options_fail_before_schema_io_including_dry_run() {
     let dir = tempdir().unwrap();
     let out = dir.path().join("output");
@@ -1886,7 +1858,6 @@ features = ["builder", "direct-codec"]
         "{}",
         String::from_utf8_lossy(&result.stderr)
     );
-    assert!(!String::from_utf8_lossy(&result.stderr).contains("deprecated"));
     for file in ["Item.java", "ItemCodec.java"] {
         assert_eq!(
             fs::read(dir.path().join("array").join(file)).unwrap(),
@@ -1912,7 +1883,7 @@ features = ["builder", "direct-codec"]
 }
 
 #[test]
-fn unified_help_hides_legacy_flags() {
+fn unified_help_shows_generation_options() {
     let result = Command::new(env!("CARGO_BIN_EXE_polyxml"))
         .args(["generate", "--help"])
         .output()
@@ -1920,15 +1891,6 @@ fn unified_help_hides_legacy_flags() {
     let help = String::from_utf8_lossy(&result.stdout);
     for flag in ["--backend", "--style", "--feature", "--zero-copy"] {
         assert!(help.contains(flag));
-    }
-    for flag in [
-        "--zod",
-        "--source-gen",
-        "--rkyv",
-        "--builder",
-        "--record-kind",
-    ] {
-        assert!(!help.contains(flag));
     }
 }
 
@@ -2117,7 +2079,6 @@ fn completion_candidates_follow_target_validation() {
         .unwrap();
     let flags = String::from_utf8_lossy(&output.stdout);
     assert!(flags.contains("--feature"));
-    assert!(!flags.contains("--zod"));
 }
 
 #[test]

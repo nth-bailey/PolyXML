@@ -44,9 +44,8 @@ pub struct WorkspaceSection {
 }
 
 /// Target configuration from either `[[generate]]` or `[codegen.<target>]`.
-/// Unknown keys are rejected so removed legacy fields (`zod`, `source_gen`,
-/// `record_kind`, `builder`, `codec`, `rkyv`) fail loudly instead of being
-/// silently ignored.
+/// Unknown keys are rejected so misspelled or unsupported options fail
+/// instead of being silently ignored.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TargetConfig {

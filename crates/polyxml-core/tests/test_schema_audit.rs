@@ -1,8 +1,7 @@
-//! Empirical audit tests for issue #51: edge-case XSD handling verification.
+//! Regression tests for edge-case XSD parsing and code generation.
 //!
-//! Each test asserts the DESIRED behavior described in the issue's
-//! verification checklists. Failing tests document confirmed bugs;
-//! passing tests lock in behavior audited as already correct.
+//! These tests cover named groups, duplicate enum values, nested inline
+//! types, namespace collisions, simple content, and include behavior.
 
 use std::collections::HashSet;
 use std::fs;
@@ -40,11 +39,11 @@ fn field_names(s: &StructDef) -> Vec<String> {
 }
 
 // ---------------------------------------------------------------------------
-// Item 1: xs:group named model groups
+// xs:group named model groups
 // ---------------------------------------------------------------------------
 
 #[test]
-fn issue51_item1_named_group_reference_fields_are_parsed() {
+fn named_group_reference_fields_are_parsed() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
             targetNamespace="urn:g" xmlns:t="urn:g" elementFormDefault="qualified">
         <xs:group name="HeaderParts">
@@ -74,11 +73,11 @@ fn issue51_item1_named_group_reference_fields_are_parsed() {
 }
 
 // ---------------------------------------------------------------------------
-// Item 2: duplicate enum variant deduplication
+// duplicate enum variant deduplication
 // ---------------------------------------------------------------------------
 
 #[test]
-fn issue51_item2_duplicate_enumeration_values_are_deduped() {
+fn duplicate_enumeration_values_are_deduped() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
             targetNamespace="urn:e" elementFormDefault="qualified">
         <xs:simpleType name="SettlementStatus">
@@ -104,7 +103,7 @@ fn issue51_item2_duplicate_enumeration_values_are_deduped() {
 }
 
 #[test]
-fn issue51_item2_distinct_values_with_colliding_variant_names_stay_unique() {
+fn distinct_values_with_colliding_variant_names_stay_unique() {
     // "failed" and "Failed" are distinct (legal) XSD values but sanitize to the
     // same variant identifier in every target language.
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -140,7 +139,7 @@ fn issue51_item2_distinct_values_with_colliding_variant_names_stay_unique() {
 }
 
 // ---------------------------------------------------------------------------
-// Item 3: cross-namespace same-local-name collision in flat output
+// cross-namespace same-local-name collision in flat output
 // ---------------------------------------------------------------------------
 
 fn two_namespace_address_ir() -> SchemaIR {
@@ -184,7 +183,7 @@ fn declared_prefixed_idents(code: &str, markers: &[&str], prefix: &str) -> HashS
 }
 
 #[test]
-fn issue51_item3_rust_flat_output_has_no_colliding_type_names() {
+fn rust_flat_output_has_no_colliding_type_names() {
     let ir = two_namespace_address_ir();
     let code = RustCodegen::new(RustOptions::default()).generate_module(&ir);
 
@@ -218,7 +217,7 @@ fn issue51_item3_rust_flat_output_has_no_colliding_type_names() {
 }
 
 #[test]
-fn issue51_item3_all_languages_disambiguate_flat_collision() {
+fn all_languages_disambiguate_flat_collision() {
     let ir = two_namespace_address_ir();
     let outputs = [
         (
@@ -266,11 +265,11 @@ fn issue51_item3_all_languages_disambiguate_flat_collision() {
 }
 
 // ---------------------------------------------------------------------------
-// Item 4: simpleContent extension text field
+// simpleContent extension text field
 // ---------------------------------------------------------------------------
 
 #[test]
-fn issue51_item4_simple_content_extension_emits_value_field() {
+fn simple_content_extension_emits_value_field() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
             targetNamespace="urn:amt" elementFormDefault="qualified">
         <xs:complexType name="AmountWithCurrency">
@@ -307,11 +306,11 @@ fn issue51_item4_simple_content_extension_emits_value_field() {
 }
 
 // ---------------------------------------------------------------------------
-// Item 5: anonymous inline complexType extraction (nested)
+// anonymous inline complexType extraction (nested)
 // ---------------------------------------------------------------------------
 
 #[test]
-fn issue51_item5_nested_inline_complex_type_is_extracted_not_leaked() {
+fn nested_inline_complex_type_is_extracted_not_leaked() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
             targetNamespace="urn:ord" elementFormDefault="qualified">
         <xs:complexType name="Order">
@@ -356,11 +355,11 @@ fn issue51_item5_nested_inline_complex_type_is_extracted_not_leaked() {
 }
 
 // ---------------------------------------------------------------------------
-// Item 6: unknown element tolerance in generated serde codecs
+// unknown element tolerance in generated serde codecs
 // ---------------------------------------------------------------------------
 
 #[test]
-fn issue51_item6_generated_rust_has_no_deny_unknown_fields() {
+fn generated_rust_has_no_deny_unknown_fields() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
             targetNamespace="urn:p" elementFormDefault="qualified">
         <xs:complexType name="Person">
@@ -379,7 +378,7 @@ fn issue51_item6_generated_rust_has_no_deny_unknown_fields() {
 }
 
 #[test]
-fn issue51_item6_quick_xml_serde_skips_unknown_elements() {
+fn quick_xml_serde_skips_unknown_elements() {
     // Mirrors the derive set emitted by the Rust codegen; verifies quick-xml's
     // default Deserialize behavior skips elements not present on the struct.
     #[derive(Debug, serde::Deserialize)]
@@ -393,17 +392,14 @@ fn issue51_item6_quick_xml_serde_skips_unknown_elements() {
     assert_eq!(parsed.name, "Alex");
 }
 
-// ---------------------------------------------------------------------------
-// Item 7: xsi:type polymorphic dispatch — implemented as issue #53;
-// see `tests/test_issue53_xsi_type.rs`.
-// ---------------------------------------------------------------------------
+// `xsi:type` polymorphic dispatch is covered in `tests/test_xsi_type.rs`.
 
 // ---------------------------------------------------------------------------
-// Item 8: pattern facet AND/OR derivation semantics
+// pattern facet AND/OR derivation semantics
 // ---------------------------------------------------------------------------
 
 #[test]
-fn issue51_item8_derived_simple_type_inherits_base_patterns() {
+fn derived_simple_type_inherits_base_patterns() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
             targetNamespace="urn:pat" xmlns:t="urn:pat" elementFormDefault="qualified">
         <xs:simpleType name="BaseCode">
@@ -459,11 +455,11 @@ fn issue51_item8_derived_simple_type_inherits_base_patterns() {
 }
 
 // ---------------------------------------------------------------------------
-// Item 9: include cache / chameleon namespace attribution
+// include cache / chameleon namespace attribution
 // ---------------------------------------------------------------------------
 
 #[test]
-fn issue51_item9_chameleon_include_adopts_including_namespace_per_includer() {
+fn chameleon_include_adopts_including_namespace_per_includer() {
     let dir = tempdir().expect("tempdir");
     let common = dir.path().join("common.xsd");
     fs::write(
@@ -530,11 +526,11 @@ fn issue51_item9_chameleon_include_adopts_including_namespace_per_includer() {
 }
 
 // ---------------------------------------------------------------------------
-// Item 10: named aliases/newtypes for restricted simple types
+// named aliases/newtypes for restricted simple types
 // ---------------------------------------------------------------------------
 
 #[test]
-fn issue51_item10_restricted_simple_types_emit_named_aliases() {
+fn restricted_simple_types_emit_named_aliases() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
             targetNamespace="urn:bic" elementFormDefault="qualified">
         <xs:simpleType name="BicCode">

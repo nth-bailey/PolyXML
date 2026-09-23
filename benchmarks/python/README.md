@@ -84,5 +84,5 @@ To add a new benchmark scenario:
 
 ---
 
-Published result tables live in [`docs/benchmarks.md`](../../docs/benchmarks.md);
+Published result tables live in [`docs/benchmarks/index.md`](../../docs/benchmarks/index.md);
 suite conventions and the full catalog are in the [suite index](../README.md).

@@ -1,4 +1,4 @@
-//! Issue #53: `xsi:type` polymorphic dispatch for abstract complexTypes.
+//! `xsi:type` polymorphic dispatch for abstract complex types.
 //!
 //! Locks in the runtime registry strategy: `ModelSchema` carries the
 //! concrete derivations of a type (keyed by QName local part), the parser
@@ -97,7 +97,7 @@ fn schema_local(schema: &ModelSchema) -> String {
 }
 
 #[test]
-fn issue53_from_ir_flattens_base_fields_and_registers_variants() {
+fn from_ir_flattens_base_fields_and_registers_variants() {
     let root = schema_for(Some("Root"));
     let declared = declared_vehicle(&root);
 
@@ -133,7 +133,7 @@ fn issue53_from_ir_flattens_base_fields_and_registers_variants() {
 }
 
 #[test]
-fn issue53_nested_xsi_type_dispatch_and_round_trip() {
+fn nested_xsi_type_dispatch_and_round_trip() {
     let root = schema_for(Some("Root"));
     let xml = br#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh">
         <vehicle xsi:type="t:Car"><id>V1</id><doors>4</doors></vehicle>
@@ -188,7 +188,7 @@ fn issue53_nested_xsi_type_dispatch_and_round_trip() {
 }
 
 #[test]
-fn issue53_root_xsi_type_dispatch_including_empty_element() {
+fn root_xsi_type_dispatch_including_empty_element() {
     let root = schema_for(Some("Vehicle"));
     assert!(root.is_abstract);
     assert!(root.has_variants());
@@ -220,7 +220,7 @@ fn issue53_root_xsi_type_dispatch_including_empty_element() {
 }
 
 #[test]
-fn issue53_unknown_xsi_type_on_abstract_type_errors() {
+fn unknown_xsi_type_on_abstract_type_errors() {
     let root = schema_for(Some("Root"));
     let xml = br#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh"><vehicle xsi:type="t:Plane"><id>X</id></vehicle></Root>"#;
     let err = polyxml::deserialize(xml, root).expect_err("unknown derivation must fail");
@@ -236,7 +236,7 @@ fn issue53_unknown_xsi_type_on_abstract_type_errors() {
 }
 
 #[test]
-fn issue53_abstract_type_without_derivations_errors() {
+fn abstract_type_without_derivations_errors() {
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
             targetNamespace="urn:solo" xmlns:t="urn:solo">
         <xs:complexType name="Solo" abstract="true">
@@ -261,7 +261,7 @@ fn issue53_abstract_type_without_derivations_errors() {
 }
 
 #[test]
-fn issue53_plain_type_attribute_is_not_mistaken_for_dispatch() {
+fn plain_type_attribute_is_not_mistaken_for_dispatch() {
     // A content attribute literally named "type" on a non-abstract type
     // must never be treated as an xsi:type selector.
     let xsd = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -292,7 +292,7 @@ fn issue53_plain_type_attribute_is_not_mistaken_for_dispatch() {
 }
 
 #[test]
-fn issue53_iterparse_dispatches_each_streamed_item() {
+fn iterparse_dispatches_each_streamed_item() {
     let root = schema_for(Some("Root"));
     let declared = declared_vehicle(&root);
     let xml = br#"<wrap xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh">

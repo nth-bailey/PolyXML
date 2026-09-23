@@ -269,7 +269,7 @@ fn extract_schema_from_class<'py>(
                 }
             }
         }
-        // Issue #53: abstract types raise a clear error when xsi:type names
+        // Abstract types raise a clear error when xsi:type names
         // a derivation the runtime does not know.
         if let Ok(abstract_val) = meta_cls.getattr("abstract") {
             if abstract_val.extract::<bool>().unwrap_or(false) {
@@ -483,7 +483,7 @@ fn get_or_create_schema_meta<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<Cach
         map.insert(schema.name.clone(), Arc::clone(&meta));
     }
 
-    // xsi:type dispatch (issue #53): register concrete subclasses as
+    // xsi:type dispatch: register concrete subclasses as
     // derivations of this type. Deliberately runs AFTER the cache inserts so
     // a subclass field typed as this class resolves from cache instead of
     // re-entering extraction.
@@ -493,7 +493,7 @@ fn get_or_create_schema_meta<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<Cach
 }
 
 /// Collect runtime schemas for every dataclass/Pydantic subclass of `cls`,
-/// transitively, to power `xsi:type` dispatch (issue #53).
+/// transitively, to power `xsi:type` dispatch.
 fn discover_variants(cls: &Bound<'_, PyType>) -> Vec<Arc<ModelSchema>> {
     let mut out = Vec::new();
     let mut seen: HashSet<usize> = HashSet::new();
@@ -677,7 +677,7 @@ fn poly_value_to_py<'py>(
             schema: rec_schema,
             values,
         } => {
-            // xsi:type dispatch (issue #53): the record was parsed as a
+            // xsi:type dispatch: the record was parsed as a
             // concrete derivation of the declared type, so construct it with
             // the derivation's Python class.
             if let ValueType::Nested(ref declared) = val_type {
@@ -964,7 +964,7 @@ fn py_to_poly_value<'py>(
     meta_opt: Option<&CachedSchemaMeta>,
 ) -> PyResult<PolyValue> {
     if let Some(meta) = meta_opt {
-        // xsi:type dispatch (issue #53): a concrete subclass instance in a
+        // xsi:type dispatch: a concrete subclass instance in a
         // field declared as the base type builds the derivation's record so
         // the serializer re-emits xsi:type and keeps every concrete field.
         let obj_type = obj.get_type();
@@ -1231,7 +1231,7 @@ fn serialize<'py>(
     ns_map: Option<Bound<'py, PyDict>>,
 ) -> PyResult<Bound<'py, PyBytes>> {
     // With `target_type`, serialize against the declared base type so
-    // xsi:type dispatch round-trips the element name (issue #53); without
+    // xsi:type dispatch round-trips the element name; without
     // it, the instance's own concrete type is used.
     let meta = match &target_type {
         Some(t) => get_or_create_schema_meta(t)?,
