@@ -3,6 +3,7 @@ import initWasm, {
   json_to_xml as rawJsonToXml,
   xml_to_json as rawXmlToJson,
 } from './polyxml_wasm.js'
+import { parseStream } from './stream.js'
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder('utf-8', { fatal: true })
@@ -40,6 +41,7 @@ export async function createPolyXml(source = new URL('./polyxml_wasm_bg.wasm', i
   })
   await initialization
   return {
+    parseStream(source, options) { return parseStream(this, source, options) },
     xmlToJsonBytes(xml) { return rawXmlToJson(bytes(xml)) },
     xmlToJson(xml) { return JSON.parse(decoder.decode(rawXmlToJson(bytes(xml)))) },
     jsonToXmlBytes(json, rootName) { return rawJsonToXml(jsonBytes(json), rootName) },

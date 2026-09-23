@@ -21,6 +21,6 @@ manifest.exports = {
 }
 manifest.files = ['*.js', '*.wasm', '*.d.ts', 'README.md', 'LICENSE']
 await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
-for (const name of ['index.js', 'index.node.js', 'index.d.ts', 'README.md', 'LICENSE']) {
+for (const name of ['index.js', 'index.node.js', 'stream.js', 'index.d.ts', 'README.md', 'LICENSE']) {
   await cp(path.join(directory, name), path.join(output, name))
 }

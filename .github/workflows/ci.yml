@@ -233,6 +233,20 @@ jobs:
       - name: Validate npm package contents
         run: npm pack --dry-run ./crates/polyxml-wasm/pkg
 
+      - name: Install browser benchmark dependencies
+        run: npm ci --prefix benchmarks/typescript-wasm
+
+      - name: Smoke test Node and Bun benchmarks
+        run: |
+          node --expose-gc benchmarks/typescript-wasm/bench.mjs micro
+          bun benchmarks/typescript-wasm/bench.mjs micro
+
+      - name: Install headless Chromium
+        run: npm exec --prefix benchmarks/typescript-wasm -- playwright install chromium-headless-shell
+
+      - name: Smoke test browser Wasm runtime
+        run: node benchmarks/typescript-wasm/browser-runner.mjs micro
+
   # -------------------------------------------------------------
   # 7. Java Bindings: OpenJDK 22 & Maven Test (Panama FFI)
   # -------------------------------------------------------------

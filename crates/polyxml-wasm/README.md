@@ -34,6 +34,20 @@ output bytes are copied back into JS memory. Converting to JS objects incurs
 further allocations. The API does not promise zero-copy behavior or a speedup
 over native JS parsers.
 
+For documents containing repeated children under one root, stream records as
+they complete:
+
+```js
+for await (const record of polyxml.parseStream(readableStream)) {
+  console.log(record)
+}
+```
+
+`parseStream` accepts a web `ReadableStream` or async iterable of byte/string
+chunks. It uses schema-free conversion and retains one record at a time, plus
+the root tag and transient Wasm copies; the default per-record limit is 16 MiB.
+DTDs and mixed root text are not supported.
+
 ## Build from source
 
 Install the `wasm32-unknown-unknown` Rust target and `wasm-pack`, then run:

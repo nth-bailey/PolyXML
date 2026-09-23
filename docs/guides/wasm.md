@@ -41,6 +41,22 @@ Wasm source when the host controls asset loading.
 
 `wasm-bindgen` copies byte inputs into Wasm memory and byte outputs back to
 JavaScript memory. Converting JSON to a JavaScript object allocates again. The
-current API handles complete documents; it does not incrementally process a
-`ReadableStream`. End-to-end throughput, GC effects, and bundle tradeoffs
-remain to be measured under [issue #47](https://github.com/nth-bailey/PolyXML/issues/47).
+complete-document methods hold the input and output in memory. For a document
+with repeated children under one root, `parseStream` yields each child when it
+is complete:
+
+```js
+for await (const record of polyxml.parseStream(xmlReadableStream)) {
+  console.log(record)
+}
+```
+
+The stream accepts a web `ReadableStream` or an async iterable of strings or
+bytes. It uses the schema-free converter and yields one object per direct child
+of the document root. It keeps only the current child in memory, plus the root
+tag and Wasm copies; the default maximum child size is 16 MiB and can be set
+with `{ maxRecordBytes: 1048576 }`. The root must contain records rather than
+mixed text. DTDs and other declarations are rejected. This API is for large
+lists of records; it cannot split a single huge child into smaller records.
+
+See [Wasm benchmark results](../benchmarks/wasm-vs-js.md) for measured tradeoffs.
