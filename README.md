@@ -145,6 +145,7 @@ Production repositories across **all 7 languages**:
 
 - **[Multi-Language Quickstart](https://nth-bailey.github.io/PolyXML/quickstart/)**: 5-minute setup across all 7 target ecosystems.
 - **[XSD-to-Code & CLI Guide](https://nth-bailey.github.io/PolyXML/guides/compiler/)**: Full reference for `polyxml generate`, `build`, `validate`, and `polyxml.toml`.
+- **[Language Guides](https://nth-bailey.github.io/PolyXML/languages/)**: Rust, Python, C++20, Go, TypeScript/Node.js, Java, and C# examples.
 - **[Why PolyXML? Architectural Breakdown](https://nth-bailey.github.io/PolyXML/why-polyxml/)**: Deep comparison against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
 - **[Architecture & Streaming Pipeline](https://nth-bailey.github.io/PolyXML/architecture/)**: Detailed breakdown of our zero-copy reader, frame stack, and Tarjan cycle-cutting.
 - **[Performance Benchmarks](https://nth-bailey.github.io/PolyXML/benchmarks/)**: Reproducible benchmarks and throughput charts.

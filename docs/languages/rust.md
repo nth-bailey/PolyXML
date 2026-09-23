@@ -357,37 +357,6 @@ let restored_xml = json_to_xml(
 
 ---
 
-## 9. Zero-Copy Binary Wire Format Serialization via rkyv (`--feature rkyv`)
+## 9. rkyv generation status
 
-For inter-process communication (IPC), shared memory, network wire protocols, and high-frequency messaging where even JSON and binary serialization overhead is unacceptable, PolyXML supports zero-copy deserialization via **`rkyv`**:
-
-```bash
-polyxml generate --lang rust --feature rkyv --out ./src/generated schema.xsd
-```
-
-This generates `#[cfg_attr(feature = "rkyv", ...)]` attributes on structs, enums, and choices:
-
-```rust
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
-#[cfg_attr(feature = "rkyv", rkyv(check_bytes))]
-pub struct Packet {
-    pub id: i32,
-}
-```
-
-### Zero-Copy Validation and Access
-
-When downstream consumers enable the `rkyv` feature flag in `Cargo.toml`:
-
-```rust
-use rkyv::rancor::Error;
-
-// 1. Serialize into an aligned byte buffer
-let bytes = rkyv::to_bytes::<Error>(&packet)?;
-
-// 2. Zero-copy access directly from the byte buffer without allocating memory
-let archived = rkyv::access::<ArchivedPacket, Error>(&bytes)?;
-assert_eq!(archived.id, 42);
-```
-
+The CLI accepts `--feature rkyv`, but the generated `#[rkyv(check_bytes)]` attribute is incompatible with rkyv 0.8. Do not enable this option for new projects until the generator is updated and its output is verified against the rkyv version you use. The default Rust output does not require rkyv.

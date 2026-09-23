@@ -337,9 +337,9 @@ func handleCustomer(xmlData []byte) ([]byte, error) {
 
 ---
 
-## 8. High-Throughput Reflectionless Backends (`--backend easyjson | sonic`)
+## 8. JSON backend options (`--backend easyjson | sonic`)
 
-PolyXML supports high-performance reflectionless serialization backends for Go:
+PolyXML can emit annotations for optional Go JSON tooling:
 
 ```bash
 # 1. Standard encoding/json (default)
@@ -348,7 +348,7 @@ polyxml generate --lang go --backend standard --out ./src/models schema.xsd
 # 2. EasyJSON static marshallers
 polyxml generate --lang go --backend easyjson --out ./src/models schema.xsd
 
-# 3. ByteDance Sonic JIT serialization
+# 3. Additional Sonic struct tags (see limitation below)
 polyxml generate --lang go --backend sonic --out ./src/models schema.xsd
 ```
 
@@ -367,7 +367,7 @@ type Customer struct {
 
 ### ByteDance Sonic (`--backend sonic`)
 
-Emits `sonic:"..."` struct tags alongside standard `json:"..."` tags, providing direct hints to ByteDance's Sonic JIT compiler for lightning-fast zero-allocation encoding and decoding:
+Emits `sonic:"..."` struct tags alongside standard `json:"..."` tags:
 
 ```go
 type Customer struct {
@@ -380,3 +380,5 @@ type Customer struct {
 ```
 
 
+
+Current Sonic releases use the standard `json` tags for field names; PolyXML’s extra `sonic` tags do not enable a separate fast path. Use the default Go backend unless you need these tags for another tool.

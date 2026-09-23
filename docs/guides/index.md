@@ -1,21 +1,12 @@
 ---
 title: Guides
-description: CLI, runtime, and language guides for PolyXML.
+description: Schema compiler, polymorphism, and WebAssembly runtime guides for PolyXML.
 ---
 
 # Guides
 
-Start with the [schema compiler and CLI](compiler.md), then choose a runtime or
-generated-code guide:
+- [Schema compiler and CLI](compiler.md): generate models, build projects, validate schemas, and transcode documents.
+- [Polymorphism](polymorphism.md): handle dynamic XML type hierarchies and `xsi:type` dispatch.
+- [WebAssembly runtime](wasm.md): use PolyXML in browsers and JavaScript runtimes.
 
-- [Rust](rust.md)
-- [Python](python.md)
-- [C++20](cpp.md)
-- [Go](go.md)
-- [TypeScript and Node.js](node.md)
-- [Java](java.md)
-- [C#](csharp.md)
-- [WebAssembly runtime](wasm.md)
-
-For dynamic XML type hierarchies, see [polymorphic types and `xsi:type`
-dispatch](polymorphism.md).
+For language-specific examples, see the [language guides](../languages/index.md).

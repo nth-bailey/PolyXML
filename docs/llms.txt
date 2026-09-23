@@ -53,6 +53,6 @@ use polyxml::{deserialize, serialize};
 ## Documentation Links
 - [Multi-Language Quickstart](quickstart.md): Getting started across Rust, Python, and FFI targets.
 - [Architecture & Design](architecture.md): Zero-allocation streaming pipeline and Schema IR.
-- [Python Guide](guides/python.md): Dataclasses and Pydantic v2 bindings.
-- [Rust Guide](guides/rust.md): Using the native core engine.
+- [Python Guide](languages/python.md): Dataclasses and Pydantic v2 bindings.
+- [Rust Guide](languages/rust.md): Using the native core engine.
 - [Benchmarks](benchmarks/index.md): 300MB+ NeTEx transit benchmark comparing against pure-Python parsers.
