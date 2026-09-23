@@ -43,7 +43,7 @@ pub enum Commands {
     /// Validate XML schema syntax and structural invariants without generating code
     Validate(ValidateArgs),
 
-    /// Bidirectionally transcode XML ↔ JSON with zero-copy streaming
+    /// Convert complete XML or JSON documents; stdin/stdout pipes are supported
     Transcode(TranscodeArgs),
 
     /// Print a shell completion script with target-aware option suggestions

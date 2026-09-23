@@ -457,7 +457,7 @@ user = parser.parse("data.json", User)
 
 ## 8. High-Performance XML ↔ JSON Transcoding (`polyxml.xml_to_json` & `polyxml.json_to_xml`)
 
-PolyXML provides zero-copy streaming functions to transcode between XML and JSON directly in Rust/C without building intermediate DOM trees or incurring Python loop overhead.
+PolyXML provides Rust-backed functions to convert complete XML and JSON documents without a Python-level parsing loop. Each call holds the input and output in memory; schema-free conversion also builds an intermediate JSON value tree.
 
 ### Schema-Directed Transcoding
 
@@ -534,6 +534,5 @@ json_bytes = polyxml.xml_to_json(Path("order.xml"), schema_path=Path("order.xsd"
 with open("order.xml", "rb") as f:
     json_bytes = polyxml.xml_to_json(f, indent=2)
 ```
-
 
 

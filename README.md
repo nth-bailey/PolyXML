@@ -96,9 +96,9 @@ json_bytes = customer.to_json(indent=2)   # native JSON on the same model
 
 ---
 
-## 🔄 Dual-Format XML ↔ JSON Streaming Transcoder (`polyxml transcode`)
+## 🔄 Dual-Format XML ↔ JSON Transcoding (`polyxml transcode`)
 
-Bridge legacy enterprise XML (ISO 20022 banking, HL7 healthcare, FIXM aviation) and modern JSON microservices with an ultra-fast, zero-copy streaming transcoder — via stdin/stdout CLI pipes or the `polyxml.xml_to_json` / `polyxml.json_to_xml` Python APIs. **[Full reference →](docs/guides/compiler.md)**
+Bridge legacy enterprise XML (ISO 20022 banking, HL7 healthcare, FIXM aviation) and modern JSON microservices through stdin/stdout CLI pipes or the `polyxml.xml_to_json` / `polyxml.json_to_xml` Python APIs. Each call reads and converts a complete document in memory. **[Full reference →](docs/guides/compiler.md)**
 
 ---
 

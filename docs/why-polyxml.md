@@ -60,7 +60,7 @@ Historical C++ tools like CodeSynthesis XSD and gSOAP enforce strict **GPL v2 / 
 
 PolyXML is **100% permissively licensed under the MIT License**, with zero runtime licensing fees, zero commercial paywalls, and zero legal restrictions on proprietary distribution.
 
-### 5. Dual-Format Polyglot Architecture & Zero-Copy Streaming Transcoder (`polyxml transcode`)
+### 5. Dual-Format Polyglot Architecture & XML/JSON Transcoding (`polyxml transcode`)
 Enterprise engineering rarely lives in an XML-only silo. Interbank rails (ISO 20022), aviation telemetry (FIXM), and healthcare networks (HL7) mandate strict XML Schema contracts, but modern cloud services, microservices, and frontends operate on JSON.
 
 Historically, bridging this divide forced engineering teams into painful trade-offs:
@@ -68,7 +68,7 @@ Historically, bridging this divide forced engineering teams into painful trade-o
 - **Duplicate Schema Maintenance**: Manually writing and synchronizing separate XSD and OpenAPI/JSON schemas across teams inevitably leads to silent drift and catastrophic production outages.
 
 PolyXML breaks this dichotomy through a **natively dual-format architecture**:
-- **Zero-Copy Streaming Transcoder (`polyxml transcode`)**: A Rust-powered CLI and runtime transcoder that converts XML ↔ JSON bidirectionally via streaming events without building DOM trees.
+- **Whole-Document Transcoder (`polyxml transcode`)**: A Rust-powered CLI and runtime converter for XML ↔ JSON. It accepts stdin/stdout pipes, but buffers each complete input and output document; schema-free conversion builds an intermediate JSON value tree.
 - **Schema-Directed Precision**: Use `--schema schema.xsd` to ensure numeric types, booleans, and arrays in JSON match the exact XSD type definitions rather than ambiguous strings.
 - **Dynamic Schema-Less Fallback**: Automatically preserves XML attributes (`@attr`) and text content (`#text`) in pure JSON when no schema is present.
 - **Natively Dual-Annotated Generated Models**:
@@ -179,7 +179,7 @@ Across more than 600 official test groups from Sun Microsystems, Microsoft, and 
 | **`xsd-parser` in Rust** | A battle-tested compiler that doesn't panic on complex schemas, with automatic Tarjan `Box<T>` cycle breaks, inherent streaming XML codecs, and native `.to_json_string()` codecs. |
 | **`xgen` in Go** | Dual `xml:"..."` and `json:"..."` struct tags on every model, true `xs:choice` mutual exclusivity validation, pointer cycle breaks, and canonical Go initialism normalization. |
 | **`xsd.exe` in .NET** | Modern C# 12 records with primary constructors, dual `XmlSerializer` and `System.Text.Json` attributes (`[JsonPropertyName]`, `[JsonConverter]`), and standard `IValidatableObject` integration. |
-| **Ad-hoc XML ↔ JSON Scripts** | Zero-copy streaming CLI (`polyxml transcode`) with schema-directed precision or dynamic `@attr` preservation, executing in microseconds. |
+| **Ad-hoc XML ↔ JSON Scripts** | CLI document conversion (`polyxml transcode`) with schema-directed precision or dynamic `@attr` preservation. |
 
 **Ready to modernize your XML infrastructure?**
 👉 **[Get Started with the 5-Minute Quickstart →](quickstart.md)**

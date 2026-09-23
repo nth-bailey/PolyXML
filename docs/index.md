@@ -58,7 +58,7 @@ Legacy XML Toolchains (JAXB, CodeSynthesis, xsdata, xgen)
 The PolyXML Way
 ✅ Unified Rust Tool: Generates idiomatic, type-safe code (like protoc) across 7 languages.
 ✅ Zero-Allocation Streaming: Direct-to-struct parsing with quick-xml & lexical-core (10x–24x faster).
-✅ Dual-Format XML ↔ JSON: Zero-copy streaming transcoder (polyxml transcode) & dual-annotated models.
+✅ Dual-Format XML ↔ JSON: Whole-document transcoding (`polyxml transcode`) and dual-annotated models.
 ✅ Modern Language Idioms: Immutable Java 21+ records, C++20 value types, Python 3.12 PEP 695 dataclasses.
 ✅ Secure by Design: Pure-Rust streaming parser structurally immune to XXE (CWE-611) & SSRF.
 ✅ 100% Permissive MIT: Zero commercial licensing fees, zero GPL infection risk.

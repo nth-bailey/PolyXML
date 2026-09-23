@@ -16,7 +16,8 @@ use crate::serializer::XmlSerializer;
 ///
 /// If a `ModelSchema` is provided, typed data-binding is used, respecting numeric, boolean,
 /// and collection types as well as field aliases.
-/// If `schema` is None, zero-copy dynamic streaming transcoding is used.
+/// If `schema` is None, XML events are assembled into a JSON value tree.
+/// The complete input and output are held in memory.
 pub fn xml_to_json(
     xml: &[u8],
     schema: Option<Arc<ModelSchema>>,
@@ -35,7 +36,8 @@ pub fn xml_to_json(
 ///
 /// If a `ModelSchema` is provided, typed data-binding is used, mapping JSON properties to XML
 /// elements, attributes, and namespaces.
-/// If `schema` is None, zero-copy dynamic streaming transcoding is used.
+/// If `schema` is None, the complete JSON input is parsed into a value tree
+/// before XML output is written into a byte buffer.
 pub fn json_to_xml(
     json: &[u8],
     schema: Option<Arc<ModelSchema>>,
