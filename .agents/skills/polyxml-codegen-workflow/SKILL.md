@@ -277,11 +277,11 @@ derived types inherit their base's patterns at parse time):
   parsers can still return `None`; the CLI must reject invalid values before
   emitter defaults are applied.
 - New opt-ins belong in repeatable `--feature` and manifest `features` arrays.
-  The legacy hidden flags (`--zod`, `--source-gen`, `--record-kind`, `--rkyv`,
+  The former flags (`--zod`, `--source-gen`, `--record-kind`, `--rkyv`,
   `--builder`, `--codec`) and their manifest keys were deleted outright: clap
   rejects the flags as unexpected arguments, `#[serde(deny_unknown_fields)]`
-  rejects the keys, and the deprecation-warning loop no longer exists. Keep
-  CLI and manifest parity.
+  rejects the keys. No compatibility aliases or deprecation warnings are
+  planned (decision in #58). Keep CLI and manifest parity.
 - `--zero-copy` (and manifest `zero_copy`) stays a first-class bool because
   `--feature` cannot express `false`; it alone selects owned Rust output, and
   `--zero-copy=false --feature zero-copy` is still rejected as a contradiction.
