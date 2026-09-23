@@ -25,8 +25,8 @@ A local Linux x86-64 release build measured on 2026-09-22 with hyperfine 1.19.0:
 | `generate-help` | 1.5 ± 0.2 ms |
 | `parse-and-validate` | 1.6 ± 0.2 ms |
 
-These measurements meet issue #50's 5ms target on this host. They use warm OS
-caches: they do **not** establish cold-disk or post-reboot startup latency.
+These measurements use warm OS caches: they do **not** establish cold-disk or
+post-reboot startup latency.
 The parsing case includes tiny-schema I/O and parsing, so it is not an isolated
 argument-parser microbenchmark. Results depend on hardware and system load;
 rerun the script to compare changes on the same host.
@@ -60,12 +60,13 @@ release CLI, 100 runs per case and mode on 2026-09-22 measured:
 | Invalid backend | Warm | 1.66 ms | 1.64 ms | 1.99 ms | 0/100 |
 | Invalid backend | Executable evicted | 7.75 ms | 7.71 ms | 8.43 ms | 100/100 |
 
-The proposed <5 ms target holds for warm caches but **does not hold** for this
-host's executable-evicted runs. The major faults and roughly 6 ms gap point to
-file loading as the main cost on this host; the measurement does not establish
-which part is inherent or what another storage system would do. A universal
-post-reboot target requires measurements on representative machines. Issue #63
-tracks the remaining cold-start target investigation.
+The original #50 proposal mentioned a <5 ms cold-start target without a
+supported-host requirement or user report behind it. These measurements do not
+identify a startup problem: even the executable-evicted median is under 8 ms
+on this host. The major faults and roughly 6 ms gap point to file loading as
+the main extra cost here; the measurement does not establish which part is
+inherent or what another storage system would do. No fixed cold-start target
+is currently required.
 
 ## Error display
 
