@@ -36,9 +36,9 @@ sub-millisecond timer resolution limit the precision of the ratios. The
 benchmark also includes `xml2js` 0.6.2 and browser `DOMParser`, but their
 result shapes differ substantially; compare those using the raw suite output.
 
-The generated Wasm binary is 460,190 bytes (167,945 bytes gzip). The generated
-Wasm JS glue, browser wrapper, and stream helper total another 20,036 bytes
-uncompressed and about 5,360 bytes gzipped separately. These are file sizes,
+The generated Wasm binary is 460,190 bytes (167,949 bytes gzip). The generated
+Wasm JS glue, browser wrapper, and stream helper total another 20,253 bytes
+uncompressed and 5,397 bytes gzipped separately. These are file sizes,
 not a minified application bundle. Browser bundlers may change the delivered
 size. `wasm-bindgen` copies bytes across the JS/Wasm boundary, and object
 conversion allocates in JavaScript. The stream API also buffers one complete
