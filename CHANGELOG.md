@@ -1,3 +1,21 @@
+# [0.21.0](https://github.com/nth-bailey/PolyXML/compare/v0.20.1...v0.21.0) (2026-09-23)
+
+
+### Bug Fixes
+
+* enforce pattern and xsi:type semantics across runtimes ([d6f567d](https://github.com/nth-bailey/PolyXML/commit/d6f567d148d4f0ca46786fdf755f580bd72b4f54))
+* **java-codegen:** inline base fields in plain record mode ([5e559ee](https://github.com/nth-bailey/PolyXML/commit/5e559ee8d11bbe831ec5baa4651dec91993d938b))
+* **rust-codegen:** inline xsd:extension base fields in generated structs ([93713b3](https://github.com/nth-bailey/PolyXML/commit/93713b353a41a50e02b9686072e896badb19bb68))
+* simpleContent text codecs, split-text accumulation, and transcoder entity refs ([c16e57d](https://github.com/nth-bailey/PolyXML/commit/c16e57d30a1501a154e6d02c7dfc921b4b16be8e)), closes [#51](https://github.com/nth-bailey/PolyXML/issues/51)
+
+
+### Features
+
+* **cli:** unify generation options and add target-aware completion ([a5337af](https://github.com/nth-bailey/PolyXML/commit/a5337af3cf25569dbb2b059eb9724c8f7ca90c05)), closes [#50](https://github.com/nth-bailey/PolyXML/issues/50)
+* **rust-codegen:** perfect-hash element tag dispatch via --feature phf ([dce03c1](https://github.com/nth-bailey/PolyXML/commit/dce03c1c1633e22c73821e0e7cbd1a728922b97a)), closes [#49](https://github.com/nth-bailey/PolyXML/issues/49)
+* **schema:** preserve xs:pattern OR/AND semantics and enforce patterns in all 7 codegens (issue [#54](https://github.com/nth-bailey/PolyXML/issues/54)) ([05466ba](https://github.com/nth-bailey/PolyXML/commit/05466ba903f3139162619bf2d76560c8811399e3))
+* **schema:** xsi:type polymorphic dispatch for abstract complexTypes (issue [#53](https://github.com/nth-bailey/PolyXML/issues/53)) ([2c6e611](https://github.com/nth-bailey/PolyXML/commit/2c6e6119d703d1c0c5d03a2652938ff938b6ffb0))
+
 ## [0.20.1](https://github.com/nth-bailey/PolyXML/compare/v0.20.0...v0.20.1) (2026-09-22)
 
 
