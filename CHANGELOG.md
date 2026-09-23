@@ -1,3 +1,10 @@
+# [0.23.0](https://github.com/nth-bailey/PolyXML/compare/v0.22.0...v0.23.0) (2026-09-23)
+
+
+### Features
+
+* **wasm:** stream XML records and benchmark runtimes ([#70](https://github.com/nth-bailey/PolyXML/issues/70)) ([5cf91a9](https://github.com/nth-bailey/PolyXML/commit/5cf91a957882852afb4da795ab93e44371226ad7))
+
 # [0.22.0](https://github.com/nth-bailey/PolyXML/compare/v0.21.0...v0.22.0) (2026-09-23)
 
 
