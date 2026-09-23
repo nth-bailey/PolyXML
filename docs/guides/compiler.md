@@ -297,12 +297,12 @@ polyxml completions fish > ~/.config/fish/completions/polyxml.fish
 Backend, style, and feature suggestions use the CLI's validation rules and the
 selected `--lang` (including aliases). With multiple languages, completion only
 suggests values accepted by every selected target. Without `--lang`, it uses the
-Python default. Removed flags are not suggested. Bash also completes
+Python default. Bash also completes
 comma-separated features; repeat `--feature` for portable completion across shells.
 
 ### CLI startup benchmark
 
 Run `./benchmarks/cli/benchmark.sh` with `hyperfine` installed. It builds the
 release CLI and measures help rendering plus argument validation and parsing of
-an empty schema. See [the benchmark methodology](../../benchmarks/cli/README.md)
+an empty schema. See [the benchmark methodology](https://github.com/nth-bailey/PolyXML/blob/main/benchmarks/cli/README.md)
 for measurement limits and output location.

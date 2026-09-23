@@ -104,7 +104,7 @@ Bridge legacy enterprise XML (ISO 20022 banking, HL7 healthcare, FIXM aviation) 
 
 ## 🚀 Performance Benchmarks
 
-Headline numbers ([full methodology & reproduction steps →](docs/benchmarks.md)):
+Headline numbers ([full methodology & reproduction steps →](docs/benchmarks/index.md)):
 
 - **10x–24x faster** than legacy Python bindings: 10.0x faster deserialization & 23.5x faster serialization than `xsdata` on 10,000-item catalogs.
 - **3.2 μs per telemetry packet** (13.9x vs pure Python) — neck-and-neck with the C-based `lxml.etree` while still returning fully typed dataclasses.

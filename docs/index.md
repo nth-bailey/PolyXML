@@ -129,4 +129,4 @@ Explore complete, production-ready example repositories showcasing PolyXML in mi
 - Read about our [XSD-to-Code Generator & CLI Toolchain](guides/compiler.md).
 - Learn how [Polymorphic Types & `xsi:type` Dispatch](guides/polymorphism.md) work at runtime.
 - Read about our [Architecture & Streaming Design](architecture.md).
-- Explore [Performance & Benchmarks](benchmarks.md).
+- Explore [Performance & Benchmarks](benchmarks/index.md).
