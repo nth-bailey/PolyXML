@@ -210,13 +210,13 @@ Validates:
 
 ### 4. `polyxml transcode`
 
-Bidirectionally transcode between XML and JSON using zero-copy streaming, with optional schema guidance:
+Bidirectionally convert complete XML and JSON documents, with optional schema guidance. The command accepts stdin and stdout pipes, but reads the full input and buffers the full output before writing it:
 
 ```bash
 # 1. Transcode XML to JSON with W3C XSD schema typing
 polyxml transcode --schema order.xsd --pretty order.xml --out order.json
 
-# 2. Stream directly through stdin / stdout pipes
+# 2. Connect stdin / stdout pipes
 cat order.xml | polyxml transcode --schema order.xsd > order.json
 
 # 3. Transcode JSON back to XML with specified root element

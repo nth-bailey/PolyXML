@@ -306,7 +306,7 @@ To achieve the maximum throughput from `polyxml-core`:
 
 ---
 
-## 8. Native JSON Codecs & Streaming Transcoder
+## 8. Native JSON Codecs & Document Transcoder
 
 ### Inherent JSON Methods on Generated Models
 
@@ -325,34 +325,33 @@ let restored = Order::from_json_str(&json_str)?;
 let from_bytes = Order::from_json_slice(&json_vec)?;
 ```
 
-### Direct Streaming Transcoder (`polyxml::transcoder`)
+### Whole-Document Transcoder (`polyxml::transcoder`)
 
-For high-speed transcoding without compiling Rust structs, use `polyxml::transcoder`:
+To convert a complete document without compiling Rust structs, use
+`polyxml::transcoder`. It accepts byte slices and returns newly allocated
+output bytes; schema-free conversion builds an intermediate JSON value tree:
 
 ```rust
-use polyxml::transcoder::{xml_to_json, json_to_xml, TranscodeOptions};
+use polyxml::transcoder::{xml_to_json, json_to_xml};
 
 let xml_input = br#"<Product id="42"><name>Sensor</name><price>19.99</price></Product>"#;
 
 // Transcode XML to JSON with pretty formatting
 let json_bytes = xml_to_json(
     xml_input,
-    None, // Optional Arc<ModelSchema> or SchemaIR
-    TranscodeOptions {
-        pretty: true,
-        ..Default::default()
-    },
+    None, // Optional Arc<ModelSchema>
+    Some(2), // Indentation width
+    true, // Use schema field aliases
 )?;
 
-// Transcode JSON back to XML with specified root element
+// Transcode JSON back to XML, inferring the root from its single top-level key
 let restored_xml = json_to_xml(
     &json_bytes,
     None,
-    TranscodeOptions {
-        root_tag: Some("Product".to_string()),
-        pretty: true,
-        ..Default::default()
-    },
+    None,
+    Some(2),
+    None, // Namespace handling
+    None, // Namespace map
 )?;
 ```
 
@@ -391,6 +390,4 @@ let bytes = rkyv::to_bytes::<Error>(&packet)?;
 let archived = rkyv::access::<ArchivedPacket, Error>(&bytes)?;
 assert_eq!(archived.id, 42);
 ```
-
-
 
