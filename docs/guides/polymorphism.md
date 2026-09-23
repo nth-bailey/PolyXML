@@ -14,7 +14,7 @@ Every runtime `ModelSchema` carries:
 
 - `is_abstract` — the source schema marked the type `abstract="true"`.
 - a **`variants` registry** — the concrete derivations eligible for
-  dispatch, each keyed by its **QName local part** (e.g. `Car` for
+  dispatch, matched by its **namespace and local name** (e.g.
   `urn:veh:Car`).
 
 The registry is populated from whichever schema source built the model:
@@ -127,19 +127,20 @@ let out = polyxml::serialize_with_options("Root", &value, &schema, None, Some(tr
 2. **`polyxml-js` is scalar-flat today.** Its schema binding exposes only
    scalar fields, so complex-typed (and therefore polymorphic) fields are
    unreachable from JS yet — the dispatch itself lives in the shared core,
-   so no binding change will be needed when nested schemas land.
+   so no new core dispatch algorithm is needed when the JS binding gains
+   nested schemas.
 3. **JSON transcoding drops the selector.** `xml_to_json` keeps every
    concrete field (it iterates the record's own schema), but JSON carries
    no `xsi:type` marker, so JSON → XML cannot recover the wire selector.
-4. **Discovery timing (Python).** Subclass discovery runs when the base
-   class's schema is first created. Define/import concrete subclasses
-   before the first `deserialize` call — ordinary module import order
-   already guarantees this.
-5. **Unknown derivations fail loudly.** An `xsi:type` naming a type the
-   registry doesn't hold is an error (never silent truncation). *Escape
-   hatch:* import the module that defines the missing subclass, or
-   deserialize with the concrete type.
+4. **Discovery timing (Python).** Cached schemas refresh their variant
+   registries when used, including nested fields, so subclasses imported
+   after the first deserialize can be discovered on a later call.
+5. **Unknown derivations on abstract bases fail loudly.** An `xsi:type`
+   naming an unregistered type on an abstract base is an error. Import the
+   module defining the subclass or deserialize with the concrete type.
+   Non-abstract declarations without a matching registered variant parse as
+   their declared type.
 
 Regression coverage lives in
-`crates/polyxml-core/tests/test_issue53_xsi_type.rs` (Rust, 7 cases) and
+`crates/polyxml-core/tests/test_xsi_type.rs` (Rust, 7 cases) and
 `crates/polyxml-python/tests/test_xsi_type.py` (Python, 11 cases).

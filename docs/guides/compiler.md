@@ -47,7 +47,7 @@ Generate code directly from one or more `.xsd` schema files:
 polyxml generate --lang python --out ./generated/python schema.xsd
 
 # Generate Pydantic v2 models with runtime facet validation
-polyxml generate --lang python --backend pydantic-v2 --out ./generated/python schema.xsd
+polyxml generate --lang python --backend pydantic --out ./generated/python schema.xsd
 
 # Generate zero-copy Rust models with inherent streaming codecs
 polyxml generate --lang rust --feature zero-copy --codecs --out ./generated/rust schema.xsd
@@ -73,7 +73,7 @@ polyxml generate \
 | **Output Directory** | `-o`, `--out` | Target directory for generated source files. | `generated` |
 | **Model Style** | `--style` | Target-specific type representation; see the table below. | Existing target default |
 | **Enhancements** | `--feature NAME` | Repeatable; also accepts comma-separated names. | None added |
-| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic-v2` for Python; `standard`/`jackson` for Java; `standard`/`glaze` for C++; `none`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
+| **Target Backend** | `-b`, `--backend` | Target backend (`dataclass`/`pydantic` for Python; `standard`/`jackson` for Java; `standard`/`glaze` for C++; `interfaces`/`zod`/`valibot`/`typebox` for TypeScript; `standard`/`easyjson`/`sonic` for Go). | Target default |
 | **Compilation Mode** | `-m`, `--mode` | Target packaging mode (`header` or `modules` for C++). | Target default |
 | **Streaming Codecs**| `--codecs` | Emit inherent zero-copy streaming XML serializers and deserializers. | `true` |
 | **Package / Namespace** | `-p`, `--package` | Namespace or package name for Java, Go, C#, or C++. | Target default |
@@ -96,7 +96,7 @@ including with `--dry-run`.
 | Rust | `standard` | — | `zero-copy`, `rkyv`, `phf` |
 | TypeScript | `interfaces`, `zod`, `valibot`, `typebox` | — | — |
 | Java | `standard`, `jackson` | `record` (default), `pojo` (alias `class`) | `builder`, `direct-codec` |
-| C# | `standard`, `source-gen` | `record-class` (default), `record-struct`, `class` (mutable); legacy aliases `record`, `pojo` | — |
+| C# | `standard`, `source-gen` | `record-class` (default), `record-struct`, `class` (mutable) | — |
 | C++ | `standard`, `glaze` | — | — |
 | Go | `standard`, `easyjson`, `sonic` | — | — |
 
@@ -120,13 +120,9 @@ style = "pojo"
 features = ["builder", "direct-codec"]
 ```
 
-The former flags `--zod`, `--source-gen`, `--record-kind`, `--rkyv`,
-`--builder`, and `--codec`, along with their `polyxml.toml` counterparts, have
-been removed: clap rejects the flags outright and unknown manifest fields are
-errors, so the unified options above are the only spellings. For owned Rust
-strings, `--zero-copy=false` (or `zero_copy = false` in the manifest) remains
-available as a first-class option; combining it with `--feature zero-copy` is
-an error.
+The CLI rejects unsupported target options and manifest fields. For owned Rust
+strings, use `--zero-copy=false` (or `zero_copy = false` in the manifest);
+combining it with `--feature zero-copy` is an error.
 
 `polyxml generate` without schema paths delegates to the manifest. Put target
 options in that manifest; command-line generation overrides are rejected rather
@@ -153,7 +149,7 @@ custom_header = "// Copyright (c) 2026 Enterprise Corp. All rights reserved."
 [[generate]]
 target = "python"
 output = "src/generated/python"
-backend = "pydantic-v2"
+backend = "pydantic"
 codecs = true
 
 [[generate]]

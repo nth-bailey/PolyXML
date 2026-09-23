@@ -437,7 +437,7 @@ fn test_python_generated_tag_and_custom_header() {
 
 #[test]
 fn test_python_abstract_meta_emission() {
-    // Issue #53: abstract complexTypes mark Meta.abstract so the runtime
+    // Abstract complex types mark Meta.abstract so the runtime
     // can raise a clear error for xsi:type values with no derivations.
     let mut ir = SchemaIR::new().with_target_namespace("urn:veh");
     ir.add_type(TypeDef::Struct(StructDef {

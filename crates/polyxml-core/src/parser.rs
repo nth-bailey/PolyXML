@@ -144,7 +144,7 @@ fn xsi_type_value(e: &BytesStart, scope: &HashMap<String, String>) -> Result<Opt
     Ok(None)
 }
 
-/// Resolve the concrete schema an element should be parsed with (issue #53).
+/// Resolve the concrete schema an element should be parsed with.
 ///
 /// When the declared type has `xsi:type` derivations registered (or is
 /// abstract), the wire attribute selects one; unknown types on an abstract

@@ -1,4 +1,4 @@
-# Rust Tag Dispatch: `match` vs `HashMap` vs `phf` (issue #49)
+# Rust Tag Dispatch: `match` vs `HashMap` vs `phf`
 
 > Status: benchmark results below are produced on a Linux x86-64 host with a
 > functional PMU (`perf_event_paranoid = 2`). Commands are reproducible with
@@ -17,11 +17,6 @@ polyxml generate schema.xsd --lang rust --feature phf
 #   target = "rust"
 #   features = ["phf"]
 ```
-
-> **Note on flag shape**: issue #49 originally proposed a standalone `--phf`
-> flag; per the issue #50 unification decision (see the
-> `polyxml-codegen-workflow` skill §9), all Rust opt-ins are exposed through the
-> repeatable `--feature` array instead. `--feature phf` is the supported form.
 
 For every struct with element children the generator emits:
 
@@ -44,17 +39,14 @@ Consuming crates must add `phf = "0.14"` to their `Cargo.toml`.
 
 ## Methodology
 
-* **Framework**: Criterion.rs (`benches/tag_dispatch.rs`, issue acceptance
-  criterion #2).
-* **Scale tiers** (issue-defined): small **16**, medium **120**, large **600**
-  elements, plus an extra-large **1500** tier added here so the
-  `match`→`phf` crossover is *measured* directly rather than extrapolated
-  (the issue's hypothesis put the break-even at 50 elements — see
-  [Auto-threshold](#auto-threshold-recommendation)). Tags are seeded
+* **Framework**: Criterion.rs (`benches/tag_dispatch.rs`).
+* **Scale tiers**: small **16**, medium **120**, large **600**, and
+  extra-large **1500** elements, so the `match`→`phf` crossover is
+  *measured* directly rather than extrapolated. Tags are seeded
   two-word pseudo-ISO-20022 vocabulary
   (`scripts/gen_tag_dispatch_fixtures.py`, 10-45 byte names) so LLVM's
   length-bucketed memcmp chains are neither favored nor gamed.
-* **Baselines** (issue-defined):
+* **Baselines**:
   1. `match tag { "..." => ... }` — LLVM lowers these to length-bucketed
      vectorized/memcmp chains, not jump tables (byte-array keys can't jump-table).
   2. Runtime `HashMap<&str, u32>` (SipHash-1-3, std default).
@@ -62,10 +54,10 @@ Consuming crates must add `phf = "0.14"` to their `Cargo.toml`.
 * **Hit and miss paths** are measured separately per strategy
   (`*_hit` = full-tier sweep, throughput reported in tags/s;
   `*_miss` = lookup of an unknown sentinel tag).
-* **Tokenization is intentionally excluded**: XML tokenization cost is
-  identical across dispatch strategies, so only the lookup — the part the
-  feature changes — is measured. Issue metric "1,000,000 tags" maps to
-  tags/s × elapsed time below.
+* **Tokenization is intentionally excluded** to isolate lookup cost. An
+  end-to-end XML decoding comparison remains open in #57, so the lookup-only
+  crossover is not a proven decoder-throughput crossover. Throughput below
+  reports tags/s from the measured lookup sweeps.
 
 ## Results — throughput (Criterion)
 
@@ -95,9 +87,9 @@ Interpretation:
 
 * **Small (16) & medium (120)**: LLVM's length-bucketed `memcmp` chain wins
   decisively — `match` is 5.3× faster than `HashMap` and 8.4× faster than
-  `phf` at 16 tags (52 ns vs 440 ns per sweep). This inverts issue #49's
-  hypothesis that `phf` would already win at ≥50 elements: on this
-  toolchain it does not, because `phf` pays a fixed ~27 ns/tag (SipHash-1-3
+  `phf` at 16 tags (52 ns vs 440 ns per sweep). On this toolchain, `phf`
+  trails at the measured 16- and 120-tag tiers because it pays a fixed
+  ~27 ns/tag (SipHash-1-3
   + displacement probe) while small `memcmp` chains are a handful of
   predictable vectorized compares.
 * **Large (600)**: the crossover happens between tiers. `HashMap` edges
@@ -118,7 +110,7 @@ Interpretation:
   only dispatches tags that exist in the schema, so the miss path matters
   mainly for schema-validation workloads.
 
-## Results — hardware counters (`perf stat`, issue acceptance criterion #3)
+## Results — hardware counters (`perf stat`)
 
 The canonical command (requires the `perf` binary):
 
@@ -156,13 +148,12 @@ across tiers). IPC = instructions / cycles; miss% = branch-misses / branches.
 
 Interpretation:
 
-* **The issue's two predicted failure modes are confirmed for `match`, but
-  only at scale.** From 120 → 1500 tags, `match`'s branch-miss rate grows
+* **Branch misses and instruction-cache misses grow for `match` at scale.**
+  From 120 → 1500 tags, `match`'s branch-miss rate grows
   21× (0.081% → 1.704%) and its L1 instruction-cache misses explode
   **277×** (332 K → 92.1 M) as hundreds of string-literal `memcmp` arms
-  stop fitting in the 32 KiB I-cache and the predictor saturates — exactly
-  the "branch misprediction & i-cache thrash" mechanism #49 predicted for
-  large tag counts. Both hash structures stay ~flat by comparison
+  stop fitting in the 32 KiB I-cache and the predictor saturates. Both hash
+  structures stay ~flat by comparison
   (`phf` L1I: 103 K → 130 K over the same range).
 * **`phf` is the lowest-work dispatch of the three**: fewest branches at
   every tier (7.5–9.0 B vs 16–21 B for `match` at small/medium — one hash
@@ -219,10 +210,11 @@ Interpretation (small schema):
   between the strategies is *how each lookup walks it*, not how much code
   or data gets emitted for a typical schema.
 
-## Auto-threshold recommendation
+## Lookup-only threshold recommendation
 
-**Enable `--feature phf` for schemas with ≥ ~900 element tags on a struct;
-keep the default `match` below that.**
+**Consider `--feature phf` for lookup-heavy schemas with ≥ ~900 element tags
+on a struct; keep the default `match` below that.** This is based on the
+dispatch microbenchmark, not an end-to-end XML decoding result.
 
 Derivation (per-tag hit cost, linear interpolation between the measured
 tiers): `match` costs 18.6 ns/tag at 600 tags and 50.4 ns/tag at 1500
@@ -232,13 +224,11 @@ hit crossover at **N ≈ 835**; we round up to **900** for measurement noise
 and schema drift. Notes:
 
 * This is a *recommendation*, not an auto-enable: the feature stays
-  opt-in (`--feature phf` / `features = ["phf"]`) per the issue #50
-  unification decision — PolyXML does not silently change emitted code.
-* The threshold is **~18× higher than issue #49's hypothesized 50-element
-  break-even** on this toolchain (rustc 1.98.1 / LLVM): small and medium
-  tiers keep winning for `match` at 5–8× margin. Trust the measurement,
-  not the hypothesis — re-run `cargo bench --bench tag_dispatch` on your
-  toolchain before adopting a different number.
+  opt-in (`--feature phf` / `features = ["phf"]`).
+* On this toolchain (rustc 1.98.1 / LLVM), the measured small and medium
+  tiers favor `match` by a 5–8× margin. Re-run
+  `cargo bench --bench tag_dispatch` on your toolchain before adopting a
+  threshold.
 * `phf`'s real win at ≥900 tags is **predictability**: flat ~37 M tags/s
   and flat counters from 16 → 1500 tags, whereas `match` degrades 3.8×
   (and its counters, catastrophically) with no upper bound in sight.

@@ -21,7 +21,7 @@ Yet, for over twenty years, the developer tooling landscape for XML has suffered
 | **Java** | **Apache XMLBeans** | In-memory XML store maintaining full Infoset | ❌ **Very Low**: Classes extending `XmlObject` | **10x–20x memory bloat**; every field access traverses pointer trees; obsolete Ant/Maven plugins | ✅ **Streaming Core**: Zero DOM allocation, minimal memory footprint |
 | **C++** | **CodeSynthesis XSD** | Hard dependency on **Apache Xerces-C++** | ❌ **Low**: Pre-C++11 raw pointers, `auto_ptr`, Boost wrappers | Massive binary footprint; expensive **UTF-8 ↔ UTF-16 (`XMLCh`) transcoding**; punitive **GPL v2 / commercial dual-license** | ✅ **Modern C++20/C++23**: `std::variant`, `std::optional`, `std::string_view`, concepts, zero Xerces dependency, **permissive MIT license** |
 | **C++** | **gSOAP (`soapcpp2`)** | Custom low-level C parser with macro tables | ❌ **Very Low**: Procedural C/C++ | Global state variables; namespace collisions; fragile memory ownership; GPL/commercial dual-license | ✅ **Thread-Safe Modern Value Types**: RAII memory management, CMake/Meson module export |
-| **Python** | **`xsdata`** | Pure Python over `lxml` or `xml.etree` | 🟡 **High**: Emits `@dataclass` and Pydantic v2 | **10x–24x slower**; vulnerable to XXE file exfiltration by default in `lxml` handler (CWE-611); interpreter loop bottlenecks | ✅ **High-Performance Rust PyO3 Engine**: 10x faster deserialization, 23.5x faster serialization, structurally immune to XXE (pure Rust, zero filesystem I/O), PEP 695 type aliases, 100% test coverage |
+| **Python** | **`xsdata`** | Pure Python over `lxml` or `xml.etree` | 🟡 **High**: Emits `@dataclass` and Pydantic v2 | **10x–24x slower** on the documented benchmark workload; interpreter loop bottlenecks | ✅ **High-Performance Rust PyO3 Engine**: 10x faster deserialization, 23.5x faster serialization on that workload, in-memory XML entity handling, PEP 695 type aliases, 100% test coverage |
 | **Python** | **`generateDS`** | Monolithic Python script with string matching | ❌ **Very Low**: Legacy procedural classes | Monolithic un-typed files; fails on substitution groups and circular definitions | ✅ **Pydantic v2 & `@dataclass(slots=True)`**: Complete restriction facet validation and IDE autocomplete |
 | **Rust** | **`xsd-parser`** | quick-xml / serde-xml-rs derive attributes | 🟡 **Moderate**: Rust structs with serde | **Panics on enterprise schemas** (ISO 20022); Serde impedance mismatch on mixed content and duplicate element sequences | ✅ **Pure-Rust Compiler & Zero-Copy Codecs**: Tarjan SCC cycle-cutting (`Box<T>`), streaming `Cow<'a, str>`, zero Serde mismatch |
 | **Go** | **`xgen` / `goxsd`** | Direct SAX mapping to `encoding/xml` | 🟡 **Moderate**: Standard Go structs | **Collapses `xs:choice` into optional pointers** (losing mutual exclusivity); slow reflection parser; no facet validation | ✅ **Go 1.22+ Structs with Choice Validation**: Custom `UnmarshalXML` enforcing mutual exclusivity, pointer cycle cuts, canonical initialisms (`ID`, `URL`) |
@@ -77,10 +77,15 @@ PolyXML breaks this dichotomy through a **natively dual-format architecture**:
   - **Rust**: Inherent zero-copy `.to_json_string()`, `.to_json_vec()`, `.from_json_str()`, and `.from_json_slice()` methods alongside XML codecs, with Serde rename support.
   - **Python**: Inherent `.to_json()` and `@classmethod from_json()` on every model, drop-in `JsonSerializer` / `JsonParser` (9.5x faster than xsdata), and direct `polyxml.xml_to_json()` / `polyxml.json_to_xml()`.
 
-### 6. Secure by Design: Inherent Immunity to XXE & SSRF
-Traditional XML parsing stacks in Python, C++, and Java are fraught with severe security vulnerabilities stemming from legacy XML specifications—most notoriously **XML External Entity (XXE) injection (CWE-611)**:
-- In toolchains built atop C's `libxml2` (such as `lxml` and `xsdata`), the underlying parser resolves external SYSTEM entities by default unless defensive configuration flags like `resolve_entities=False` are explicitly configured. Untrusted XML payloads can trivially exfiltrate local files (`/etc/hostname`, cloud metadata credentials) or trigger Server-Side Request Forgery (SSRF).
-- PolyXML's streaming runtime is built entirely on safe Rust pull-parsing (`quick-xml`). The parser contains **zero network or filesystem I/O capabilities**, resolves entity references strictly against an in-memory lookup table of standard predefined XML entities (`&lt;`, `&gt;`, `&amp;`, `&apos;`, `&quot;`), and silently bypasses external DTD subsets. Security is not an optional toggle or configuration afterthought—it is an immutable invariant structurally guaranteed by the compiler and runtime architecture.
+### 6. Controlled XML Entity Handling
+
+PolyXML's native streaming runtime uses `quick-xml` events and resolves standard
+XML entities and numeric character references in memory. Unknown named
+references are treated as text; the runtime does not fetch external entity
+URLs or local files while parsing XML. The schema compiler is a separate path
+that reads local XSD includes and imports. Generated codecs use their target
+language's XML libraries, so their entity behavior should be assessed in the
+consuming application.
 
 ---
 
@@ -179,4 +184,3 @@ Across more than 600 official test groups from Sun Microsystems, Microsoft, and 
 **Ready to modernize your XML infrastructure?**
 👉 **[Get Started with the 5-Minute Quickstart →](quickstart.md)**
 👉 **[Read the XSD-to-Code Generator & CLI Guide →](guides/compiler.md)**
-

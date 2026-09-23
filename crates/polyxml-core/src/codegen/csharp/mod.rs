@@ -234,7 +234,7 @@ pub struct CSharpCodegen {
 }
 
 /// Emitted C# identifier for a named type, disambiguated across namespaces
-/// for the IR currently being generated (issue #51 item 3).
+/// for the IR currently being generated.
 fn type_ident(q: &QName) -> String {
     lookup_type_name(q, || to_csharp_type_name(&q.local))
 }

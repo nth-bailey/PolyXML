@@ -49,15 +49,15 @@ struct PendingGroupRef {
 /// A pure-Rust XSD 1.0/1.1 Schema Parser.
 pub struct XsdParser {
     /// Raw (pre-merge) IR per canonical file path, keyed so chameleon includes
-    /// can be re-namespaced per includer without re-parsing (issue #51 item 9).
+    /// can be re-namespaced per includer without re-parsing.
     file_cache: HashMap<PathBuf, SchemaIR>,
     /// Groups registered by each cached file, replayed on cache hits.
     file_groups: HashMap<PathBuf, Vec<(QName, GroupDef)>>,
     /// Files currently being parsed (include-cycle guard).
     active_files: HashSet<PathBuf>,
-    /// Named model groups visible to the current parse (issue #51 item 1).
+    /// Named model groups visible to the current parse.
     groups: HashMap<QName, GroupDef>,
-    /// Group references awaiting expansion at frame end (issue #51 item 1).
+    /// Group references awaiting expansion at frame end.
     pending_group_refs: Vec<PendingGroupRef>,
     /// Include/import recursion depth; post-passes run in every frame, the
     /// root frame (depth 1 while executing) additionally drops dead refs.
@@ -149,9 +149,8 @@ impl XsdParser {
         let mut ir = result?;
 
         // Frame post-passes: inherit pattern facets up derivation chains
-        // (issue #51 item 8) and expand named model group references
-        // (issue #51 item 1). Both are idempotent. Cycle detection runs last
-        // so fields spliced in from groups are covered as well.
+        // and expand named model group references. Both are idempotent.
+        // Cycle detection runs last so fields spliced in from groups are covered.
         inherit_pattern_facets(&mut ir);
         self.expand_group_refs(&mut ir, self.frame_depth == 0);
         ir.resolve_cycles();
@@ -223,7 +222,7 @@ impl XsdParser {
                                         let mut sub_ir = self.parse_file(&inc_path)?;
                                         // Chameleon include (no targetNamespace in the
                                         // included file): attribute its components to
-                                        // this schema's namespace (issue #51 item 9).
+                                        // this schema's namespace.
                                         if sub_ir.target_namespace.is_none() {
                                             if let Some(ns) = target_namespace.as_deref() {
                                                 rekey_to_namespace(&mut sub_ir, ns);
@@ -285,7 +284,7 @@ impl XsdParser {
                             }
                         }
                         "group" => {
-                            // Named model group definition (issue #51 item 1).
+                            // Named model group definition.
                             if let Some(gname) = get_attr_value(e, "name") {
                                 let gq = QName::new(target_namespace.as_deref(), gname);
                                 let def = self.parse_group_body(
@@ -317,7 +316,7 @@ impl XsdParser {
                                         let mut sub_ir = self.parse_file(&inc_path)?;
                                         // Chameleon include (no targetNamespace in the
                                         // included file): attribute its components to
-                                        // this schema's namespace (issue #51 item 9).
+                                        // this schema's namespace.
                                         if sub_ir.target_namespace.is_none() {
                                             if let Some(ns) = target_namespace.as_deref() {
                                                 rekey_to_namespace(&mut sub_ir, ns);
@@ -467,7 +466,7 @@ impl XsdParser {
                                     base_type = Some(resolved);
                                 }
                                 // simpleContent extension: the text content is the
-                                // value of the restricted base type (issue #51 item 4).
+                                // value of the restricted base type.
                                 if in_simple_content && !value_field_pushed {
                                     value_field_pushed = true;
                                     fields.push(value_field(&base, target_ns, prefixes));
@@ -516,8 +515,7 @@ impl XsdParser {
                             ) {
                                 // Consume inline type definitions so nested
                                 // fields cannot leak into the parent struct;
-                                // extracted types are registered in `ir`
-                                // (issue #51 item 5).
+                                // extracted types are registered in `ir`.
                                 self.consume_inline_element_type(
                                     reader, e, target_ns, prefixes, &name, &mut field, ir,
                                 )?;
@@ -621,7 +619,7 @@ impl XsdParser {
             && group_refs.is_empty()
             && fields.len() == choice_branches.len();
 
-        // Record group refs for post-parse expansion (issue #51 item 1).
+        // Record group refs for post-parse expansion.
         if !is_union {
             for (at, group) in group_refs {
                 self.pending_group_refs.push(PendingGroupRef {
@@ -653,7 +651,7 @@ impl XsdParser {
     /// `complexType`/`simpleType` definition (and no `type`/`ref` attribute),
     /// extract that definition as a uniquely named type and point `field` at
     /// it. Otherwise the subtree is skipped so its content can never leak into
-    /// the enclosing struct (issue #51 item 5).
+    /// the enclosing struct.
     #[allow(clippy::too_many_arguments)]
     fn consume_inline_element_type(
         &mut self,
@@ -731,7 +729,7 @@ impl XsdParser {
     }
 
     /// Parse the body of a named `<xs:group>` definition: its element
-    /// particles plus nested group references (issue #51 item 1).
+    /// particles plus nested group references.
     fn parse_group_body(
         &mut self,
         reader: &mut Reader<&[u8]>,
@@ -967,7 +965,7 @@ impl XsdParser {
             facets.patterns = vec![alternatives];
         }
 
-        // Issue #51 item 2: drop duplicate enumeration values (keep the first
+        // Drop duplicate enumeration values (keep the first
         // occurrence) and disambiguate variant names that collide after
         // sanitization, so generated enums always compile.
         if !enum_values.is_empty() {
@@ -1048,7 +1046,7 @@ impl XsdParser {
                         }
                         "complexType" => {
                             // Unique naming guards against `{name}Type`
-                            // colliding with an existing type (issue #51 item 5).
+                            // colliding with an existing type.
                             let anon_name =
                                 unique_type_name(ir, target_ns, &format!("{}Type", name));
                             let anon_qname = QName::new(target_ns, anon_name.clone());
@@ -1122,9 +1120,9 @@ impl XsdParser {
         }))
     }
 
-    /// Splice referenced group fields into their owner structs (issue #51
-    /// item 1). Runs at the end of every parse frame; entries that cannot be
-    /// resolved yet are carried to the parent frame (dropped at the root).
+    /// Splice referenced group fields into their owner structs. Runs at the
+    /// end of every parse frame; entries that cannot be resolved yet are
+    /// carried to the parent frame (dropped at the root).
     fn expand_group_refs(&mut self, ir: &mut SchemaIR, root: bool) {
         let pending = std::mem::take(&mut self.pending_group_refs);
         let mut carried: Vec<PendingGroupRef> = Vec::new();
@@ -1184,9 +1182,9 @@ impl XsdParser {
         Some(fields)
     }
 
-    /// Re-namespace parser state created during a chameleon include (issue
-    /// #51 item 9): newly registered groups and carried group refs that still
-    /// carry no namespace adopt the includer's namespace.
+    /// Re-namespace parser state created during a chameleon include: newly
+    /// registered groups and carried group refs that still carry no namespace
+    /// adopt the includer's namespace.
     fn rekey_new_state(&mut self, groups_before: &HashSet<QName>, pend_before: usize, ns: &str) {
         let stale: Vec<QName> = self
             .groups
@@ -1455,8 +1453,7 @@ fn skip_subtree(reader: &mut Reader<&[u8]>) -> Result<(), SchemaError> {
     Ok(())
 }
 
-/// The synthetic `<Text>` field representing a `simpleContent` value
-/// (issue #51 item 4).
+/// The synthetic `<Text>` field representing a `simpleContent` value.
 fn value_field(
     base: &str,
     target_ns: Option<&str>,
@@ -1478,8 +1475,8 @@ fn value_field(
     }
 }
 
-/// Pick a type name that does not collide with an existing type in `ir`
-/// (issue #51 items 3/5): `{base}`, `{base}2`, `{base}3`, ...
+/// Pick a type name that does not collide with an existing type in `ir`:
+/// `{base}`, `{base}2`, `{base}3`, ...
 fn unique_type_name(ir: &SchemaIR, target_ns: Option<&str>, base: &str) -> String {
     let mut name = base.to_string();
     let mut n = 2u32;
@@ -1491,8 +1488,7 @@ fn unique_type_name(ir: &SchemaIR, target_ns: Option<&str>, base: &str) -> Strin
 }
 
 /// Rewrite every namespace-less QName in the IR to `ns`. Used for chameleon
-/// includes, whose components adopt the including schema's target namespace
-/// (issue #51 item 9).
+/// includes, whose components adopt the including schema's target namespace.
 fn rekey_to_namespace(ir: &mut SchemaIR, ns: &str) {
     ir.target_namespace = Some(ns.to_string());
 
@@ -1625,7 +1621,7 @@ fn rekey_group_def(def: &mut GroupDef, ns: &str) {
 }
 
 /// Inherit pattern facets from base simple types down their derivation
-/// chains (issue #51 item 8): every derivation step's patterns must be
+/// chains: every derivation step's patterns must be
 /// enforced together. Idempotent.
 fn inherit_pattern_facets(ir: &mut SchemaIR) {
     let derived: Vec<(QName, QName)> = ir

@@ -208,7 +208,7 @@ pub fn to_java_type_name(name: &str) -> String {
 }
 
 /// Emitted Java identifier for a named type, disambiguated across
-/// namespaces for the IR currently being generated (issue #51 item 3).
+/// namespaces for the IR currently being generated.
 pub(super) fn type_ident(q: &QName) -> String {
     lookup_type_name(q, || to_java_type_name(&q.local))
 }
