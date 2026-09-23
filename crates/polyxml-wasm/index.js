@@ -40,12 +40,13 @@ export async function createPolyXml(source = new URL('./polyxml_wasm_bg.wasm', i
     throw error
   })
   await initialization
-  return {
-    parseStream(source, options) { return parseStream(this, source, options) },
+  const api = {
+    parseStream(source, options) { return parseStream(api, source, options) },
     xmlToJsonBytes(xml) { return rawXmlToJson(bytes(xml)) },
     xmlToJson(xml) { return JSON.parse(decoder.decode(rawXmlToJson(bytes(xml)))) },
     jsonToXmlBytes(json, rootName) { return rawJsonToXml(jsonBytes(json), rootName) },
     jsonToXml(json, rootName) { return decoder.decode(rawJsonToXml(jsonBytes(json), rootName)) },
     schemaFromXsd(xsd, rootName) { return wrapSchema(new WasmSchema(xsd, rootName)) },
   }
+  return api
 }

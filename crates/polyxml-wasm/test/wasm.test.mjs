@@ -98,4 +98,8 @@ test('parseStream handles split UTF-8, quoted tag delimiters, and early records'
   assert.equal(continued, false)
   assert.deepEqual((await iterator.next()).value, { item: 'next' })
   assert.equal((await iterator.next()).done, true)
+  const { parseStream } = polyxml
+  const detached = []
+  for await (const record of parseStream((async function* () { yield '<rows><item>ok</item></rows>' })())) detached.push(record)
+  assert.deepEqual(detached, [{ item: 'ok' }])
 })
