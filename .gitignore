@@ -36,6 +36,7 @@ site/
 # Node / napi-rs
 node_modules/
 *.node
+/crates/polyxml-wasm/pkg/
 
 # CMake / C++
 bindings/cpp/build/

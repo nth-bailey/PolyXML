@@ -194,7 +194,47 @@ jobs:
         run: npm test
 
   # -------------------------------------------------------------
-  # 6. Java Bindings: OpenJDK 22 & Maven Test (Panama FFI)
+  # 6. WebAssembly: build and exercise the publishable package
+  # -------------------------------------------------------------
+  wasm-check:
+    name: WebAssembly package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install Rust and Wasm target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.15.0 --locked
+
+      - name: Build Wasm npm package
+        run: ./crates/polyxml-wasm/build.sh
+
+      - name: Test Wasm package
+        run: node --test crates/polyxml-wasm/test/*.test.mjs
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Test Wasm package with Bun
+        run: bun test crates/polyxml-wasm/test/wasm.test.mjs
+
+      - name: Validate npm package contents
+        run: npm pack --dry-run ./crates/polyxml-wasm/pkg
+
+  # -------------------------------------------------------------
+  # 7. Java Bindings: OpenJDK 22 & Maven Test (Panama FFI)
   # -------------------------------------------------------------
   java-check:
     name: Java 22 (Panama FFI)
