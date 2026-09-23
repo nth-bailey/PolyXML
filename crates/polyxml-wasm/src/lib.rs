@@ -1,0 +1,86 @@
+use std::sync::Arc;
+
+use polyxml::schema::ModelSchema;
+use polyxml::schema_parser::XsdParser;
+use quick_xml::events::Event;
+use quick_xml::Reader;
+use wasm_bindgen::prelude::*;
+
+fn error(message: impl ToString) -> JsValue {
+    JsValue::from_str(&message.to_string())
+}
+
+/// Convert XML bytes to JSON bytes without a schema.
+#[wasm_bindgen]
+pub fn xml_to_json(xml: &[u8]) -> Result<Vec<u8>, JsValue> {
+    polyxml::xml_to_json(xml, None, None, true).map_err(error)
+}
+
+/// Convert JSON bytes to XML bytes without a schema.
+#[wasm_bindgen]
+pub fn json_to_xml(json: &[u8], root_name: Option<String>) -> Result<Vec<u8>, JsValue> {
+    polyxml::json_to_xml(json, None, root_name.as_deref(), None, None, None).map_err(error)
+}
+
+/// An inline XSD compiled once and reused for typed XML/JSON conversion.
+#[wasm_bindgen]
+pub struct WasmSchema {
+    schema: Arc<ModelSchema>,
+    root_name: String,
+}
+
+#[wasm_bindgen]
+impl WasmSchema {
+    /// Compile a self-contained XSD. File-based includes/imports are unavailable in browsers.
+    #[wasm_bindgen(constructor)]
+    pub fn new(xsd: &str, root_name: Option<String>) -> Result<WasmSchema, JsValue> {
+        reject_external_schema_references(xsd)?;
+        let ir = XsdParser::new().parse_str(xsd).map_err(error)?;
+        let root_name = root_name
+            .or_else(|| ir.elements.keys().map(|name| &name.local).min().cloned())
+            .or_else(|| ir.types.keys().map(|name| &name.local).min().cloned())
+            .ok_or_else(|| error("XSD contains no root elements or types"))?;
+        let schema = ModelSchema::from_ir(&ir, Some(&root_name)).map_err(error)?;
+        Ok(Self { schema, root_name })
+    }
+
+    /// Transcode XML into JSON using this schema's field types and aliases.
+    pub fn xml_to_json(&self, xml: &[u8]) -> Result<Vec<u8>, JsValue> {
+        polyxml::xml_to_json(xml, Some(Arc::clone(&self.schema)), None, true).map_err(error)
+    }
+
+    /// Transcode JSON into XML using this schema's root element.
+    pub fn json_to_xml(&self, json: &[u8]) -> Result<Vec<u8>, JsValue> {
+        polyxml::json_to_xml(
+            json,
+            Some(Arc::clone(&self.schema)),
+            Some(&self.root_name),
+            None,
+            None,
+            None,
+        )
+        .map_err(error)
+    }
+}
+
+fn reject_external_schema_references(xsd: &str) -> Result<(), JsValue> {
+    let mut reader = Reader::from_str(xsd);
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(tag) | Event::Empty(tag)) => {
+                let name = tag.local_name();
+                if matches!(
+                    name.as_ref(),
+                    "include" | "import" | "redefine" | "override"
+                ) {
+                    return Err(error(
+                        "Inline XSD must not use include/import/redefine/override",
+                    ));
+                }
+            }
+            Ok(Event::Eof) => return Ok(()),
+            Err(err) => return Err(error(err)),
+            _ => {}
+        }
+    }
+}

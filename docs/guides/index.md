@@ -15,6 +15,7 @@ generated-code guide:
 - [TypeScript and Node.js](node.md)
 - [Java](java.md)
 - [C#](csharp.md)
+- [WebAssembly runtime](wasm.md)
 
 For dynamic XML type hierarchies, see [polymorphic types and `xsi:type`
 dispatch](polymorphism.md).

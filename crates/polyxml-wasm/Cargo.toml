@@ -1,0 +1,19 @@
+[package]
+name = "polyxml-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "WebAssembly bindings for PolyXML XML/JSON transcoding"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+polyxml = { path = "../polyxml-core" }
+quick-xml = "0.42"
+wasm-bindgen = "0.2"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
