@@ -421,7 +421,7 @@ impl GoCodegen {
         if self.options.validate_facets && !simple.facets.patterns.is_empty() {
             writeln!(out, "func (s {}) Validate() error {{", type_name).unwrap();
             for pattern in &simple.facets.patterns {
-                writeln!(out, "    if matched, err := regexp.MatchString({:?}, fmt.Sprint(s)); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", pattern).unwrap();
+                writeln!(out, "    if matched, err := regexp.MatchString({:?}, fmt.Sprint(s)); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", format!("^(?:{pattern})$")).unwrap();
             }
             writeln!(out, "    return nil\n}}\n").unwrap();
             if self
@@ -832,7 +832,7 @@ impl GoCodegen {
         indent: &str,
     ) {
         for pattern in &facets.patterns {
-            writeln!(out, "{}if matched, err := regexp.MatchString({:?}, fmt.Sprint({})); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", indent, pattern, target).unwrap();
+            writeln!(out, "{}if matched, err := regexp.MatchString({:?}, fmt.Sprint({})); err != nil || !matched {{ return fmt.Errorf(\"pattern constraint failed\") }}", indent, format!("^(?:{pattern})$"), target).unwrap();
         }
         if let Some(min_len) = facets.min_length {
             writeln!(

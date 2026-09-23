@@ -451,9 +451,9 @@ fn issue51_item8_derived_simple_type_inherits_base_patterns() {
         py.contains(r#"AfterValidator(_polyxml_patterns(r"[A-Z]{6}[A-Z0-9]{3}", r"[A-Z]{6}"))"#),
         "both patterns must be AND-combined via AfterValidator:\n{py}"
     );
-    // Single-pattern types keep the plain Field(pattern=...) kwarg.
+    // Single-pattern types keep Field(pattern=...), with full-value anchors.
     assert!(
-        py.contains(r#"Field(pattern=r"[A-Z]{6}")"#),
+        py.contains(r#"Field(pattern=r"\A(?:[A-Z]{6})\z")"#),
         "single-pattern Field kwarg missing:\n{py}"
     );
 }

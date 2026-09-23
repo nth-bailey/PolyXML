@@ -24,11 +24,10 @@ The registry is populated from whichever schema source built the model:
 | **XSD** (`ModelSchema::from_ir`) | All *transitive* `xs:extension` derivations of the type are built recursively from the `SchemaIR`. Derived schemas **flatten the full base-chain content model**: inherited fields precede the type's own fields. |
 | **Python classes** (PyO3) | A `__subclasses__()` walk of the dataclass/Pydantic hierarchy, keyed by `Meta.name` (falling back to the class name). Generated Python already emits real class inheritance (`class Car(Vehicle):`), so inherited fields and metadata flow automatically. |
 
-**Matching is namespace-blind**, consistent with the rest of the runtime:
-the parser matches elements and attributes by local name, so an `xsi:type`
-QName value is reduced to its local part before lookup. Both prefixed
-(`xsi:type="t:Car"` / `xsi:type="p:Car"`) and bare (`type="Car"`) wire
-forms are accepted — the attribute's local name must simply be `type`.
+`xsi:type` is resolved as a QName using namespace declarations in scope at
+the element. The attribute itself must be bound to the XML Schema Instance
+namespace. A type with the same local name in a different namespace does not
+select a registered variant.
 
 ---
 
@@ -40,6 +39,7 @@ Dispatch is applied at **every frame creation point**: the document root
 
 - `xsi:type` names a registered derivation → the element is parsed with the
   concrete schema, so **base fields and concrete fields both survive**.
+- An abstract declaration without `xsi:type` is rejected.
 - `xsi:type` names an unknown type on an **abstract** base → a loud
   `ValueError` listing the known derivations:
   ```
@@ -98,7 +98,7 @@ class Fleet:
         name = "Fleet"
     vehicle: Vehicle = field(metadata={"type": "Element", "name": "vehicle"})
 
-xml = b'<Fleet><vehicle xsi:type="Car"><id>V1</id><doors>4</doors></vehicle></Fleet>'
+xml = b'<Fleet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><vehicle xsi:type="Car"><id>V1</id><doors>4</doors></vehicle></Fleet>'
 
 fleet = polyxml.deserialize(xml, Fleet)     # fleet.vehicle is a Car
 assert fleet.vehicle.doors == 4             # concrete field preserved

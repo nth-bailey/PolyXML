@@ -21,7 +21,7 @@ const PATTERN_VALIDATOR_HELPER: &str = r#"def _polyxml_patterns(*patterns: str):
 
     def _validate(value: str) -> str:
         for regex in _compiled:
-            if regex.search(value) is None:
+            if regex.fullmatch(value) is None:
                 raise ValueError(f"string_pattern_mismatch: {regex.pattern!r}")
         return value
 
@@ -889,7 +889,7 @@ impl PythonCodegen {
             clauses.push(format!("min_length={}, max_length={}", l, l));
         }
         if let Some(pat) = facets.patterns.first() {
-            clauses.push(format!("pattern=r\"{}\"", pat));
+            clauses.push(format!("pattern=r\"\\A(?:{})\\z\"", pat));
         }
 
         clauses.join(", ")

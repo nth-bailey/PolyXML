@@ -116,7 +116,7 @@ impl NamespaceContext {
                 uris.push(XSI_NS.to_string());
             }
             for variant in variants {
-                Self::collect_namespaces(variant, uris);
+                Self::collect_namespaces(&variant, uris);
             }
         }
     }
@@ -318,12 +318,17 @@ impl XmlSerializer {
                 Some(ctx) => {
                     let key = ctx.qualify_attribute("type", Some(XSI_NS));
                     if key.as_ref() == "type" {
-                        "xsi:type".to_string()
-                    } else {
-                        key.into_owned()
+                        return Err(PolyXmlError::SerializationError(
+                            "xsi:type requires a namespace prefix".into(),
+                        ));
                     }
+                    key.into_owned()
                 }
-                None => "xsi:type".to_string(),
+                None => {
+                    return Err(PolyXmlError::SerializationError(
+                        "xsi:type requires namespaces to be enabled".into(),
+                    ))
+                }
             };
             elem.push_attribute((attr_key.as_str(), xsi_val.as_str()));
         }

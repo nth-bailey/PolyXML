@@ -835,7 +835,7 @@ impl JavaCodegen {
                 }
                 for pat in &facets.patterns {
                     checks.push(format!(
-                        "{}.ifPresent(v -> {{ if (!Pattern.compile({:?}).matcher(v).find()) throw new IllegalArgumentException(\"{} does not match pattern: \" + {:?}); }});",
+                        "{}.ifPresent(v -> {{ if (!Pattern.compile({:?}).matcher(v).matches()) throw new IllegalArgumentException(\"{} does not match pattern: \" + {:?}); }});",
                         var_name, pat, var_name, pat
                     ));
                 }
@@ -864,7 +864,7 @@ impl JavaCodegen {
                 }
                 for pat in &facets.patterns {
                     checks.push(format!(
-                        "if (!Pattern.compile({:?}).matcher({}).find()) throw new IllegalArgumentException(\"{} does not match pattern: \" + {:?});",
+                        "if (!Pattern.compile({:?}).matcher({}).matches()) throw new IllegalArgumentException(\"{} does not match pattern: \" + {:?});",
                         pat, var_name, var_name, pat
                     ));
                 }

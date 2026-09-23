@@ -77,7 +77,7 @@ class Tagged:
 
 
 FLEET_XML = (
-    b"<Fleet>"
+    b'<Fleet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
     b'<vehicle xsi:type="Car"><id>V1</id><doors>4</doors></vehicle>'
     b'<spare xsi:type="Truck"><id>S1</id><payload>ore</payload></spare>'
     b'<spare xsi:type="Car"><id>S2</id><doors>2</doors></spare>'
@@ -122,7 +122,7 @@ def test_nested_xsi_type_round_trip():
 
 
 def test_root_xsi_type_dispatch():
-    xml = b'<Vehicle xsi:type="Truck"><id>T9</id><payload>ore</payload></Vehicle>'
+    xml = b'<Vehicle xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="Truck"><id>T9</id><payload>ore</payload></Vehicle>'
 
     vehicle = polyxml.deserialize(xml, Vehicle)
     assert type(vehicle) is Truck
@@ -150,14 +150,14 @@ def test_concrete_serialize_without_target_type():
 
 
 def test_unknown_xsi_type_raises():
-    xml = b'<Fleet><vehicle xsi:type="Plane"><id>X</id></vehicle></Fleet>'
+    xml = b'<Fleet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><vehicle xsi:type="Plane"><id>X</id></vehicle></Fleet>'
 
     with pytest.raises(ValueError, match="known derivation"):
         polyxml.deserialize(xml, Fleet)
 
 
 def test_abstract_without_derivations_raises():
-    xml = b'<LonelyBase xsi:type="Other"><id>X</id></LonelyBase>'
+    xml = b'<LonelyBase xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="Other"><id>X</id></LonelyBase>'
 
     with pytest.raises(ValueError, match="no registered derivations"):
         polyxml.deserialize(xml, LonelyBase)
@@ -200,7 +200,7 @@ class PFleet(BaseModel):
 
 
 def test_pydantic_xsi_type_dispatch_and_round_trip():
-    xml = b'<PFleet><vehicle xsi:type="PCar"><id>V9</id><doors>2</doors></vehicle></PFleet>'
+    xml = b'<PFleet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><vehicle xsi:type="PCar"><id>V9</id><doors>2</doors></vehicle></PFleet>'
 
     fleet = polyxml.deserialize(xml, PFleet)
     assert type(fleet.vehicle) is PCar
@@ -216,7 +216,7 @@ def test_pydantic_xsi_type_dispatch_and_round_trip():
 
 def test_iterparse_xsi_type_dispatch():
     xml = (
-        b"<wrap>"
+        b'<wrap xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
         b'<vehicle xsi:type="Car"><id>A</id><doors>2</doors></vehicle>'
         b'<vehicle xsi:type="Truck"><id>B</id><payload>p</payload></vehicle>'
         b"</wrap>"
@@ -229,9 +229,46 @@ def test_iterparse_xsi_type_dispatch():
 
 
 def test_xml_to_json_keeps_variant_fields():
-    xml = b'<Fleet><vehicle xsi:type="Car"><id>V1</id><doors>4</doors></vehicle></Fleet>'
+    xml = b'<Fleet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><vehicle xsi:type="Car"><id>V1</id><doors>4</doors></vehicle></Fleet>'
 
     out = polyxml.xml_to_json(xml, target_type=Fleet)
     data = json.loads(out)
     assert data["vehicle"]["id"] == "V1"
     assert data["vehicle"]["doors"] == 4
+
+
+def test_subclass_defined_after_base_was_cached_dispatches():
+    @dataclass
+    class LateBase:
+        class Meta:
+            name = "LateBase"
+            abstract = True
+
+        id: str = field(metadata={"type": "Element", "name": "id"})
+
+    @dataclass
+    class LateFleet:
+        class Meta:
+            name = "LateFleet"
+
+        vehicle: LateBase = field(metadata={"type": "Element", "name": "vehicle"})
+
+    xml = b'<LateBase xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LateChild"><id>X</id><extra>Y</extra></LateBase>'
+    with pytest.raises(ValueError):
+        polyxml.deserialize(xml, LateBase)
+    fleet_xml = b'<LateFleet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><vehicle xsi:type="LateChild"><id>X</id><extra>Y</extra></vehicle></LateFleet>'
+    with pytest.raises(ValueError):
+        polyxml.deserialize(fleet_xml, LateFleet)
+
+    @dataclass
+    class LateChild(LateBase):
+        class Meta:
+            name = "LateChild"
+
+        extra: str = field(metadata={"type": "Element", "name": "extra"})
+
+    value = polyxml.deserialize(xml, LateBase)
+    assert isinstance(value, LateChild)
+    assert value.extra == "Y"
+    fleet = polyxml.deserialize(fleet_xml, LateFleet)
+    assert isinstance(fleet.vehicle, LateChild)

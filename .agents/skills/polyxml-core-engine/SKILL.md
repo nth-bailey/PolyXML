@@ -89,12 +89,11 @@ The runtime dispatches polymorphic elements through a **type registry on
 `crates/polyxml-core/tests/test_issue53_xsi_type.rs`.
 
 - **Registry**: `ModelSchema` carries `is_abstract: bool` plus a
-  `variants: OnceLock<Vec<Arc<ModelSchema>>>` (methods: `set_variants`,
-  `variants`, `has_variants`, `find_variant(local_bytes)`,
-  `matches_variant(candidate)`). `OnceLock` keeps `ModelSchema`'s `Clone`
-  derive intact and guarantees each schema registers once. Variants are
-  keyed by the type QName local part (`xml_name`), which is `Meta.name` on
-  the Python side and the type local on the XSD side.
+  `variants: Arc<RwLock<Vec<Arc<ModelSchema>>>>` (methods: `set_variants`,
+  `variants`, `has_variants`, `find_variant_qname(namespace, local_bytes)`,
+  `matches_variant(candidate)`). The lock lets Python refresh the registry
+  after new subclasses are imported. Variants carry their QName namespace
+  and local name (`xml_name`), which is `Meta.name` on the Python side.
 - **Population (`schema.rs::from_ir`)**: `build_struct` (a) flattens the
   `xs:extension` content model by collecting the base-chain structs
   (root-base first, cycle-guarded) and prepending their fields — mirroring
@@ -107,14 +106,19 @@ The runtime dispatches polymorphic elements through a **type registry on
   `__subclasses__()` transitively (ptr-seen set, extracts only
   dataclass/Pydantic classes) — running *after* cache insertion so a
   subclass field typed as the base resolves from cache instead of
-  re-entering extraction.
-- **Parse (`parser.rs`)**: `resolve_record_schema(declared, start)` runs at
+  re-entering extraction. Cached classes refresh the registry on lookup;
+  refresh walks nested field schemas too, so a subclass loaded after a
+  containing model was cached is visible. A thread-local discovery guard
+  prevents recursive refresh during extraction.
+- **Parse (`parser.rs`)**: `resolve_record_schema(declared, start, scope)` runs at
   *every* frame creation site — root `Start`/`Empty` in
   `deserialize_with_limit`, the root frame in `parse_sub_tree`, both
   nested `Start`/`Empty` arms (single and list), and the `XmlItemStream`
-  `Empty` arm. `xsi_type_value` matches the attribute **local name**
-  `type` (namespace-blind, like `is_nil_element`). Policy: registered
-  variant → switch schema; unknown value on `is_abstract` →
+  `Empty` arm. Namespace scopes track declarations through nested elements,
+  including streamed records. The attribute must resolve to the XML Schema
+  Instance namespace, and its QName value must match both the variant's
+  namespace and local name. Policy: registered concrete variant → switch
+  schema; absent or unknown value on `is_abstract` →
   `PolyXmlError::SchemaError` listing known variants, or an
   "escape hatch" error when none are registered; everything else falls
   back to the declared schema. Schemas that are neither abstract nor have
@@ -124,8 +128,8 @@ The runtime dispatches polymorphic elements through a **type registry on
 - **Serialize (`serializer.rs`)**: `write_model` checks
   `schema.matches_variant(rec)` on `Record` values, shadows the effective
   schema to the variant, and pushes `xsi:type` (qualified QName via
-  `qualify_element`, falling back to literal `xsi:type` when namespaces
-  are disabled) after content attributes. `NamespaceContext::collect_namespaces`
+  `qualify_element`) after content attributes. Serialization errors when
+  namespaces are disabled or XSI has no bound prefix. `NamespaceContext::collect_namespaces`
   recurses `variants` and injects the XSI URI so `xmlns:xsi` is always
   declared at the root whenever dispatch is possible.
 - **JSON (`json.rs`)**: `poly_value_to_json_value` prefers the record's

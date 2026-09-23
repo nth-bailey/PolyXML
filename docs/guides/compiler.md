@@ -93,7 +93,7 @@ including with `--dry-run`.
 | Target | Backends (first is default) | Styles | Features |
 | --- | --- | --- | --- |
 | Python | `dataclass`, `pydantic` | `dataclass` (dataclass backend only) | `slots`, `kw-only` (dataclass backend only) |
-| Rust | `standard` | — | `zero-copy`, `rkyv` |
+| Rust | `standard` | — | `zero-copy`, `rkyv`, `phf` |
 | TypeScript | `interfaces`, `zod`, `valibot`, `typebox` | — | — |
 | Java | `standard`, `jackson` | `record` (default), `pojo` (alias `class`) | `builder`, `direct-codec` |
 | C# | `standard`, `source-gen` | `record-class` (default), `record-struct`, `class` (mutable); legacy aliases `record`, `pojo` | — |
@@ -101,7 +101,7 @@ including with `--dry-run`.
 | Go | `standard`, `easyjson`, `sonic` | — | — |
 
 Defaults are unchanged: Rust zero-copy and Python slots/keyword-only fields are
-already enabled. Future features such as `phf` and `aot`, Python plain `class`,
+already enabled. Future features such as `aot`, Python plain `class`,
 and C# mutable `struct` are rejected until their generators support them.
 
 ```bash

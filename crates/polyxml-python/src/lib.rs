@@ -6,6 +6,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyString, PyTuple, PyType};
 use pyo3::IntoPyObjectExt;
+use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
@@ -37,6 +38,46 @@ struct CachedSchemaMeta {
 static SCHEMA_CACHE: RwLock<Option<HashMap<usize, Arc<CachedSchemaMeta>>>> = RwLock::new(None);
 // Cache keyed by schema name to resolve nested Python types during deserialization
 static CLASS_BY_SCHEMA: RwLock<Option<HashMap<String, Arc<CachedSchemaMeta>>>> = RwLock::new(None);
+thread_local! { static DISCOVERING_VARIANTS: Cell<bool> = const { Cell::new(false) }; }
+
+fn refresh_variants(cls: &Bound<'_, PyType>, meta: &CachedSchemaMeta) {
+    DISCOVERING_VARIANTS.with(|busy| {
+        if busy.replace(true) {
+            return;
+        }
+        let mut seen = HashSet::new();
+        refresh_variant_tree(cls, &meta.schema, &mut seen);
+        busy.set(false);
+    });
+}
+
+fn refresh_variant_tree(
+    cls: &Bound<'_, PyType>,
+    schema: &Arc<ModelSchema>,
+    seen: &mut HashSet<usize>,
+) {
+    if !seen.insert(Arc::as_ptr(schema) as usize) {
+        return;
+    }
+    schema.set_variants(discover_variants(cls));
+    for field in &schema.fields {
+        let nested = match &field.val_type {
+            ValueType::Nested(nested) => Some(nested),
+            ValueType::List(inner) => match inner.as_ref() {
+                ValueType::Nested(nested) => Some(nested),
+                _ => None,
+            },
+            _ => None,
+        };
+        if let Some(nested) = nested {
+            if let Some(meta) = lookup_cached_meta(&nested.name) {
+                if let Ok(child_cls) = meta.py_cls.bind(cls.py()).cast::<PyType>() {
+                    refresh_variant_tree(child_cls, &meta.schema, seen);
+                }
+            }
+        }
+    }
+}
 
 fn lookup_cached_meta(schema_name: &str) -> Option<Arc<CachedSchemaMeta>> {
     let class_map = CLASS_BY_SCHEMA.read().unwrap_or_else(|p| p.into_inner());
@@ -397,7 +438,10 @@ fn get_or_create_schema_meta<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<Cach
         let cache = SCHEMA_CACHE.read().unwrap_or_else(|p| p.into_inner());
         if let Some(ref map) = *cache {
             if let Some(meta) = map.get(&type_key) {
-                return Ok(Arc::clone(meta));
+                let meta = Arc::clone(meta);
+                drop(cache);
+                refresh_variants(cls, &meta);
+                return Ok(meta);
             }
         }
     }
@@ -443,10 +487,7 @@ fn get_or_create_schema_meta<'py>(cls: &Bound<'py, PyType>) -> PyResult<Arc<Cach
     // derivations of this type. Deliberately runs AFTER the cache inserts so
     // a subclass field typed as this class resolves from cache instead of
     // re-entering extraction.
-    let variants = discover_variants(cls);
-    if !variants.is_empty() {
-        meta.schema.set_variants(variants);
-    }
+    refresh_variants(cls, &meta);
 
     Ok(meta)
 }

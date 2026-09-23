@@ -233,7 +233,7 @@ fn test_python_pydantic_codegen_with_facets() {
     assert!(code.contains("type Age = Annotated[int, Field(ge=0, le=120)]"));
     assert!(code.contains("class User(BaseModel):"));
     assert!(code.contains("model_config = ConfigDict(defer_build=True, populate_by_name=True)"));
-    assert!(code.contains("username: str = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"username\", \"json_name\": \"username\"}, min_length=3, max_length=20, pattern=r\"^[a-zA-Z0-9_]+$\")"));
+    assert!(code.contains("username: str = Field(..., json_schema_extra={\"type\": \"Element\", \"name\": \"username\", \"json_name\": \"username\"}, min_length=3, max_length=20, pattern=r\"\\A(?:^[a-zA-Z0-9_]+$)\\z\")"));
     assert!(code.contains(
         "user_age: Age = Field(..., alias=\"age\", serialization_alias=\"age\", json_schema_extra={\"type\": \"Element\", \"name\": \"age\", \"json_name\": \"age\"})"
     ));

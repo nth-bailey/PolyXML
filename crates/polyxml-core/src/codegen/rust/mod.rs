@@ -447,7 +447,8 @@ impl RustCodegen {
             let _ = writeln!(out, "pub fn validate_{}_patterns(value: &str) -> std::result::Result<(), &'static str> {{", type_name);
             for (i, pattern) in s.facets.patterns.iter().enumerate() {
                 let _ = writeln!(out, "    static PATTERN_{}: std::sync::OnceLock<std::result::Result<regex::Regex, regex::Error>> = std::sync::OnceLock::new();", i);
-                let _ = writeln!(out, "    let pattern = PATTERN_{}.get_or_init(|| regex::Regex::new({:?})).as_ref().map_err(|_| \"unsupported pattern syntax\")?;", i, pattern);
+                let full_pattern = format!(r"\A(?:{pattern})\z");
+                let _ = writeln!(out, "    let pattern = PATTERN_{}.get_or_init(|| regex::Regex::new({:?})).as_ref().map_err(|_| \"unsupported pattern syntax\")?;", i, full_pattern);
                 out.push_str("    if !pattern.is_match(value) { return Err(\"pattern constraint failed\"); }\n");
             }
             out.push_str("    Ok(())\n}\n");
@@ -1875,7 +1876,7 @@ impl RustCodegen {
         } else if self.field_is_bool(&field.type_ref, ir) {
             out.push_str(read);
             out.push_str("        let s = text.trim();\n");
-            out.push_str("        let val = s == \"true\" || s == \"1\";\n");
+            let _ = writeln!(out, "        let val = match s {{ \"true\" | \"1\" => true, \"false\" | \"0\" => false, _ => return Err(PolyXmlError::ScalarParseError {{ field: {:?}.into(), expected: \"bool\", value: s.into() }}) }};", field.name);
             let _ = writeln!(out, "        var_{} = Some(val);", rust_name);
         } else if let Some(enum_name) = self.field_is_enum(&field.type_ref, ir) {
             out.push_str(read);

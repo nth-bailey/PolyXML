@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldKind {
@@ -82,11 +82,9 @@ pub struct ModelSchema {
     pub text_field: Option<usize>,
     /// Declared `abstract="true"` in the source schema (issue #53).
     pub is_abstract: bool,
-    /// Concrete derivations eligible for `xsi:type` dispatch, each keyed by
-    /// its type QName local part (stored in `xml_name`). Set once after the
-    /// schema is created: from `SchemaIR` extension chains in `from_ir`, or
-    /// from Python subclass hierarchies in the PyO3 layer.
-    variants: OnceLock<Vec<Arc<ModelSchema>>>,
+    /// Concrete derivations eligible for `xsi:type` dispatch. Python may
+    /// refresh this registry when subclasses are defined after first use.
+    variants: Arc<RwLock<Vec<Arc<ModelSchema>>>>,
 }
 
 impl ModelSchema {
@@ -95,35 +93,60 @@ impl ModelSchema {
     }
 
     /// Register the concrete derivations eligible for `xsi:type` dispatch.
-    /// Ignored on a second call (`OnceLock` semantics).
+    /// Replaces the registry when subclasses are discovered after first use.
     pub fn set_variants(&self, variants: Vec<Arc<ModelSchema>>) {
-        let _ = self.variants.set(variants);
+        *self.variants.write().unwrap_or_else(|p| p.into_inner()) = variants;
     }
 
     /// Registered derivations for `xsi:type` dispatch (empty when none).
-    pub fn variants(&self) -> &[Arc<ModelSchema>] {
-        self.variants.get().map(Vec::as_slice).unwrap_or(&[])
+    pub fn variants(&self) -> Vec<Arc<ModelSchema>> {
+        self.variants
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone()
     }
 
     /// Whether any `xsi:type` derivations are registered for this type.
     pub fn has_variants(&self) -> bool {
-        !self.variants().is_empty()
+        !self
+            .variants
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .is_empty()
     }
 
     /// Look up a derivation by the QName local part of an `xsi:type` value.
     pub fn find_variant(&self, local: &[u8]) -> Option<Arc<ModelSchema>> {
-        self.variants()
+        self.variants
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
             .iter()
             .find(|v| v.xml_name.as_slice() == local)
             .cloned()
     }
 
+    /// Look up a derivation by its complete QName.
+    pub fn find_variant_qname(&self, namespace: &str, local: &[u8]) -> Option<Arc<ModelSchema>> {
+        self.variants
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .iter()
+            .find(|v| {
+                v.xml_name.as_slice() == local && v.namespace.as_deref().unwrap_or("") == namespace
+            })
+            .cloned()
+    }
+
     /// Whether `candidate` is a registered derivation of `self`.
     pub fn matches_variant(&self, candidate: &ModelSchema) -> bool {
-        self.variants().iter().any(|v| {
-            std::ptr::eq(v.as_ref(), candidate)
-                || (v.xml_name == candidate.xml_name && v.namespace == candidate.namespace)
-        })
+        self.variants
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .iter()
+            .any(|v| {
+                std::ptr::eq(v.as_ref(), candidate)
+                    || (v.xml_name == candidate.xml_name && v.namespace == candidate.namespace)
+            })
     }
 
     /// Construct a runtime `ModelSchema` from a compiled `SchemaIR`.
@@ -483,7 +506,7 @@ impl ModelSchemaBuilder {
             attribute_map,
             text_field,
             is_abstract: self.is_abstract,
-            variants: OnceLock::new(),
+            variants: Arc::new(RwLock::new(Vec::new())),
         })
     }
 }

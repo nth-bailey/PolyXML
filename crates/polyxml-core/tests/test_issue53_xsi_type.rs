@@ -135,7 +135,7 @@ fn issue53_from_ir_flattens_base_fields_and_registers_variants() {
 #[test]
 fn issue53_nested_xsi_type_dispatch_and_round_trip() {
     let root = schema_for(Some("Root"));
-    let xml = br#"<Root>
+    let xml = br#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh">
         <vehicle xsi:type="t:Car"><id>V1</id><doors>4</doors></vehicle>
         <spare xsi:type="t:Truck"><id>S1</id><payload>ore</payload></spare>
         <spare xsi:type="t:Car"/>
@@ -193,7 +193,7 @@ fn issue53_root_xsi_type_dispatch_including_empty_element() {
     assert!(root.is_abstract);
     assert!(root.has_variants());
 
-    let xml = br#"<Vehicle xsi:type="t:Truck"><id>T9</id><payload>ore</payload></Vehicle>"#;
+    let xml = br#"<Vehicle xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh" xsi:type="t:Truck"><id>T9</id><payload>ore</payload></Vehicle>"#;
     let value = polyxml::deserialize(xml, Arc::clone(&root)).expect("root dispatch");
     assert_eq!(schema_local(rec_schema(&value)), "Truck");
     assert_str(rec_field(&value, "id"), "T9", "root id");
@@ -214,7 +214,7 @@ fn issue53_root_xsi_type_dispatch_including_empty_element() {
     assert_eq!(reparsed, value);
 
     // Empty elements dispatch through the root Empty branch too.
-    let empty = br#"<Vehicle xsi:type="t:Car"/>"#;
+    let empty = br#"<Vehicle xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh" xsi:type="t:Car"/>"#;
     let value = polyxml::deserialize(empty, root).expect("empty dispatch");
     assert_eq!(schema_local(rec_schema(&value)), "Car");
 }
@@ -222,7 +222,7 @@ fn issue53_root_xsi_type_dispatch_including_empty_element() {
 #[test]
 fn issue53_unknown_xsi_type_on_abstract_type_errors() {
     let root = schema_for(Some("Root"));
-    let xml = br#"<Root><vehicle xsi:type="t:Plane"><id>X</id></vehicle></Root>"#;
+    let xml = br#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh"><vehicle xsi:type="t:Plane"><id>X</id></vehicle></Root>"#;
     let err = polyxml::deserialize(xml, root).expect_err("unknown derivation must fail");
     let msg = err.to_string();
     assert!(
@@ -251,7 +251,7 @@ fn issue53_abstract_type_without_derivations_errors() {
     assert!(root.is_abstract);
     assert!(!root.has_variants());
 
-    let xml = br#"<Solo xsi:type="t:Other"><id>X</id></Solo>"#;
+    let xml = br#"<Solo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:solo" xsi:type="t:Other"><id>X</id></Solo>"#;
     let err = polyxml::deserialize(xml, root).expect_err("must fail loudly");
     let msg = err.to_string();
     assert!(
@@ -295,7 +295,7 @@ fn issue53_plain_type_attribute_is_not_mistaken_for_dispatch() {
 fn issue53_iterparse_dispatches_each_streamed_item() {
     let root = schema_for(Some("Root"));
     let declared = declared_vehicle(&root);
-    let xml = br#"<wrap>
+    let xml = br#"<wrap xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh">
         <vehicle xsi:type="t:Car"><id>A</id><doors>2</doors></vehicle>
         <vehicle xsi:type="t:Truck"><id>B</id><payload>p</payload></vehicle>
         <vehicle xsi:type="t:Car"/>
@@ -316,4 +316,37 @@ fn issue53_iterparse_dispatches_each_streamed_item() {
     assert_eq!(schema_local(rec_schema(&third)), "Car");
 
     assert!(stream.next_item().expect("eof").is_none());
+}
+
+#[test]
+fn abstract_type_requires_concrete_selector() {
+    let root = schema_for(Some("Vehicle"));
+    for xml in [
+        b"<Vehicle/>".as_slice(),
+        b"<Vehicle><id>X</id></Vehicle>".as_slice(),
+    ] {
+        let err = polyxml::deserialize(xml, Arc::clone(&root)).unwrap_err();
+        assert!(err.to_string().contains("requires xsi:type"), "{err}");
+    }
+}
+
+#[test]
+fn xsi_type_resolves_namespace_inherited_from_parent() {
+    let root = schema_for(Some("Root"));
+    let valid = br#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh"><vehicle xsi:type="t:Car"><id>X</id><doors>2</doors></vehicle></Root>"#;
+    assert!(polyxml::deserialize(valid, Arc::clone(&root)).is_ok());
+    let wrong = br#"<Root xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:other"><vehicle xsi:type="t:Car"><id>X</id><doors>2</doors></vehicle></Root>"#;
+    assert!(polyxml::deserialize(wrong, Arc::clone(&root)).is_err());
+    let wrong_attribute = br#"<Root xmlns:o="urn:other" xmlns:t="urn:veh"><vehicle o:type="t:Car"><id>X</id><doors>2</doors></vehicle></Root>"#;
+    assert!(polyxml::deserialize(wrong_attribute, root).is_err());
+}
+
+#[test]
+fn variant_serialization_requires_namespaces() {
+    let root = schema_for(Some("Vehicle"));
+    let xml = br#"<Vehicle xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:t="urn:veh" xsi:type="t:Car"><id>X</id><doors>2</doors></Vehicle>"#;
+    let value = polyxml::deserialize(xml, Arc::clone(&root)).unwrap();
+    let err = polyxml::serialize_with_options("Vehicle", &value, &root, None, Some(false), None)
+        .unwrap_err();
+    assert!(err.to_string().contains("requires namespaces"), "{err}");
 }

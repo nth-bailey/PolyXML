@@ -906,7 +906,9 @@ impl CSharpCodegen {
             .unwrap();
         }
         for pattern in &facets.patterns {
-            let escaped = pattern.replace('\\', "\\\\").replace('"', "\\\"");
+            let escaped = format!(r"\A(?:{pattern})\z")
+                .replace('\\', "\\\\")
+                .replace('"', "\\\"");
             writeln!(
                 out,
                 "{}if (!Regex.IsMatch({}.ToString() ?? \"\", \"{}\")) yield return new ValidationResult(\"{} does not match pattern {}\", [nameof({})]);",

@@ -790,7 +790,10 @@ impl TypeScriptCodegen {
                 zod_expr.push_str(&format!(".length({})", length));
             }
             for pat in &facets.patterns {
-                zod_expr.push_str(&format!(".regex(new RegExp({:?}))", pat));
+                zod_expr.push_str(&format!(
+                    ".regex(new RegExp({:?}))",
+                    format!("^(?:{pat})(?![\\s\\S])")
+                ));
             }
         }
 
@@ -857,7 +860,10 @@ impl TypeScriptCodegen {
                 actions.push(format!("v.length({})", length));
             }
             for pat in &facets.patterns {
-                actions.push(format!("v.regex(/{}/)", pat.replace('/', "\\/")));
+                actions.push(format!(
+                    "v.regex(/^(?:{})(?![\\s\\S])/)",
+                    pat.replace('/', "\\/")
+                ));
             }
         }
         if is_num {
@@ -927,7 +933,10 @@ impl TypeScriptCodegen {
                 opts.push(format!("minLength: {}, maxLength: {}", length, length));
             }
             if facets.patterns.len() == 1 {
-                opts.push(format!("pattern: {:?}", facets.patterns[0]));
+                opts.push(format!(
+                    "pattern: {:?}",
+                    format!("^(?:{})(?![\\s\\S])", facets.patterns[0])
+                ));
             }
         }
         if is_num {
@@ -958,7 +967,12 @@ impl TypeScriptCodegen {
             let schemas = facets
                 .patterns
                 .iter()
-                .map(|p| format!("Type.String({{ pattern: {:?} }})", p))
+                .map(|p| {
+                    format!(
+                        "Type.String({{ pattern: {:?} }})",
+                        format!("^(?:{p})(?![\\s\\S])")
+                    )
+                })
                 .collect::<Vec<_>>();
             *expr = format!("Type.Intersect([{}, {}])", expr, schemas.join(", "));
         }

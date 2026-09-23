@@ -14,9 +14,10 @@ const SCHEMA: &str = r#"<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xs:pattern value="[A-Z]{3}"/><xs:pattern value="[0-9]{3}"/>
   </xs:restriction></xs:simpleType>
   <xs:simpleType name="Mixed"><xs:restriction base="Derived">
-    <xs:pattern value="Z"/><xs:pattern value="9"/>
+    <xs:pattern value=".*Z.*"/><xs:pattern value=".*9.*"/>
   </xs:restriction></xs:simpleType>
   <xs:simpleType name="Single"><xs:restriction base="xs:string"><xs:pattern value="[A-Z]+"/></xs:restriction></xs:simpleType>
+  <xs:complexType name="Flag"><xs:simpleContent><xs:extension base="xs:boolean"/></xs:simpleContent></xs:complexType>
   <xs:complexType name="Document"><xs:sequence>
     <xs:element name="value" type="Mixed"/>
     <xs:element name="optional" type="Derived" minOccurs="0"/>
@@ -86,14 +87,14 @@ fn generated_go_pattern_validation_and_xml_roundtrip() {
     fs::write(dir.path().join("models_test.go"), r#"package models
 import("testing"; "encoding/xml")
 func TestPatterns(t *testing.T) {
-    for _, value := range []string{"ZZZ", "999", "xZZZy"} {
+    for _, value := range []string{"ZZZ", "999"} {
         if err := Mixed(value).Validate(); err != nil { t.Fatal(value, err) }
         var doc Document
         if err := xml.Unmarshal([]byte("<document><value>"+value+"</value></document>"), &doc); err != nil { t.Fatal(err) }
         if err := doc.Validate(); err != nil { t.Fatal(err) }
         if _, err := xml.Marshal(doc); err != nil { t.Fatal(err) }
     }
-    for _, value := range []string{"ABC", "123", "Z", "9", "abc", ""} {
+    for _, value := range []string{"ABC", "123", "Z", "9", "abc", "xZZZy", ""} {
         if Mixed(value).Validate() == nil { t.Fatal("accepted", value) }
         var doc Document
         if xml.Unmarshal([]byte("<document><value>"+value+"</value></document>"), &doc) == nil { t.Fatal("read accepted", value) }
@@ -123,8 +124,8 @@ fn generated_cpp_pattern_validation() {
 #include <cassert>
 using namespace polyxml::generated;
 int main() {
-    for (auto value : {"ZZZ", "999", "xZZZy"}) { assert(validate_Mixed_patterns(value)); Document doc; doc.value=value; assert(doc.validate()); }
-    for (auto value : {"ABC", "123", "Z", "9", "abc", ""}) { assert(!validate_Mixed_patterns(value)); Document doc; doc.value=value; assert(!doc.validate()); }
+    for (auto value : {"ZZZ", "999"}) { assert(validate_Mixed_patterns(value)); Document doc; doc.value=value; assert(doc.validate()); }
+    for (auto value : {"ABC", "123", "Z", "9", "abc", "xZZZy", ""}) { assert(!validate_Mixed_patterns(value)); Document doc; doc.value=value; assert(!doc.validate()); }
     assert(validate_ZBase_patterns("ABC")); assert(validate_ZBase_patterns("123"));
     Document doc; doc.value="ZZZ"; doc.optional="x"; assert(!doc.validate());
     doc.optional.reset(); doc.items.push_back("x"); assert(!doc.validate());
@@ -169,13 +170,13 @@ regex="1"
         r#"mod models;
 use models::*;
 fn main() {
-    for value in ["ZZZ", "999", "xZZZy"] {
+    for value in ["ZZZ", "999"] {
         assert!(validate_Mixed_patterns(value).is_ok());
         let xml=format!("<document><value>{value}</value></document>");
         let doc=Document::from_xml(&xml).unwrap();
         assert!(doc.to_xml().is_ok());
     }
-    for value in ["ABC", "123", "Z", "9", "abc", ""] {
+    for value in ["ABC", "123", "Z", "9", "abc", "xZZZy", ""] {
         assert!(validate_Mixed_patterns(value).is_err());
         let xml=format!("<document><value>{value}</value></document>");
         assert!(Document::from_xml(&xml).is_err());
@@ -186,6 +187,9 @@ fn main() {
     assert!(Document::from_xml("<document/>").is_err());
     assert!(validate_ZBase_patterns("ABC").is_ok());
     assert!(validate_ZBase_patterns("123").is_ok());
+    assert!(Flag::from_xml("<Flag>true</Flag>").is_ok());
+    assert!(Flag::from_xml("<Flag>0</Flag>").is_ok());
+    assert!(Flag::from_xml("<Flag>garbage</Flag>").is_err());
 }
 "#,
     )
@@ -220,9 +224,9 @@ fn generated_python_pattern_validation() {
         r#"from models import Mixed, Derived, ZBase
 from pydantic import TypeAdapter, ValidationError
 mixed = TypeAdapter(Mixed)
-for value in ('ZZZ', '999', 'xZZZy'):
+for value in ('ZZZ', '999'):
     assert mixed.validate_python(value) == value
-for value in ('ABC', '123', 'Z', '9', 'abc', ''):
+for value in ('ABC', '123', 'Z', '9', 'abc', 'xZZZy', ''):
     try:
         mixed.validate_python(value)
     except ValidationError:
@@ -257,13 +261,13 @@ fn generated_java_pattern_validation_and_direct_codecs() {
 import java.io.*;
 public class Check {
     public static void main(String[] args) throws Exception {
-        for (String value : new String[]{"ZZZ", "999", "xZZZy"}) {
+        for (String value : new String[]{"ZZZ", "999"}) {
             new Mixed(value);
             var parsed = MixedCodec.readXml(new ByteArrayInputStream(("<Mixed>"+value+"</Mixed>").getBytes()));
             if (!parsed.value().equals(value)) throw new AssertionError();
             MixedCodec.writeXml(parsed, new ByteArrayOutputStream());
         }
-        for (String value : new String[]{"ABC", "123", "Z", "9", "abc", ""}) {
+        for (String value : new String[]{"ABC", "123", "Z", "9", "abc", "xZZZy", ""}) {
             try { new Mixed(value); throw new AssertionError(value); }
             catch (IllegalArgumentException expected) { }
         }
@@ -296,8 +300,8 @@ fn generated_csharp_pattern_validation() {
     fs::write(dir.path().join("Program.cs"), r#"using Generated;
 using System.ComponentModel.DataAnnotations;
 static bool Valid(IValidatableObject value) => !value.Validate(new ValidationContext(value)).Any();
-foreach(var value in new[]{"ZZZ", "999", "xZZZy"}) if(!Valid(new Mixed(value))) throw new Exception(value);
-foreach(var value in new[]{"ABC", "123", "Z", "9", "abc", ""}) if(Valid(new Mixed(value))) throw new Exception(value);
+foreach(var value in new[]{"ZZZ", "999"}) if(!Valid(new Mixed(value))) throw new Exception(value);
+foreach(var value in new[]{"ABC", "123", "Z", "9", "abc", "xZZZy", ""}) if(Valid(new Mixed(value))) throw new Exception(value);
 if(!Valid(new ZBase("ABC")) || !Valid(new ZBase("123"))) throw new Exception("OR");
 "#).unwrap();
     run(Command::new("dotnet")
@@ -335,10 +339,10 @@ import { MixedSchema as v, ZBaseSchema as vb } from './valibot';
 import { MixedSchema as t, ZBaseSchema as tb } from './typebox';
 import * as valibot from 'valibot';
 import { Value } from '@sinclair/typebox/value';
-for(const value of ['ZZZ','999','xZZZy']) {
+for(const value of ['ZZZ','999']) {
     if(!z.safeParse(value).success || !valibot.safeParse(v,value).success || !Value.Check(t,value)) throw Error(value);
 }
-for(const value of ['ABC','123','Z','9','abc','']) {
+for(const value of ['ABC','123','Z','9','abc','xZZZy','']) {
     if(z.safeParse(value).success || valibot.safeParse(v,value).success || Value.Check(t,value)) throw Error(value);
 }
 for(const value of ['ABC','123']) {

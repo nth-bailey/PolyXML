@@ -259,12 +259,12 @@ derived types inherit their base's patterns at parse time):
 
 - `emit_simple_type` appends `AfterValidator(_polyxml_patterns(r"p1", r"p2"))`
   to the `Annotated[...]` alias (single-pattern types keep the plain
-  `Field(pattern=...)` kwarg, byte-identical to before).
+  `Field(pattern=...)` kwarg, anchored for full-value matching).
 - `needs_pattern_validator(ir)` gates emission of the module-level
   `_polyxml_patterns` factory helper, the `import re` line, and the
   `AfterValidator,` prefix on the pydantic import — keep these three in sync.
-- Semantics: unanchored `regex.search` per pattern, all must match (AND),
-  matching XSD pattern search semantics.
+- Semantics: each pattern must match the entire lexical value (`fullmatch`);
+  patterns inherited across derivation steps all apply (AND).
 - Field-level facets (`FieldDef.facets`) are never populated by the parser
   today, so `emit_struct`'s field path needs no `AfterValidator` wiring; if
   that ever changes, mirror the type-level handling there.
@@ -375,11 +375,10 @@ Per-language enforcement (all gated so unpatterned schemas stay byte-identical):
   expressions into the call** — binding `const auto& value = <field>;`
   self-references when the field is named `value` (range-for over a member named
   `value` is fine). `#include <regex>` is conditional on `ir`.
-- **Java**: `Pattern.compile(p).matcher(v).find()` (search semantics —
-  `Pattern.matches` anchors and is wrong for XSD); direct codecs resolve
+- **Java**: `Pattern.compile(p).matcher(v).matches()`; direct codecs resolve
   patterned aliases through `primitive_base`.
-- **C#**: `Regex.IsMatch` **without** `^...$` anchors (XSD patterns are
-  unanchored searches); escape `\` before `"` in the pattern string.
+- **C#**: `Regex.IsMatch` with `\A(?:...)\z` full-value anchors;
+  escape `\` before `"` in the pattern string.
 - **TypeScript**: one pattern → `pattern:` option (zod/valibot) or single
   `Type.String({pattern})`; multiple → `AfterValidator`-equivalent AND via
   `_polyxml_patterns` (Python) / `Type.Intersect([...])` (TypeBox — duplicating

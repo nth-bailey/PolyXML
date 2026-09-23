@@ -655,7 +655,7 @@ concept XmlModel = requires(T a) {{
         if self.options.validate_facets && !simple.facets.patterns.is_empty() {
             writeln!(out, "[[nodiscard]] inline bool validate_{}_patterns(std::string_view value) noexcept {{\n    try {{", type_name).unwrap();
             for (i, pattern) in simple.facets.patterns.iter().enumerate() {
-                writeln!(out, "        static const std::regex pattern_{}({:?});\n        if (!std::regex_search(value.begin(), value.end(), pattern_{})) return false;", i, pattern, i).unwrap();
+                writeln!(out, "        static const std::regex pattern_{}({:?});\n        if (!std::regex_match(value.begin(), value.end(), pattern_{})) return false;", i, pattern, i).unwrap();
             }
             writeln!(out, "        return true;\n    }} catch (const std::regex_error&) {{ return false; }}\n}}\n").unwrap();
         }
@@ -996,7 +996,7 @@ concept XmlModel = requires(T a) {{
         indent: &str,
     ) {
         for pattern in &facets.patterns {
-            writeln!(out, "{}try {{ static const std::regex pattern({:?}); if (!std::regex_search({}, pattern)) return false; }} catch (const std::regex_error&) {{ return false; }}", indent, pattern, target).unwrap();
+            writeln!(out, "{}try {{ static const std::regex pattern({:?}); if (!std::regex_match({}, pattern)) return false; }} catch (const std::regex_error&) {{ return false; }}", indent, pattern, target).unwrap();
         }
         if let Some(min_len) = facets.min_length {
             writeln!(
