@@ -9,6 +9,7 @@ export interface PolyXmlSchema {
 }
 
 export interface PolyXml {
+  parseStream(source: ReadableStream<Uint8Array> | AsyncIterable<string | Uint8Array | ArrayBuffer>, options?: { maxRecordBytes?: number }): AsyncIterable<unknown>
   xmlToJsonBytes(xml: Bytes): Uint8Array
   xmlToJson(xml: Bytes): unknown
   jsonToXmlBytes(json: unknown, rootName?: string): Uint8Array

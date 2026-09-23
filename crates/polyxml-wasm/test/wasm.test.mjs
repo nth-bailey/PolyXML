@@ -56,3 +56,50 @@ test('the browser entry accepts explicit Wasm bytes', async () => {
   const web = await createWebPolyXml(wasm)
   assert.deepEqual(web.xmlToJson('<root/>'), { root: null })
 })
+
+test('parseStream emits records across tiny byte chunks', async () => {
+  const xml = '<rows xmlns:x="urn:test"><x:item id="1">A &amp; B</x:item><x:item><![CDATA[<two>]]></x:item><x:item id="3"/></rows>'
+  const encoded = new TextEncoder().encode(xml)
+  const stream = new ReadableStream({
+    start(controller) {
+      for (const byte of encoded) controller.enqueue(Uint8Array.of(byte))
+      controller.close()
+    },
+  })
+  const records = []
+  for await (const record of polyxml.parseStream(stream)) records.push(record)
+  assert.deepEqual(records, [{ item: { '@id': 1, value: 'A & B' } }, { item: '<two>' }, { item: { '@id': 3 } }])
+})
+
+test('parseStream enforces record limits and rejects incomplete input', async () => {
+  async function* chunks(...parts) { for (const part of parts) yield part }
+  await assert.rejects(async () => {
+    for await (const _ of polyxml.parseStream(chunks('<rows><item>long</item></rows>'), { maxRecordBytes: 4 })) {}
+  }, /exceeds maxRecordBytes/)
+  await assert.rejects(async () => {
+    for await (const _ of polyxml.parseStream(chunks('<rows><item>unfinished'))) {}
+  }, /Incomplete XML document/)
+})
+
+test('parseStream handles split UTF-8, quoted tag delimiters, and early records', async () => {
+  const xml = '<rows><item label="a>b">café</item><item>next</item></rows>'
+  const input = new TextEncoder().encode(xml)
+  const boundary = input.indexOf(0xc3)
+  const nextItem = new TextEncoder().encode(xml.slice(0, xml.indexOf('<item>next'))).length
+  let continued = false
+  async function* chunks() {
+    yield input.slice(0, boundary + 1)
+    yield input.slice(boundary + 1, nextItem)
+    continued = true
+    yield input.slice(nextItem)
+  }
+  const iterator = polyxml.parseStream(chunks())[Symbol.asyncIterator]()
+  assert.deepEqual((await iterator.next()).value, { item: { '@label': 'a>b', value: 'café' } })
+  assert.equal(continued, false)
+  assert.deepEqual((await iterator.next()).value, { item: 'next' })
+  assert.equal((await iterator.next()).done, true)
+  const { parseStream } = polyxml
+  const detached = []
+  for await (const record of parseStream((async function* () { yield '<rows><item>ok</item></rows>' })())) detached.push(record)
+  assert.deepEqual(detached, [{ item: 'ok' }])
+})

@@ -5,6 +5,9 @@ description: Reproducible performance benchmarks comparing PolyXML against nativ
 
 # Performance & Benchmarks
 
+The [WebAssembly vs JavaScript benchmark](wasm-vs-js.md) compares the Wasm
+runtime with JavaScript parsers in Node, Bun, and Chromium.
+
 PolyXML is engineered to process gigabytes of XML per second by leveraging Rust's zero-cost abstractions, `quick-xml` streaming events, and `lexical-core` numeric conversions.
 
 The repository includes fully reusable, automated benchmark suites covering the pure Rust Criterion tests, the Python comparative benchmarks, and the Java four-runtime JMH benchmarks.
