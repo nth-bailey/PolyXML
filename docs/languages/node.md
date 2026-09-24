@@ -12,7 +12,7 @@ PolyXML provides native compiled C/Rust performance directly inside the Node.js 
 ## 📦 Installation
 
 ```bash
-npm install polyxml
+npm install @polyxml/polyxml
 ```
 
 PolyXML ships pre-built binaries across Linux, macOS, and Windows via standard npm optional dependencies.
@@ -24,7 +24,7 @@ PolyXML ships pre-built binaries across Linux, macOS, and Windows via standard n
 Define your domain models and corresponding `ModelSchema` definitions:
 
 ```typescript
-import { deserialize, serialize, ModelSchema } from 'polyxml';
+import { deserialize, serialize, ModelSchema } from '@polyxml/polyxml';
 
 // 1. Define TypeScript interface
 interface DeviceTelemetry {
@@ -73,7 +73,7 @@ PolyXML accepts both JavaScript `string` and raw `Uint8Array` / `Buffer` inputs 
 
 ```typescript
 import * as fs from 'node:fs';
-import { deserialize, ModelSchema } from 'polyxml';
+import { deserialize, ModelSchema } from '@polyxml/polyxml';
 
 const catalogSchema: ModelSchema = {
   name: 'Product',
@@ -100,7 +100,7 @@ Integrate PolyXML into Express or Fastify request handlers to process high volum
 
 ```typescript
 import express, { Request, Response } from 'express';
-import { deserialize, serialize, ModelSchema } from 'polyxml';
+import { deserialize, serialize, ModelSchema } from '@polyxml/polyxml';
 
 const orderSchema: ModelSchema = {
   name: 'PurchaseOrder',
@@ -147,7 +147,7 @@ app.listen(3000, () => console.log('XML Server listening on http://localhost:300
 When parsing malformed XML or invalid scalar values (such as non-numeric characters in an integer element), PolyXML throws informative native errors:
 
 ```typescript
-import { deserialize, ModelSchema } from 'polyxml';
+import { deserialize, ModelSchema } from '@polyxml/polyxml';
 
 const schema: ModelSchema = {
   name: 'Data',
@@ -172,7 +172,7 @@ try {
 PolyXML for Node.js/TypeScript supports full W3C XML namespace declarations and custom prefix maps:
 
 ```typescript
-import { deserialize, serialize, ModelSchema } from 'polyxml';
+import { deserialize, serialize, ModelSchema } from '@polyxml/polyxml';
 
 const orderSchema: ModelSchema = {
   name: 'Order',
@@ -267,5 +267,4 @@ export const AccountSchema = Type.Object({
 
 export type Account = Static<typeof AccountSchema>;
 ```
-
 
