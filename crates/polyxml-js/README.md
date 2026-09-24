@@ -9,13 +9,13 @@ High-performance, polyglot streaming XML data-binding engine for Node.js and Typ
 ## Installation
 
 ```bash
-npm install @polyxml/polyxml
+npm install @polyxml/node
 ```
 
 ## Usage
 
 ```javascript
-const polyxml = require('@polyxml/polyxml');
+const polyxml = require('@polyxml/node');
 
 const schema = {
   name: 'Book',

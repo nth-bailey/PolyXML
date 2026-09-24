@@ -1,5 +1,5 @@
 {
-  "name": "@polyxml/polyxml",
+  "name": "@polyxml/node",
   "version": "0.23.0",
   "description": "High-performance, polyglot XML data-binding engine built in Rust",
   "main": "index.js",
