@@ -1,3 +1,10 @@
+## [0.23.3](https://github.com/polyxml/PolyXML/compare/v0.23.2...v0.23.3) (2026-09-26)
+
+
+### Bug Fixes
+
+* **ci:** eliminate .NET first-time migration race condition in tests ([3d21af3](https://github.com/polyxml/PolyXML/commit/3d21af3757d57510d9abda240109635e196d378e))
+
 ## [0.23.2](https://github.com/polyxml/PolyXML/compare/v0.23.1...v0.23.2) (2026-09-26)
 
 ### Packages
