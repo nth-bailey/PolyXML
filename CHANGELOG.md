@@ -1,3 +1,10 @@
+## [0.23.1](https://github.com/polyxml/PolyXML/compare/v0.23.0...v0.23.1) (2026-09-26)
+
+
+### Bug Fixes
+
+* **release:** fail crates publish on real errors ([bfa5e65](https://github.com/polyxml/PolyXML/commit/bfa5e658445a76f13a1b416e1f4089fb6a303e53))
+
 # [0.23.0](https://github.com/nth-bailey/PolyXML/compare/v0.22.0...v0.23.0) (2026-09-23)
 
 
