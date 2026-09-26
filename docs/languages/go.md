@@ -1,9 +1,9 @@
 ---
-title: Go Guide (Cgo)
+title: Go
 description: High-throughput XML data binding in Go using PolyXML's native Cgo bridge to replace slow encoding/xml.
 ---
 
-# Go Guide (Cgo)
+# Go
 
 PolyXML provides high-throughput native XML parsing for Go, replacing the standard library's reflection-heavy `encoding/xml` with a zero-copy Rust streaming engine connected via Cgo.
 

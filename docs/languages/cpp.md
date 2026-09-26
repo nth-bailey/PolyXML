@@ -1,9 +1,9 @@
 ---
-title: Modern C++20 Guide
+title: C++
 description: Header-only, zero-overhead C++20 bindings for PolyXML with RAII, move semantics, and zero memory leaks.
 ---
 
-# Modern C++20 Guide
+# C++
 
 PolyXML delivers high-throughput native XML processing for modern C++20 applications. The C++ bindings are header-only (`bindings/cpp/include/polyxml.hpp`), wrapping the pure Rust engine (`polyxml-c`) with idiomatic C++20 types, `std::optional`, `std::string_view`, RAII memory management, and move semantics.
 

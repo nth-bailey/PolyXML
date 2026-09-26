@@ -1,9 +1,9 @@
 ---
-title: Language guides
+title: Languages
 description: Use PolyXML and generated models in each supported language ecosystem.
 ---
 
-# Language guides
+# Languages
 
 Choose the ecosystem you are using:
 

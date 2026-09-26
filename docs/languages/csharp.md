@@ -1,9 +1,9 @@
 ---
-title: C# 12 / .NET 8+ Guide
+title: C#
 description: Modern XML data binding, record generation, and facet validation in C# 12 and .NET 8+ using PolyXML.
 ---
 
-# C# 12 / .NET 8+ Guide
+# C#
 
 PolyXML compiles W3C XML schemas directly into idiomatic, high-performance C# 12 and .NET 8+ data models.
 

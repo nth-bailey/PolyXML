@@ -1,9 +1,9 @@
 ---
-title: TypeScript & Node.js Guide
+title: TypeScript
 description: High-throughput XML serialization and deserialization in TypeScript and Node.js using native Rust Node-API (napi-rs).
 ---
 
-# TypeScript & Node.js Guide
+# TypeScript
 
 PolyXML provides native compiled C/Rust performance directly inside the Node.js event loop via `napi-rs`. It avoids the CPU bottlenecks of JavaScript-based XML parsers (e.g. `xml2js`, `fast-xml-parser`) by executing schema validation and XML parsing in compiled Rust.
 

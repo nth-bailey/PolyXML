@@ -1,9 +1,9 @@
 ---
-title: Rust Core Guide
+title: Rust
 description: Using PolyXML's native Rust engine directly in Rust applications for high-throughput, zero-allocation XML processing.
 ---
 
-# Rust Native Core Guide
+# Rust
 
 The `polyxml` crate is the pure, idiomatic Rust core engine driving the entire PolyXML ecosystem. It provides ultra-fast streaming serialization and deserialization with zero FFI overhead, zero C dependencies, and no intermediate DOM allocations.
 

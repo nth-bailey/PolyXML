@@ -1,9 +1,9 @@
 ---
-title: Java Guide — Models, Direct Codecs, and Panama
+title: Java
 description: Ultra-fast Java XML processing using Java 22 Foreign Function & Memory API (Project Panama) with zero-JNI overhead.
 ---
 
-# Java Guide
+# Java
 
 ## Java 21 models: records, POJOs, and builders
 

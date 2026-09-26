@@ -1,9 +1,9 @@
 ---
-title: Python Guide (Dataclasses & Pydantic v2)
+title: Python
 description: High-throughput XML serialization and deserialization into Python dataclasses and Pydantic v2 models with zero boilerplate.
 ---
 
-# Python Guide: Dataclasses & Pydantic v2
+# Python
 
 PolyXML is the fastest typed XML data-binding engine for Python `>=3.12`. Compiled natively in Rust via PyO3 with `abi3` stability, it replaces slow pure-Python parsers like `xsdata` with up to **16.8x faster deserialization** and **38.5x faster serialization**.
 
