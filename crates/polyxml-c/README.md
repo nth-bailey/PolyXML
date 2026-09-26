@@ -1,7 +1,18 @@
+<p align="center">
+  <a href="https://github.com/polyxml/PolyXML">
+    <img src="https://raw.githubusercontent.com/polyxml/PolyXML/main/docs/assets/brand/logo_polyxml_banner.png" alt="PolyXML" width="800">
+  </a>
+</p>
+
 # polyxml-c
 
-[![Crates.io](https://img.shields.io/crates/v/polyxml-c.svg)](https://crates.io/crates/polyxml-c)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/polyxml/PolyXML/blob/main/LICENSE)
+<p align="center">
+  <a href="https://crates.io/crates/polyxml-c"><img src="https://img.shields.io/crates/v/polyxml-c.svg?logo=rust&label=crates.io" alt="crates.io"></a>
+  <a href="https://en.wikipedia.org/wiki/C99"><img src="https://img.shields.io/badge/C-C99%20%7C%20C11-00599C.svg?logo=c" alt="C: C99"></a>
+  <a href="https://polyxml.github.io/PolyXML/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg" alt="Documentation"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+</p>
+
 
 **polyxml-c** provides the standard C-ABI shared and static library (`libpolyxml`) and C headers (`polyxml.h`) for **PolyXML**.
 

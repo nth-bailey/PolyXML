@@ -30,9 +30,13 @@
           "bindings/java/pom.xml",
           "bindings/cpp/CMakeLists.txt",
           "crates/polyxml-c/Cargo.toml",
-          "crates/polyxml-cli/Cargo.toml"
+          "crates/polyxml-cli/Cargo.toml",
+          "conanfile.py",
+          "bindings/java/README.md",
+          "docs/quickstart.md"
         ],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+
       }
     ],
     [

@@ -23,6 +23,7 @@ PYPROJECT_PATH = REPO_ROOT / "crates" / "polyxml-python" / "pyproject.toml"
 PACKAGE_JSON_PATH = REPO_ROOT / "crates" / "polyxml-js" / "package.json"
 POM_PATH = REPO_ROOT / "bindings" / "java" / "pom.xml"
 CMAKE_PATH = REPO_ROOT / "bindings" / "cpp" / "CMakeLists.txt"
+CONAN_PATH = REPO_ROOT / "conanfile.py"
 
 
 def normalize_version(ver: str) -> str:
@@ -73,6 +74,14 @@ def get_cmake_version() -> str:
     return m.group(1)
 
 
+def get_conan_version() -> str:
+    content = CONAN_PATH.read_text(encoding="utf-8")
+    m = re.search(r'version\s*=\s*"([^"]+)"', content)
+    if not m:
+        raise RuntimeError("Could not find version in conanfile.py")
+    return m.group(1)
+
+
 def check_versions() -> bool:
     """Check that all manifests match the workspace Cargo.toml version."""
     canonical = get_cargo_version()
@@ -82,7 +91,9 @@ def check_versions() -> bool:
         "package.json": get_package_json_version(),
         "pom.xml": get_pom_version(),
         "CMakeLists.txt": get_cmake_version(),
+        "conanfile.py": get_conan_version(),
     }
+
 
     all_matched = True
     print(f"Canonical workspace version: {canonical}")
@@ -177,7 +188,40 @@ def set_versions(new_ver: str) -> None:
         cli_cargo_path.write_text(cli_text_new, encoding="utf-8")
         print(f"  Updated {cli_cargo_path.relative_to(REPO_ROOT)}")
 
+    # 8. conanfile.py
+    if CONAN_PATH.exists():
+        conan_text = CONAN_PATH.read_text(encoding="utf-8")
+        conan_text_new = re.sub(
+            r'(version\s*=\s*)"[^"]+"',
+            rf'\g<1>"{v}"',
+            conan_text,
+        )
+        CONAN_PATH.write_text(conan_text_new, encoding="utf-8")
+        print(f"  Updated {CONAN_PATH.relative_to(REPO_ROOT)}")
+
+    # 9. bindings/java/README.md (if exists)
+    java_readme = REPO_ROOT / "bindings" / "java" / "README.md"
+    if java_readme.exists():
+        jr_text = java_readme.read_text(encoding="utf-8")
+        jr_text_new = re.sub(r'(<version>)[^<]+(</version>)', rf'\g<1>{v}\g<2>', jr_text)
+        jr_text_new = re.sub(r"(implementation\s+'io\.github\.polyxml:polyxml:)[^']+'", rf"\g<1>{v}'", jr_text_new)
+        java_readme.write_text(jr_text_new, encoding="utf-8")
+        print(f"  Updated {java_readme.relative_to(REPO_ROOT)}")
+
+    # 10. docs/quickstart.md (Maven snippet)
+    quickstart_path = REPO_ROOT / "docs" / "quickstart.md"
+    if quickstart_path.exists():
+        qs_text = quickstart_path.read_text(encoding="utf-8")
+        qs_text_new = re.sub(
+            r'(<artifactId>polyxml</artifactId>\s*<version>)[^<]+(</version>)',
+            rf'\g<1>{v}\g<2>',
+            qs_text,
+        )
+        quickstart_path.write_text(qs_text_new, encoding="utf-8")
+        print(f"  Updated {quickstart_path.relative_to(REPO_ROOT)}")
+
     print("All manifests successfully synchronized.")
+
 
 
 def main() -> int:
@@ -204,9 +248,10 @@ def main() -> int:
         try:
             set_versions(args.set)
             return 0
-        except Exception as e:
+        except (RuntimeError, ValueError, OSError) as e:
             print(f"Error setting version: {e}", file=sys.stderr)
             return 1
+
 
     return 0
 

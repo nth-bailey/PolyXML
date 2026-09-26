@@ -1,4 +1,18 @@
-﻿# PolyXML Node.js & TypeScript Bindings
+<p align="center">
+  <a href="https://github.com/polyxml/PolyXML">
+    <img src="https://raw.githubusercontent.com/polyxml/PolyXML/main/docs/assets/brand/logo_polyxml_banner.png" alt="PolyXML" width="800">
+  </a>
+</p>
+
+# PolyXML Node.js & TypeScript Bindings
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@polyxml/node"><img src="https://img.shields.io/npm/v/@polyxml/node.svg?logo=npm&color=CB3837&label=npm" alt="npm"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-20%20%7C%2022-339933.svg?logo=node.js&logoColor=white" alt="Node.js: 20 | 22"></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.0%2B-3178C6.svg?logo=typescript&logoColor=white" alt="TypeScript: 5.0+"></a>
+  <a href="https://polyxml.github.io/PolyXML/languages/node/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg" alt="Documentation"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+</p>
 
 High-performance, polyglot streaming XML data-binding engine for Node.js and TypeScript.
 
@@ -6,7 +20,10 @@ High-performance, polyglot streaming XML data-binding engine for Node.js and Typ
 - Zero external native toolchain dependencies needed at runtime.
 - Powered by the ultra-fast Rust `polyxml-core` engine and NAPI-RS.
 
+---
+
 ## Installation
+
 
 ```bash
 npm install @polyxml/node

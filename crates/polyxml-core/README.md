@@ -1,8 +1,17 @@
+<p align="center">
+  <a href="https://github.com/polyxml/PolyXML">
+    <img src="https://raw.githubusercontent.com/polyxml/PolyXML/main/docs/assets/brand/logo_polyxml_banner.png" alt="PolyXML" width="800">
+  </a>
+</p>
+
 # polyxml
 
-[![Crates.io](https://img.shields.io/crates/v/polyxml.svg)](https://crates.io/crates/polyxml)
-[![Docs.rs](https://docs.rs/polyxml/badge.svg)](https://docs.rs/polyxml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/polyxml/PolyXML/blob/main/LICENSE)
+<p align="center">
+  <a href="https://crates.io/crates/polyxml"><img src="https://img.shields.io/crates/v/polyxml.svg?logo=rust&label=crates.io" alt="Crates.io"></a>
+  <a href="https://docs.rs/polyxml"><img src="https://docs.rs/polyxml/badge.svg" alt="Docs.rs"></a>
+  <a href="https://polyxml.github.io/PolyXML/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg" alt="Documentation"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+</p>
 
 **PolyXML** is a high-performance streaming XML data-binding engine and polyglot schema compiler built in Rust. It serves as the foundational native core powering the `polyxml` CLI and language bindings across Python, C/C++, Java, TypeScript, Go, and C#.
 
@@ -23,18 +32,12 @@
 
 ## Installation
 
-Add `polyxml` to your `Cargo.toml`:
-
-```toml
-[dependencies]
-polyxml = "0.1.0"
-```
-
-Or run:
+Add `polyxml` to your Rust project:
 
 ```bash
 cargo add polyxml
 ```
+
 
 ---
 

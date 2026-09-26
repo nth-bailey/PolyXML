@@ -1,8 +1,22 @@
+<p align="center">
+  <a href="https://github.com/polyxml/PolyXML">
+    <img src="https://raw.githubusercontent.com/polyxml/PolyXML/main/docs/assets/brand/logo_polyxml_banner.png" alt="PolyXML" width="800">
+  </a>
+</p>
+
 # PolyXML CLI (`polyxml`)
+
+<p align="center">
+  <a href="https://crates.io/crates/polyxml-cli"><img src="https://img.shields.io/crates/v/polyxml-cli.svg?logo=rust&label=crates.io" alt="crates.io"></a>
+  <a href="https://github.com/polyxml/homebrew-polyxml"><img src="https://img.shields.io/badge/Homebrew-polyxml-FBB040.svg?logo=homebrew&logoColor=black" alt="Homebrew"></a>
+  <a href="https://polyxml.github.io/PolyXML/guides/compiler/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg" alt="Documentation"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+</p>
 
 Unified developer command-line interface and polyglot schema compiler toolchain for PolyXML.
 
 `polyxml` parses W3C XSD 1.0 and 1.1 schemas into a unified, language-agnostic Intermediate Representation (IR), resolves cyclic/recursive types via Tarjan's Strongly Connected Components (SCC) algorithm, and compiles production-ready, idiomatic data models and codecs for 7 target languages.
+
 
 ---
 

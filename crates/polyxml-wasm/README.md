@@ -1,7 +1,32 @@
+<p align="center">
+  <a href="https://github.com/polyxml/PolyXML">
+    <img src="https://raw.githubusercontent.com/polyxml/PolyXML/main/docs/assets/brand/logo_polyxml_banner.png" alt="PolyXML" width="800">
+  </a>
+</p>
+
 # `@polyxml/wasm`
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@polyxml/wasm"><img src="https://img.shields.io/npm/v/@polyxml/wasm.svg?logo=npm&color=CB3837&label=npm" alt="npm"></a>
+  <a href="https://webassembly.org"><img src="https://img.shields.io/badge/WebAssembly-Wasm-654FF0.svg?logo=webassembly&logoColor=white" alt="WebAssembly"></a>
+  <a href="https://polyxml.github.io/PolyXML/guides/wasm/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg" alt="Documentation"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+</p>
 
 WebAssembly XML/JSON conversion for Node.js, Bun, and browsers. This package
 uses PolyXML's Rust core without a native Node addon.
+
+---
+
+## Installation
+
+```bash
+npm install @polyxml/wasm
+```
+
+---
+
+## Quickstart
 
 ```js
 import { createPolyXml } from '@polyxml/wasm'
