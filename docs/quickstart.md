@@ -183,9 +183,9 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     ### Maven Dependency
     ```xml
     <dependency>
-        <groupId>io.github.nth-bailey</groupId>
+        <groupId>io.github.polyxml</groupId>
         <artifactId>polyxml</artifactId>
-        <version>0.1.0</version>
+        <version>0.23.0</version>
     </dependency>
     ```
 

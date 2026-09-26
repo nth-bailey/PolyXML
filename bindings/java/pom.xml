@@ -3,14 +3,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.github.nth-bailey</groupId>
+    <groupId>io.github.polyxml</groupId>
     <artifactId>polyxml</artifactId>
     <version>0.23.0</version>
     <packaging>jar</packaging>
 
     <name>PolyXML Java Bindings</name>
     <description>High-performance polyglot XML data-binding engine for Java</description>
-    <url>https://github.com/nth-bailey/PolyXML</url>
+    <url>https://github.com/polyxml/PolyXML</url>
 
     <licenses>
         <license>
@@ -26,14 +26,14 @@
             <name>Bailey Nguyen</name>
             <email>bailey.tan.nguyen@gmail.com</email>
             <organization>PolyXML</organization>
-            <organizationUrl>https://github.com/nth-bailey/PolyXML</organizationUrl>
+            <organizationUrl>https://github.com/polyxml</organizationUrl>
         </developer>
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/nth-bailey/PolyXML.git</connection>
-        <developerConnection>scm:git:ssh://github.com:nth-bailey/PolyXML.git</developerConnection>
-        <url>https://github.com/nth-bailey/PolyXML</url>
+        <connection>scm:git:https://github.com/polyxml/PolyXML.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/polyxml/PolyXML.git</developerConnection>
+        <url>https://github.com/polyxml/PolyXML</url>
     </scm>
 
     <properties>

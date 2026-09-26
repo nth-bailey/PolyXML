@@ -103,7 +103,7 @@ backend = "jackson"
 ```
 
 The same options work under `[codegen.java]`. See the
-[Java benchmark harness](https://github.com/nth-bailey/PolyXML/tree/main/benchmarks/java)
+[Java benchmark harness](https://github.com/polyxml/PolyXML/tree/main/benchmarks/java)
 for JAXB, Jackson, direct POJO/record, and Panama comparisons. No throughput advantage
 is assumed; benchmark the relevant schema and workload.
 
@@ -123,9 +123,9 @@ PolyXML provides native C/Rust XML data-binding for the modern Java Virtual Mach
 ```xml
 <dependencies>
     <dependency>
-        <groupId>io.github.nth-bailey</groupId>
+        <groupId>io.github.polyxml</groupId>
         <artifactId>polyxml</artifactId>
-        <version>0.1.0</version>
+        <version>0.23.0</version>
     </dependency>
 </dependencies>
 

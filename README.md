@@ -21,7 +21,7 @@
   <a href="https://crates.io/crates/polyxml-cli"><img src="https://img.shields.io/crates/v/polyxml-cli.svg?logo=rust&label=polyxml-cli" alt="crates.io: polyxml-cli"></a>
   <a href="https://pypi.org/project/polyxml/"><img src="https://img.shields.io/pypi/v/polyxml.svg?logo=pypi&label=PyPI" alt="PyPI: polyxml"></a>
   <a href="https://www.npmjs.com/package/@polyxml/node"><img src="https://img.shields.io/npm/v/@polyxml/node.svg?logo=npm&color=CB3837&label=npm" alt="npm: @polyxml/node"></a>
-  <a href="https://central.sonatype.com/artifact/io.github.nth-bailey/polyxml"><img src="https://img.shields.io/maven-central/v/io.github.nth-bailey/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven" alt="Maven Central"></a>
+  <a href="https://central.sonatype.com/artifact/io.github.polyxml/polyxml"><img src="https://img.shields.io/maven-central/v/io.github.polyxml/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven" alt="Maven Central"></a>
   <a href="https://pkg.go.dev/github.com/nth-bailey/PolyXML/bindings/go"><img src="https://pkg.go.dev/badge/github.com/nth-bailey/PolyXML/bindings/go.svg" alt="Go Reference"></a>
   <a href="https://github.com/nth-bailey/homebrew-polyxml"><img src="https://img.shields.io/badge/Homebrew-polyxml-FBB040.svg?logo=homebrew&logoColor=black" alt="Homebrew"></a>
 </p>
@@ -133,7 +133,7 @@ Production repositories across **all 7 languages**:
 | **Rust (C-ABI)** | [crates.io](https://crates.io/crates/polyxml-c) | `cargo add polyxml-c` | C-ABI Shared Lib |
 | **Python** | [PyPI](https://pypi.org/project/polyxml/) | `pip install polyxml` | PyO3 (`abi3-py312`) |
 | **TypeScript / Node** | [npm](https://www.npmjs.com/package/@polyxml/node) | `npm install @polyxml/node` | `napi-rs` Native Addon |
-| **Java** | [Maven Central](https://central.sonatype.com/artifact/io.github.nth-bailey/polyxml) | `<artifactId>polyxml</artifactId>` | Java 22+ Panama FFI |
+| **Java** | [Maven Central](https://central.sonatype.com/artifact/io.github.polyxml/polyxml) | `<groupId>io.github.polyxml</groupId>` · `<artifactId>polyxml</artifactId>` | Java 22+ Panama FFI |
 | **Go** | [Go Reference](https://pkg.go.dev/github.com/nth-bailey/PolyXML/bindings/go) | `go get github.com/nth-bailey/PolyXML/bindings/go` | Cgo (`polyxml.h`) |
 | **Modern C++20 / C** | [Conan](conan/) / [vcpkg](packaging/vcpkg/) (`polyxml`) | `conan install` / `vcpkg install polyxml` | Header-Only C++20 & Native Lib |
 | **C# / .NET 8+** | NuGet / Native | `dotnet add package PolyXML` | C# 12 Records & `System.Xml` |
