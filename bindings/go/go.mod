@@ -1,3 +1,3 @@
-module github.com/nth-bailey/PolyXML/bindings/go
+module github.com/polyxml/PolyXML/bindings/go
 
 go 1.22

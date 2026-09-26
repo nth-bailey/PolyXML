@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	polyxml "github.com/nth-bailey/PolyXML/bindings/go"
+	polyxml "github.com/polyxml/PolyXML/bindings/go"
 )
 
 func TestGoBindingsSignatures(t *testing.T) {
@@ -139,18 +139,7 @@ func TestGoNamespaces(t *testing.T) {
 }
 
 func TestGoConformanceFixtures(t *testing.T) {
-	paths := []string{
-		"../../tests/fixtures/atom_feed.xml",
-		"tests/fixtures/atom_feed.xml",
-	}
-	var data []byte
-	var err error
-	for _, p := range paths {
-		data, err = os.ReadFile(p)
-		if err == nil {
-			break
-		}
-	}
+	data, err := os.ReadFile("testdata/atom_feed.xml")
 	if err != nil {
 		t.Fatalf("failed to read atom_feed.xml: %v", err)
 	}

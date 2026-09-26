@@ -12,7 +12,7 @@ PolyXML provides high-throughput native XML parsing for Go, replacing the standa
 ## 📦 Installation
 
 ```bash
-go get github.com/nth-bailey/PolyXML/bindings/go
+go get github.com/polyxml/PolyXML/bindings/go
 ```
 
 *Requirements: Cgo enabled (`CGO_ENABLED=1`) and `libpolyxml` installed or present in library search path.*
@@ -30,7 +30,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/nth-bailey/PolyXML/bindings/go"
+	"github.com/polyxml/PolyXML/bindings/go"
 )
 
 func main() {
@@ -90,7 +90,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/nth-bailey/PolyXML/bindings/go"
+	"github.com/polyxml/PolyXML/bindings/go"
 )
 
 func main() {
@@ -126,7 +126,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/nth-bailey/PolyXML/bindings/go"
+	"github.com/polyxml/PolyXML/bindings/go"
 )
 
 type TradeConfirmation struct {
@@ -193,7 +193,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/nth-bailey/PolyXML/bindings/go"
+	"github.com/polyxml/PolyXML/bindings/go"
 )
 
 var (
@@ -248,7 +248,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/nth-bailey/PolyXML/bindings/go"
+	"github.com/polyxml/PolyXML/bindings/go"
 )
 
 func main() {

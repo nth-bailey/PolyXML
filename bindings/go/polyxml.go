@@ -1,7 +1,6 @@
 package polyxml
 
 /*
-#cgo CFLAGS: -I../../crates/polyxml-c/include
 #include "polyxml.h"
 #include <stdlib.h>
 */

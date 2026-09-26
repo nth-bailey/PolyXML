@@ -123,7 +123,7 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     ```go
     import (
         "fmt"
-        "github.com/nth-bailey/PolyXML/bindings/go"
+        "github.com/polyxml/PolyXML/bindings/go"
     )
 
     func main() {

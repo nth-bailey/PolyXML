@@ -55,6 +55,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
 
+      - name: Tag Go module release
+        if: steps.semantic.outputs.new_release_published == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ steps.semantic.outputs.new_release_version }}
+        run: |
+          tag="bindings/go/v${RELEASE_VERSION}"
+          git fetch origin "refs/tags/v${RELEASE_VERSION}:refs/tags/v${RELEASE_VERSION}"
+          sha=$(git rev-parse "v${RELEASE_VERSION}^{commit}")
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
+            echo "Go module tag ${tag} already exists"
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f "ref=refs/tags/${tag}" -f "sha=${sha}"
+          fi
+
       - name: Dispatch Downstream Package Releases
         if: steps.semantic.outputs.new_release_published == 'true'
         env:
@@ -73,4 +89,3 @@ jobs:
           done
           echo "Dispatching release-homebrew.yml with tag input..."
           gh workflow run release-homebrew.yml --ref main -f tag="$NEW_TAG" || echo "Note: release-homebrew.yml dispatch skipped or handled by release event"
-
