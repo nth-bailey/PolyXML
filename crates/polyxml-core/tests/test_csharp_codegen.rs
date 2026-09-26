@@ -9,7 +9,10 @@ use polyxml::ir::{
     Cardinality, EnumDef, EnumValue, FieldDef, FieldKind, PrimitiveType, QName, RestrictionFacets,
     SchemaIR, StructDef, TypeDef, TypeRef, UnionBranch, UnionDef,
 };
+use std::sync::Mutex;
 use tempfile::tempdir;
+
+static DOTNET_LOCK: Mutex<()> = Mutex::new(());
 
 fn dotnet_command() -> Command {
     let mut cmd = Command::new("dotnet");
@@ -317,6 +320,7 @@ public class Program
     )
     .unwrap();
 
+    let _dotnet_lock = DOTNET_LOCK.lock().unwrap();
     let build_status = dotnet_command()
         .args(["build", "--warnaserror"])
         .current_dir(temp.path())
@@ -497,6 +501,7 @@ public class Program
     )
     .unwrap();
 
+    let _dotnet_lock = DOTNET_LOCK.lock().unwrap();
     let build_status = dotnet_command()
         .args(["build", "--warnaserror"])
         .current_dir(temp.path())
@@ -639,6 +644,7 @@ public class Program
     )
     .unwrap();
 
+    let _dotnet_lock = DOTNET_LOCK.lock().unwrap();
     let build_status = dotnet_command()
         .args(["build", "--warnaserror"])
         .current_dir(temp.path())
@@ -809,6 +815,7 @@ class Program {
   if (((Greeting)gs.Deserialize(new StringReader(gw.ToString()))!).Value != "hello") throw new Exception(gw.ToString());
  }
 }"#).unwrap();
+    let _dotnet_lock = DOTNET_LOCK.lock().unwrap();
     if Command::new("dotnet").arg("--version").output().is_err() {
         return;
     }
@@ -856,6 +863,7 @@ class Program { static void Main() {
  if(((Root)rx.Deserialize(new StringReader(rw.ToString()))!).Value is not Contact.Phone) throw new Exception(rw.ToString());
 } }
 "#).unwrap();
+    let _dotnet_lock = DOTNET_LOCK.lock().unwrap();
     if Command::new("dotnet").arg("--version").output().is_err() {
         return;
     }

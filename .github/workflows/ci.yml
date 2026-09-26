@@ -44,7 +44,11 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Initialize .NET Environment
-        run: dotnet --info
+        run: |
+          dotnet --info
+          dotnet new console -o /tmp/dotnet-init --force
+          dotnet build /tmp/dotnet-init
+          rm -rf /tmp/dotnet-init
 
       - name: Run Core & C-ABI Tests
         run: cargo test -p polyxml -p polyxml-c --verbose
