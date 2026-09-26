@@ -1,5 +1,5 @@
 ---
-title: Why PolyXML? The Architecture of Modern XML
+title: Why PolyXML
 description: An architectural comparison of PolyXML against legacy XML binding toolchains (JAXB, CodeSynthesis, xsdata, xgen, xsd.exe) and performance benchmarks.
 ---
 
