@@ -1,3 +1,10 @@
+## [0.23.2](https://github.com/polyxml/PolyXML/compare/v0.23.1...v0.23.2) (2026-09-26)
+
+
+### Bug Fixes
+
+* **go:** migrate module to polyxml organization ([3a18d99](https://github.com/polyxml/PolyXML/commit/3a18d998108eaf54f67dd04c182d5c144c93c6be))
+
 ## [0.23.1](https://github.com/polyxml/PolyXML/compare/v0.23.0...v0.23.1) (2026-09-26)
 
 
