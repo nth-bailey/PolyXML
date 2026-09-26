@@ -1,14 +1,16 @@
 [project]
-site_url = "https://nth-bailey.github.io/PolyXML/"
+site_url = "https://polyxml.github.io/PolyXML/"
 site_name = "PolyXML"
 site_description = "Next-gen polyglot XML Schema (XSD) compiler and high-throughput streaming serialization engine for Rust, Python, Go, C++20, Java, TypeScript, and C#."
-repo_url = "https://github.com/nth-bailey/PolyXML"
-repo_name = "nth-bailey/PolyXML"
+repo_url = "https://github.com/polyxml/PolyXML"
+repo_name = "polyxml/PolyXML"
 edit_uri = "edit/main/docs/"
 
 # Navigation follows the Markdown files and folders under docs/.
 [project.theme]
 language = "en"
+logo = "assets/brand/logo_polyxml_icon.png"
+favicon = "assets/brand/logo_polyxml_icon.png"
 features = [
   "announce.dismiss",
   "content.action.edit",

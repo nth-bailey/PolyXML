@@ -1,4 +1,6 @@
-# PolyXML
+<h1 align="center">
+  <img src="docs/assets/brand/logo_polyxml_banner.png" alt="PolyXML" width="1000">
+</h1>
 
 <p align="center">
   <strong>The "protoc for XML" — Modern XSD-to-Code Generator & High-Performance Streaming Runtime</strong><br>
@@ -6,10 +8,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/nth-bailey/PolyXML/actions"><img src="https://img.shields.io/github/actions/workflow/status/nth-bailey/PolyXML/ci.yml?branch=main&label=CI&logo=github" alt="CI"></a>
-  <a href="https://nth-bailey.github.io/PolyXML/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg?logo=gitbook" alt="Docs"></a>
+  <a href="https://github.com/polyxml/PolyXML/actions"><img src="https://img.shields.io/github/actions/workflow/status/polyxml/PolyXML/ci.yml?branch=main&label=CI&logo=github" alt="CI"></a>
+  <a href="https://polyxml.github.io/PolyXML/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg?logo=gitbook" alt="Docs"></a>
   <a href="https://github.com/nth-bailey/polyxml-w3c-tests"><img src="https://img.shields.io/badge/W3C%20XSTS-99.8%25%20Passed-brightgreen.svg" alt="W3C XSTS Conformance"></a>
-  <a href="https://github.com/nth-bailey/PolyXML/blob/main/crates/polyxml-python/pyproject.toml"><img src="https://img.shields.io/badge/coverage-100%25-brightgreen.svg?logo=pytest" alt="Coverage: 100%"></a>
+  <a href="https://github.com/polyxml/PolyXML/blob/main/crates/polyxml-python/pyproject.toml"><img src="https://img.shields.io/badge/coverage-100%25-brightgreen.svg?logo=pytest" alt="Coverage: 100%"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
 </p>
@@ -136,19 +138,19 @@ Production repositories across **all 7 languages**:
 | **Modern C++20 / C** | [Conan](conan/) / [vcpkg](packaging/vcpkg/) (`polyxml`) | `conan install` / `vcpkg install polyxml` | Header-Only C++20 & Native Lib |
 | **C# / .NET 8+** | NuGet / Native | `dotnet add package PolyXML` | C# 12 Records & `System.Xml` |
 | **macOS & Linux** | [Homebrew Tap](https://github.com/nth-bailey/homebrew-polyxml) | `brew install nth-bailey/polyxml/polyxml` | Native Headers & Dynamic Lib |
-| **Universal Installer** | [GitHub Releases](https://github.com/nth-bailey/PolyXML/releases) | `curl -fsSL .../install.sh \| bash` | Pre-compiled Standalone Binary |
-| **Debian & Fedora** | [GitHub Releases](https://github.com/nth-bailey/PolyXML/releases) | `dpkg -i *.deb` / `dnf install *.rpm` | Native `.deb` & `.rpm` Packages |
+| **Universal Installer** | [GitHub Releases](https://github.com/polyxml/PolyXML/releases) | `curl -fsSL .../install.sh \| bash` | Pre-compiled Standalone Binary |
+| **Debian & Fedora** | [GitHub Releases](https://github.com/polyxml/PolyXML/releases) | `dpkg -i *.deb` / `dnf install *.rpm` | Native `.deb` & `.rpm` Packages |
 
 ---
 
 ## Documentation & Learning
 
-- **[Multi-Language Quickstart](https://nth-bailey.github.io/PolyXML/quickstart/)**: 5-minute setup across all 7 target ecosystems.
-- **[XSD-to-Code & CLI Guide](https://nth-bailey.github.io/PolyXML/guides/compiler/)**: Full reference for `polyxml generate`, `build`, `validate`, and `polyxml.toml`.
-- **[Language Guides](https://nth-bailey.github.io/PolyXML/languages/)**: Rust, Python, C++20, Go, TypeScript/Node.js, Java, and C# examples.
-- **[Why PolyXML? Architectural Breakdown](https://nth-bailey.github.io/PolyXML/why-polyxml/)**: Deep comparison against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
-- **[Architecture & Streaming Pipeline](https://nth-bailey.github.io/PolyXML/architecture/)**: Detailed breakdown of our zero-copy reader, frame stack, and Tarjan cycle-cutting.
-- **[Performance Benchmarks](https://nth-bailey.github.io/PolyXML/benchmarks/)**: Reproducible benchmarks and throughput charts.
+- **[Multi-Language Quickstart](https://polyxml.github.io/PolyXML/quickstart/)**: 5-minute setup across all 7 target ecosystems.
+- **[XSD-to-Code & CLI Guide](https://polyxml.github.io/PolyXML/guides/compiler/)**: Full reference for `polyxml generate`, `build`, `validate`, and `polyxml.toml`.
+- **[Language Guides](https://polyxml.github.io/PolyXML/languages/)**: Rust, Python, C++20, Go, TypeScript/Node.js, Java, and C# examples.
+- **[Why PolyXML? Architectural Breakdown](https://polyxml.github.io/PolyXML/why-polyxml/)**: Deep comparison against JAXB, CodeSynthesis, xsdata, xgen, and xsd.exe.
+- **[Architecture & Streaming Pipeline](https://polyxml.github.io/PolyXML/architecture/)**: Detailed breakdown of our zero-copy reader, frame stack, and Tarjan cycle-cutting.
+- **[Performance Benchmarks](https://polyxml.github.io/PolyXML/benchmarks/)**: Reproducible benchmarks and throughput charts.
 - **[Real-World Industry Showcases](#-real-world-industry-showcases--polyglot-bridges)**: Production repositories for Defense (USAF UCI), Finance (ISO 20022), and Transit (CEN SIRI/NeTEx).
 
 ---
