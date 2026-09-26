@@ -31,7 +31,7 @@ jobs:
         uses: mislav/bump-homebrew-formula-action@v4
         with:
           formula-name: polyxml
-          homebrew-tap: nth-bailey/homebrew-polyxml
+          homebrew-tap: polyxml/homebrew-polyxml
           base-branch: main
           tag-name: ${{ steps.tag.outputs.name }}
           commit-message: "chore(formula): bump polyxml to ${{ steps.tag.outputs.name }}"

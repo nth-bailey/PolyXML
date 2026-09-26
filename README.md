@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/polyxml/PolyXML/actions"><img src="https://img.shields.io/github/actions/workflow/status/polyxml/PolyXML/ci.yml?branch=main&label=CI&logo=github" alt="CI"></a>
   <a href="https://polyxml.github.io/PolyXML/"><img src="https://img.shields.io/badge/docs-zensical-blue.svg?logo=gitbook" alt="Docs"></a>
-  <a href="https://github.com/nth-bailey/polyxml-w3c-tests"><img src="https://img.shields.io/badge/W3C%20XSTS-99.8%25%20Passed-brightgreen.svg" alt="W3C XSTS Conformance"></a>
+  <a href="https://github.com/polyxml/polyxml-w3c-tests"><img src="https://img.shields.io/badge/W3C%20XSTS-99.8%25%20Passed-brightgreen.svg" alt="W3C XSTS Conformance"></a>
   <a href="https://github.com/polyxml/PolyXML/blob/main/crates/polyxml-python/pyproject.toml"><img src="https://img.shields.io/badge/coverage-100%25-brightgreen.svg?logo=pytest" alt="Coverage: 100%"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
@@ -23,7 +23,7 @@
   <a href="https://www.npmjs.com/package/@polyxml/node"><img src="https://img.shields.io/npm/v/@polyxml/node.svg?logo=npm&color=CB3837&label=npm" alt="npm: @polyxml/node"></a>
   <a href="https://central.sonatype.com/artifact/io.github.polyxml/polyxml"><img src="https://img.shields.io/maven-central/v/io.github.polyxml/polyxml.svg?logo=apache-maven&color=C71A36&label=Maven" alt="Maven Central"></a>
   <a href="https://pkg.go.dev/github.com/nth-bailey/PolyXML/bindings/go"><img src="https://pkg.go.dev/badge/github.com/nth-bailey/PolyXML/bindings/go.svg" alt="Go Reference"></a>
-  <a href="https://github.com/nth-bailey/homebrew-polyxml"><img src="https://img.shields.io/badge/Homebrew-polyxml-FBB040.svg?logo=homebrew&logoColor=black" alt="Homebrew"></a>
+  <a href="https://github.com/polyxml/homebrew-polyxml"><img src="https://img.shields.io/badge/Homebrew-polyxml-FBB040.svg?logo=homebrew&logoColor=black" alt="Homebrew"></a>
 </p>
 
 <p align="center">
@@ -49,7 +49,7 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 
 1. **🛠️ Universal XSD-to-Code Generator (`polyxml`)**: Ingests W3C XSD 1.0 and 1.1 schemas, resolves cyclic types with Tarjan's SCC algorithm, and compiles production-ready, strongly-typed data contracts across **7 modern ecosystems** simultaneously (**Python**, **Rust**, **C++**, **Java**, **TypeScript**, **Go**, and **C#**).
 2. **⚡ Ultra-Fast Streaming Runtime**: Direct-to-struct deserialization and serialization powered by `quick-xml` and `lexical-core`, executing **10x–24x faster than traditional tools** with **zero intermediate DOM allocations**.
-3. **🏛️ Official W3C XSTS Conformance Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests).
+3. **🏛️ Official W3C XSTS Conformance Tested**: Validated against the official W3C XML Schema Test Suite with a **>99.8% schema compilation pass rate** and **>96% round-trip validation rate** via [polyxml-w3c-tests](https://github.com/polyxml/polyxml-w3c-tests).
 4. **📦 Permissive MIT License**: 100% open source with zero commercial licensing fees, eliminating the GPL dual-licensing traps of legacy C++ tools.
 5. **🛡️ Controlled XML Entity Handling**: The native streaming runtime resolves standard and numeric character references in memory and does not fetch external entities while parsing XML. Schema compilation separately reads local XSD includes and imports.
 
@@ -60,7 +60,7 @@ Just as Protocol Buffers (`protoc`) and FlatBuffers (`flatc`) modernized binary 
 Install the PolyXML CLI in seconds on Linux and macOS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nth-bailey/PolyXML/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/polyxml/PolyXML/main/scripts/install.sh | bash
 ```
 
 Generate strongly-typed code for all 7 languages from any W3C XML Schema in a single command:
@@ -118,9 +118,9 @@ Headline numbers ([full methodology & reproduction steps →](docs/benchmarks/in
 
 Production repositories across **all 7 languages**:
 
-- 🛸 **Defense & Aerospace** ([polyxml-defense-examples](https://github.com/nth-bailey/polyxml-defense-examples)): Anduril Lattice SDK (Protobuf/JSON) ↔ USAF UCI v2.5 (C2 XML).
-- 💳 **Global Finance** ([polyxml-finance-examples](https://github.com/nth-bailey/polyxml-finance-examples)): FinTech payments (FedNow, Stripe, Plaid JSON) ↔ ISO 20022 `pacs.008` (XML).
-- 🚍 **Smart Cities & Transit** ([polyxml-transit-examples](https://github.com/nth-bailey/polyxml-transit-examples)): Google GTFS-Realtime (Protobuf/JSON) ↔ CEN SIRI v2.0 & NeTEx (XML).
+- 🛸 **Defense & Aerospace** ([polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples)): Anduril Lattice SDK (Protobuf/JSON) ↔ USAF UCI v2.5 (C2 XML).
+- 💳 **Global Finance** ([polyxml-finance-examples](https://github.com/polyxml/polyxml-finance-examples)): FinTech payments (FedNow, Stripe, Plaid JSON) ↔ ISO 20022 `pacs.008` (XML).
+- 🚍 **Smart Cities & Transit** ([polyxml-transit-examples](https://github.com/polyxml/polyxml-transit-examples)): Google GTFS-Realtime (Protobuf/JSON) ↔ CEN SIRI v2.0 & NeTEx (XML).
 
 ---
 
@@ -137,7 +137,7 @@ Production repositories across **all 7 languages**:
 | **Go** | [Go Reference](https://pkg.go.dev/github.com/nth-bailey/PolyXML/bindings/go) | `go get github.com/nth-bailey/PolyXML/bindings/go` | Cgo (`polyxml.h`) |
 | **Modern C++20 / C** | [Conan](conan/) / [vcpkg](packaging/vcpkg/) (`polyxml`) | `conan install` / `vcpkg install polyxml` | Header-Only C++20 & Native Lib |
 | **C# / .NET 8+** | NuGet / Native | `dotnet add package PolyXML` | C# 12 Records & `System.Xml` |
-| **macOS & Linux** | [Homebrew Tap](https://github.com/nth-bailey/homebrew-polyxml) | `brew install nth-bailey/polyxml/polyxml` | Native Headers & Dynamic Lib |
+| **macOS & Linux** | [Homebrew Tap](https://github.com/polyxml/homebrew-polyxml) | `brew install polyxml/polyxml/polyxml` | Native Headers & Dynamic Lib |
 | **Universal Installer** | [GitHub Releases](https://github.com/polyxml/PolyXML/releases) | `curl -fsSL .../install.sh \| bash` | Pre-compiled Standalone Binary |
 | **Debian & Fedora** | [GitHub Releases](https://github.com/polyxml/PolyXML/releases) | `dpkg -i *.deb` / `dnf install *.rpm` | Native `.deb` & `.rpm` Packages |
 

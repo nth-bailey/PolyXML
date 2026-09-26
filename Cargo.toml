@@ -15,8 +15,8 @@ edition = "2021"
 rust-version = "1.80"
 license = "MIT"
 authors = ["Bailey Nguyen <bailey.tan.nguyen@gmail.com>"]
-repository = "https://github.com/nth-bailey/PolyXML"
-homepage = "https://github.com/nth-bailey/PolyXML"
+repository = "https://github.com/polyxml/PolyXML"
+homepage = "https://polyxml.github.io/PolyXML/"
 keywords = ["xml", "deserializer", "serializer", "data-binding", "polyglot"]
 categories = ["parsing", "encoding"]
 

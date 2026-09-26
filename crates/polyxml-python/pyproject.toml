@@ -41,10 +41,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/nth-bailey/PolyXML"
-Documentation = "https://nth-bailey.github.io/PolyXML/"
-Repository = "https://github.com/nth-bailey/PolyXML"
-Issues = "https://github.com/nth-bailey/PolyXML/issues"
+Homepage = "https://github.com/polyxml/PolyXML"
+Documentation = "https://polyxml.github.io/PolyXML/"
+Repository = "https://github.com/polyxml/PolyXML"
+Issues = "https://github.com/polyxml/PolyXML/issues"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
@@ -85,4 +85,3 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["polyxml"]
-

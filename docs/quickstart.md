@@ -243,10 +243,10 @@ Choose your preferred language to see how PolyXML deserializes XML payloads into
     ### 0. Install the CLI
     ```bash
     # Universal one-line installer (Linux / macOS)
-    curl -fsSL https://raw.githubusercontent.com/nth-bailey/PolyXML/main/scripts/install.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/polyxml/PolyXML/main/scripts/install.sh | bash
 
     # Or via Homebrew
-    brew install nth-bailey/polyxml/polyxml
+    brew install polyxml/polyxml/polyxml
 
     # Or pre-built .deb / .rpm from GitHub Releases:
     # sudo dpkg -i polyxml_amd64.deb
@@ -430,6 +430,6 @@ Looking for production-grade project repositories with complete build setups acr
 
 | Domain | Repository | Standards & Integration |
 |---|---|---|
-| **Defense & Avionics** | [polyxml-defense-examples](https://github.com/nth-bailey/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (XML) |
-| **Banking & FinTech** | [polyxml-finance-examples](https://github.com/nth-bailey/polyxml-finance-examples) | **FinTech Payments** (FedNow, Stripe, Plaid) ↔ **ISO 20022 `pacs.008`** (XML) |
-| **Public Transit & Mobility** | [polyxml-transit-examples](https://github.com/nth-bailey/polyxml-transit-examples) | **Google GTFS-Realtime** (Protobuf/JSON) ↔ **European CEN SIRI & NeTEx** (XML) |
+| **Defense & Avionics** | [polyxml-defense-examples](https://github.com/polyxml/polyxml-defense-examples) | **Anduril Lattice SDK** (Protobuf/JSON) ↔ **USAF UCI v2.5** (XML) |
+| **Banking & FinTech** | [polyxml-finance-examples](https://github.com/polyxml/polyxml-finance-examples) | **FinTech Payments** (FedNow, Stripe, Plaid) ↔ **ISO 20022 `pacs.008`** (XML) |
+| **Public Transit & Mobility** | [polyxml-transit-examples](https://github.com/polyxml/polyxml-transit-examples) | **Google GTFS-Realtime** (Protobuf/JSON) ↔ **European CEN SIRI & NeTEx** (XML) |
