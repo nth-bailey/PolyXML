@@ -5,6 +5,7 @@ site_description = "Next-gen polyglot XML Schema (XSD) compiler and high-through
 repo_url = "https://github.com/polyxml/PolyXML"
 repo_name = "polyxml/PolyXML"
 edit_uri = "edit/main/docs/"
+extra_css = ["stylesheets/brand.css"]
 
 # Navigation follows the Markdown files and folders under docs/.
 [project.theme]
@@ -34,18 +35,24 @@ features = [
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme)"
+primary = "custom"
+accent = "custom"
 toggle.icon = "lucide/sun-moon"
 toggle.name = "Switch to light mode"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme: light)"
 scheme = "default"
+primary = "custom"
+accent = "custom"
 toggle.icon = "lucide/sun"
 toggle.name = "Switch to dark mode"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme: dark)"
 scheme = "slate"
+primary = "custom"
+accent = "custom"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to system preference"
 

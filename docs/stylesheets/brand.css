@@ -1,0 +1,100 @@
+/* Keep reading surfaces quiet; use the logo palette for navigation and details. */
+:root {
+  --polyxml-blue: #5170ff;
+  --polyxml-violet: #a86be2;
+  --polyxml-pink: #ff66c4;
+  --polyxml-lime: #c1ff72;
+  --polyxml-yellow: #ffde59;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #5547ad;
+  --md-primary-fg-color--light: #8172d0;
+  --md-primary-fg-color--dark: #40348d;
+  --md-accent-fg-color: #9d2d86;
+  --polyxml-rule: #e8e3f5;
+  --polyxml-code-bg: #f4f1fb;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 245;
+  --md-primary-fg-color: #c5b4ff;
+  --md-primary-fg-color--light: #dfd5ff;
+  --md-primary-fg-color--dark: #a28de8;
+  --md-accent-fg-color: #c1ff72;
+  --polyxml-rule: #393654;
+  --polyxml-code-bg: #28253c;
+}
+
+.md-header {
+  background: linear-gradient(105deg, #202849, #38295e 58%, #543263);
+  color: #fff;
+}
+
+.md-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--polyxml-blue), var(--polyxml-violet), var(--polyxml-pink), var(--polyxml-yellow));
+}
+
+.md-typeset h1 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.md-typeset h1::after {
+  content: "";
+  display: block;
+  width: 4.5rem;
+  height: 0.2rem;
+  margin-top: 0.45rem;
+  border-radius: 1rem;
+  background: linear-gradient(90deg, var(--polyxml-blue), var(--polyxml-violet), var(--polyxml-pink));
+}
+
+.md-typeset h2 {
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--polyxml-rule);
+}
+
+.md-typeset a:hover,
+.md-nav__link:hover {
+  color: var(--md-accent-fg-color);
+}
+
+.md-nav__link--active {
+  font-weight: 700;
+}
+
+.md-typeset :not(pre) > code {
+  background: var(--polyxml-code-bg);
+  border-radius: 0.25rem;
+}
+
+.md-typeset img[alt="PolyXML wordmark"] {
+  display: block;
+  width: 100%;
+  border-radius: 0.45rem;
+  box-shadow: 0 0.45rem 1.5rem rgb(40 30 90 / 12%);
+}
+
+.md-typeset .md-button--primary {
+  background-color: #5547ad;
+  border-color: #5547ad;
+  color: #fff;
+}
+
+.md-typeset .md-button--primary:hover {
+  background-color: #40348d;
+  border-color: #40348d;
+  color: #fff;
+}
+
+.md-typeset a:focus-visible,
+.md-nav__link:focus-visible,
+.md-header a:focus-visible {
+  outline: 2px solid var(--polyxml-lime);
+  outline-offset: 3px;
+}
