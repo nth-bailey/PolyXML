@@ -107,7 +107,7 @@ jobs:
           cargo generate-rpm -p crates/polyxml-cli/Cargo.toml --output dist/ || echo "RPM generation skipped or completed"
 
       - name: Upload Artifacts to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
