@@ -9,7 +9,7 @@ repository.
 
 `PolyXML` is the high-performance, polyglot native XML data-binding engine and schema compiler, providing
 ultra-fast bidirectional XML serialization, deserialization, and multi-language code generation across
-7 modern ecosystems: **Rust**, **Python** (dataclasses & Pydantic v2), **C++20**, **Java 21+**, **TypeScript 5+**, **Go 1.22+**, and **C# 12 / .NET 8+**.
+7 modern ecosystems: **Rust**, **Python** (dataclasses & Pydantic v2), **C++20**, **Java 22+**, **TypeScript 5+**, **Go 1.22+**, and **C# 12 / .NET 8+**.
 
 - **Technology**: Rust 2021, PyO3 (`abi3-py312`), `quick-xml`, `lexical-core`, `smallvec`, `minijinja`.
 - **Repository**: `polyxml/PolyXML`

@@ -14,7 +14,7 @@
 - **Pure-Rust XSD 1.0 & 1.1 Schema Parser**: Parses complex schemas with full support for includes, imports, redefines, choice groups, and restriction facets with zero C dependencies.
 - **Language-Agnostic Schema IR**: Normalizes XML Schema constructs into an actionable, unified Intermediate Representation (`SchemaIR`).
 - **Tarjan SCC Cycle Analysis**: Automatically breaks recursive and mutually cyclic type references with minimal cut points (`Box<T>`, pointers, `std::unique_ptr`, `z.lazy`).
-- **7-Target Code Generator**: Emits idiomatic models and streaming codecs for **Rust**, **Python** (dataclasses & Pydantic v2), **C++20**, **Java 21+**, **TypeScript 5+**, **Go 1.22+**, and **C# 12 / .NET 8+**.
+- **7-Target Code Generator**: Emits idiomatic models and streaming codecs for **Rust**, **Python** (dataclasses & Pydantic v2), **C++20**, **Java 22+**, **TypeScript 5+**, **Go 1.22+**, and **C# 12 / .NET 8+**.
 - **Bidirectional Streaming Codecs**: Fast streaming deserialization and serialization with optional indentation formatting and namespace mapping.
 - **Security Hardened**: Built-in recursion depth limits protect against XML entity expansion and deeply nested denial-of-service (Billion Laughs) attacks.
 - **Zero Heavy Allocations**: Uses `smallvec` and slice lookups to minimize intermediate heap allocations.

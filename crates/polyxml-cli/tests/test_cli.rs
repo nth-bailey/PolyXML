@@ -551,7 +551,7 @@ fn test_cli_java_generation() {
     if let Ok(javac_out) = javac_check {
         assert!(
             javac_out.status.success(),
-            "javac failed on generated Java 21 files: {}\nstdout: {}",
+            "javac failed on generated Java 22 files: {}\nstdout: {}",
             String::from_utf8_lossy(&javac_out.stderr),
             String::from_utf8_lossy(&javac_out.stdout)
         );

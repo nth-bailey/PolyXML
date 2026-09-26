@@ -247,7 +247,7 @@ polyxml transcode legacy.xml --out modern.json
 | **Python** | Python 3.12+ | `@dataclass` & Pydantic v2 | PEP 695 type aliases, PEP 604 unions, zero-copy streaming codecs, native `.to_json()` / `.from_json()` methods |
 | **Rust** | Rust 2021 / 2024 | Zero-Copy & Owned Structs | Lifetime inference `<'a>`, automatic `Box<T>` cycle breaks, inherent streaming XML codecs, inherent `.to_json_string()` codecs |
 | **C++** | C++20 / C++23 | Header-Only Value Types | `std::variant` choices, `std::unique_ptr` cycle breaks, C++20 concepts, CMake/Meson export |
-| **Java** | Java 21+ | Modern Records & Sealed Interfaces | Exhaustive switch pattern matching, compact constructor facet validation |
+| **Java** | Java 22+ | Modern Records & Sealed Interfaces | Exhaustive switch pattern matching, compact constructor facet validation |
 | **TypeScript** | TypeScript 5+ | Interfaces & Discriminated Unions | Runtime Zod schemas, circular references handled via `z.lazy()`, `as const` enums |
 | **Go** | Go 1.22+ | Structs with `encoding/xml` & `encoding/json` | Dual `xml:"..."` and `json:"..."` struct tags, `json:"-"` on `XMLName`, canonical initialisms (`ID`, `URL`), choice exclusivity |
 | **C#** | C# 12 / .NET 8+ | Records with Primary Constructors | Parameterless constructors, dual `XmlSerializer` and `System.Text.Json` attributes (`[JsonPropertyName]`, `[JsonConverter]`), `IValidatableObject` |

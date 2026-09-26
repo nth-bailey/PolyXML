@@ -5,7 +5,12 @@ description: Ultra-fast Java XML processing using Java 22 Foreign Function & Mem
 
 # Java
 
-## Java 21 models: records, POJOs, and builders
+PolyXML supports Java 22 or newer for both generated Java applications and the
+published Java binding. Java 25 is a good LTS choice. Generated models and direct
+StAX codecs use only Java APIs; they do not automatically call the Rust runtime.
+Use the Panama binding below when your application needs native PolyXML parsing.
+
+## Java 22 models: records, POJOs, and builders
 
 Records remain the default. Select mutable JavaBeans for setter-based frameworks:
 
@@ -109,8 +114,7 @@ is assumed; benchmark the relevant schema and workload.
 
 ## Java 22+ native bindings
 
-The remaining sections describe the separate Panama runtime, which requires Java 22+
-and a native PolyXML library. Generated models and direct StAX codecs work on Java 21.
+The Panama binding requires a native PolyXML library in addition to Java 22+.
 
 PolyXML provides native C/Rust XML data-binding for the modern Java Virtual Machine using **Java 22+ Project Panama (Foreign Function & Memory API - JEP 454)**. It completely eliminates legacy JNI glue code, GC object pinning, and JNI transition overheads by leveraging native off-heap memory and downcall method handles.
 
@@ -125,7 +129,7 @@ PolyXML provides native C/Rust XML data-binding for the modern Java Virtual Mach
     <dependency>
         <groupId>io.github.polyxml</groupId>
         <artifactId>polyxml</artifactId>
-        <version>0.23.0</version>
+        <version>0.23.2</version>
     </dependency>
 </dependencies>
 
@@ -137,9 +141,6 @@ PolyXML provides native C/Rust XML data-binding for the modern Java Virtual Mach
             <version>3.13.0</version>
             <configuration>
                 <release>22</release>
-                <compilerArgs>
-                    <arg>--enable-preview</arg>
-                </compilerArgs>
             </configuration>
         </plugin>
     </plugins>
@@ -304,7 +305,7 @@ In high-throughput enterprise architectures (e.g. processing millions of ISO 200
 
 ## 6. Enterprise Jackson Backend (`--backend jackson`)
 
-PolyXML's code generator supports an opt-in **Jackson backend** that annotates generated Java 21+ `record`s with [Jackson](https://github.com/FasterXML/jackson) annotations for seamless integration with **Spring Boot 3**, **Quarkus**, **Micronaut**, and any framework using `ObjectMapper` or `XmlMapper`.
+PolyXML's code generator supports an opt-in **Jackson backend** that annotates generated Java 22+ `record`s with [Jackson](https://github.com/FasterXML/jackson) annotations for seamless integration with **Spring Boot 3**, **Quarkus**, **Micronaut**, and any framework using `ObjectMapper` or `XmlMapper`.
 
 ### Quick Start
 
@@ -386,4 +387,4 @@ public class PaymentProcessor {
 }
 ```
 
-> **Note:** The default `--backend standard` (or no `--backend`) continues to emit pure, zero-dependency Java 21+ records with no Jackson imports.
+> **Note:** The default `--backend standard` (or no `--backend`) continues to emit pure, zero-dependency Java 22+ records with no Jackson imports.

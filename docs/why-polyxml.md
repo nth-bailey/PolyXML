@@ -17,7 +17,7 @@ Yet, for over twenty years, the developer tooling landscape for XML has suffered
 
 | Ecosystem | Legacy Tool | Architecture & Runtime | Modern Idiom Alignment | Critical Operational Friction | PolyXML Modern Approach |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Java** | **Jakarta JAXB (`xjc`)** | JAXP / StAX with reflection | ❌ **Low**: Mutable JavaBeans, no-arg constructors, getters/setters | Reflection overhead; extensive heap churn; cannot emit immutable records or sealed interfaces natively | ✅ **Java 21+ Records & Sealed Interfaces**: Exhaustive switch pattern matching, compact constructor facet validation, zero JNI Panama FFI |
+| **Java** | **Jakarta JAXB (`xjc`)** | JAXP / StAX with reflection | ❌ **Low**: Mutable JavaBeans, no-arg constructors, getters/setters | Reflection overhead; extensive heap churn; cannot emit immutable records or sealed interfaces natively | ✅ **Java 22+ Records & Sealed Interfaces**: Exhaustive switch pattern matching, compact constructor facet validation, zero JNI Panama FFI |
 | **Java** | **Apache XMLBeans** | In-memory XML store maintaining full Infoset | ❌ **Very Low**: Classes extending `XmlObject` | **10x–20x memory bloat**; every field access traverses pointer trees; obsolete Ant/Maven plugins | ✅ **Streaming Core**: Zero DOM allocation, minimal memory footprint |
 | **C++** | **CodeSynthesis XSD** | Hard dependency on **Apache Xerces-C++** | ❌ **Low**: Pre-C++11 raw pointers, `auto_ptr`, Boost wrappers | Massive binary footprint; expensive **UTF-8 ↔ UTF-16 (`XMLCh`) transcoding**; punitive **GPL v2 / commercial dual-license** | ✅ **Modern C++20/C++23**: `std::variant`, `std::optional`, `std::string_view`, concepts, zero Xerces dependency, **permissive MIT license** |
 | **C++** | **gSOAP (`soapcpp2`)** | Custom low-level C parser with macro tables | ❌ **Very Low**: Procedural C/C++ | Global state variables; namespace collisions; fragile memory ownership; GPL/commercial dual-license | ✅ **Thread-Safe Modern Value Types**: RAII memory management, CMake/Meson module export |
@@ -51,7 +51,7 @@ PolyXML eliminates intermediate DOM allocations entirely:
 
 ### 3. Modern Language Idioms (2024–2026) vs. 20-Year-Old Code Generation
 Most legacy compilers were architected during the Java 5 / C++98 era. They generate sprawling boilerplate:
-- **Immutable by default, mutable on request**: PolyXML generates immutable Java 21+ `record` types and `sealed interface` choice models that support compiler-enforced pattern matching without default branches. When a legacy framework requires JavaBeans, `--style pojo --feature builder` emits no-arg classes with getters/setters and fluent builders instead — same facets, same codecs.
+- **Immutable by default, mutable on request**: PolyXML generates immutable Java 22+ `record` types and `sealed interface` choice models that support compiler-enforced pattern matching without default branches. When a legacy framework requires JavaBeans, `--style pojo --feature builder` emits no-arg classes with getters/setters and fluent builders instead — same facets, same codecs.
 - **No more raw pointers or Xerces**: PolyXML generates clean C++20 value types, `std::variant`, and C++20 concepts with zero external runtime dependencies.
 - **No more untyped Python bags**: PolyXML generates `@dataclass(slots=True, kw_only=True)` and Pydantic v2 models leveraging Python 3.12 PEP 695 type aliases (`type Sku = ...`) and PEP 604 union syntax (`TypeA | TypeB`).
 
@@ -173,7 +173,7 @@ Across more than 600 official test groups from Sun Microsystems, Microsoft, and 
 
 | If you are using... | PolyXML gives you... |
 | :--- | :--- |
-| **JAXB / `xjc` in Java** | Immutable Java 21+ records, sealed interface choices, zero reflection overhead, and Project Panama FFI — or drop-in JavaBeans with fluent builders and zero-reflection StAX codecs (`--style pojo --feature builder,direct-codec`) for existing codebases. |
+| **JAXB / `xjc` in Java** | Immutable Java 22+ records, sealed interface choices, zero reflection overhead, and Project Panama FFI — or drop-in JavaBeans with fluent builders and zero-reflection StAX codecs (`--style pojo --feature builder,direct-codec`) for existing codebases. |
 | **CodeSynthesis in C++** | Modern C++20 value types, `std::variant`, zero Apache Xerces dependency, zero UTF-16 transcoding overhead, and a permissive MIT license. |
 | **`xsdata` in Python** | **10x faster** XML parsing, **23.5x faster** XML serialization, **9.5x faster** native JSON, 100% drop-in replacement (`JsonSerializer`, `JsonParser`), and direct C/Rust transcoding (`xml_to_json`, `json_to_xml`). |
 | **`xsd-parser` in Rust** | A battle-tested compiler that doesn't panic on complex schemas, with automatic Tarjan `Box<T>` cycle breaks, inherent streaming XML codecs, and native `.to_json_string()` codecs. |

@@ -86,13 +86,13 @@ echo -n "  • C++20 (modules)... "
 test -f "${TMP_DIR}/cpp_mod/test_schema.cppm"
 echo -e "${GREEN}OK${NC}"
 
-# 4. Java 21+ (standard & jackson)
-echo -n "  • Java 21+ (standard records)... "
+# 4. Java 22+ (standard & jackson)
+echo -n "  • Java 22+ (standard records)... "
 "${POLYXML_BIN}" generate --lang java --package com.example.smoke --out "${TMP_DIR}/java_std" "${SCHEMA_FILE}" >/dev/null
 test -f "${TMP_DIR}/java_std/SmokeModel.java"
 echo -e "${GREEN}OK${NC}"
 
-echo -n "  • Java 21+ (jackson)... "
+echo -n "  • Java 22+ (jackson)... "
 "${POLYXML_BIN}" generate --lang java --backend jackson --package com.example.smoke --out "${TMP_DIR}/java_jack" "${SCHEMA_FILE}" >/dev/null
 test -f "${TMP_DIR}/java_jack/SmokeModel.java"
 echo -e "${GREEN}OK${NC}"

@@ -22,7 +22,7 @@ crates/polyxml-core/src/codegen/
 ├── rust/mod.rs             # Rust (Zero-copy Cow<'a, str>, Owned, rkyv, streaming codecs)
 ├── python/mod.rs           # Python 3.12+ (Dataclasses, Pydantic v2, codecs)
 ├── cpp/mod.rs              # C++20 (Header-only / C++20 Modules, Glaze reflection)
-├── java/mod.rs             # Java 21+ (Records, Jackson XML/JSON, sealed interfaces)
+├── java/mod.rs             # Java 22+ (Records, Jackson XML/JSON, sealed interfaces)
 ├── typescript/mod.rs       # TypeScript 5+ (Interfaces, Zod, Valibot, TypeBox)
 ├── go/mod.rs               # Go 1.22+ (Structs, xml/json tags, EasyJSON, Sonic)
 └── csharp/mod.rs           # C# 12 / .NET 8+ (Record classes/structs, source gen context)

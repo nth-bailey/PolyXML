@@ -395,7 +395,7 @@ After compiling your schema with `polyxml generate`, each target ships ready-to-
     import com.fasterxml.jackson.dataformat.xml.XmlMapper;
     import com.fasterxml.jackson.databind.ObjectMapper;
 
-    // Java 21 record deserialization with Jackson XmlMapper:
+    // Java 22 record deserialization with Jackson XmlMapper:
     XmlMapper xmlMapper = new XmlMapper();
     Customer customer = xmlMapper.readValue(xmlString, Customer.class);
 

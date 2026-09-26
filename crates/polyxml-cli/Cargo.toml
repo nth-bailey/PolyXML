@@ -32,7 +32,7 @@ copyright = "2026 Bailey Nguyen <bailey.tan.nguyen@gmail.com>"
 extended-description = """\
 PolyXML is the high-performance polyglot XML schema compiler and ultra-fast
 streaming data-binding runtime. Compiles W3C XML Schemas across Rust, Python,
-C++20, Java 21+, TypeScript, Go, and C#."""
+C++20, Java 22+, TypeScript, Go, and C#."""
 depends = "$auto"
 section = "devel"
 priority = "optional"

@@ -9,7 +9,7 @@ description: Ultra-fast streaming XML data-binding engine in Rust with native bi
 
 <p align="center">
   <strong>The "protoc for XML" — Modern XSD-to-Code Generator & High-Performance Streaming Runtime</strong><br>
-  <em>Python • Rust • C++20 • Java 21+ • TypeScript • Go • C# 12</em>
+  <em>Python • Rust • C++20 • Java 22+ • TypeScript • Go • C# 12</em>
 </p>
 
 ---
@@ -61,7 +61,7 @@ The PolyXML Way
 ✅ Unified Rust Tool: Generates idiomatic, type-safe code (like protoc) across 7 languages.
 ✅ Zero-Allocation Streaming: Direct-to-struct parsing with quick-xml & lexical-core (10x–24x faster).
 ✅ Dual-Format XML ↔ JSON: Whole-document transcoding (`polyxml transcode`) and dual-annotated models.
-✅ Modern Language Idioms: Immutable Java 21+ records, C++20 value types, Python 3.12 PEP 695 dataclasses.
+✅ Modern Language Idioms: Immutable Java 22+ records, C++20 value types, Python 3.12 PEP 695 dataclasses.
 ✅ Secure by Design: Pure-Rust streaming parser structurally immune to XXE (CWE-611) & SSRF.
 ✅ 100% Permissive MIT: Zero commercial licensing fees, zero GPL infection risk.
 ```
@@ -83,7 +83,7 @@ flowchart LR
     CLI --> PY[Python 3.12+<br/>dataclass & Pydantic v2]
     CLI --> RS[Rust 2021/2024<br/>Zero-Copy, Owned & rkyv]
     CLI --> CPP2[C++20 / C++23<br/>Modules & Glaze Serde]
-    CLI --> JV[Java 21+<br/>Records, Jackson & Sealed Interfaces]
+    CLI --> JV[Java 22+<br/>Records, Jackson & Sealed Interfaces]
     CLI --> TS2[TypeScript 5+<br/>Zod, Valibot & TypeBox]
     CLI --> GO2[Go 1.22+<br/>Structs, Sonic & EasyJSON]
     CLI --> CS[C# 12 / .NET 8+<br/>Record Structs & Source Gen]
@@ -119,7 +119,7 @@ Explore complete, production-ready example repositories showcasing PolyXML in mi
 - **[🛸 Defense & Aerospace (polyxml-defense-examples)](https://github.com/polyxml/polyxml-defense-examples)**:
   Bridges autonomous edge telemetry from the **Anduril Lattice SDK** (Protobuf/JSON) with the **USAF Universal Command and Control Interface (UCI v2.5)** XML standard. Demonstrates sub-10μs telemetry transcoding and C2 mission routing in flight software.
 - **[💳 Global Finance & Banking (polyxml-finance-examples)](https://github.com/polyxml/polyxml-finance-examples)**:
-  Bridges real-time **FinTech payment webhooks (FedNow, Stripe, Plaid JSON)** with the global banking standard **ISO 20022 `pacs.008` (Customer Credit Transfer XML)**. Demonstrates high-throughput interbank settlement, Java 21 Jackson models, and C# source-gen.
+  Bridges real-time **FinTech payment webhooks (FedNow, Stripe, Plaid JSON)** with the global banking standard **ISO 20022 `pacs.008` (Customer Credit Transfer XML)**. Demonstrates high-throughput interbank settlement, Java 22 Jackson models, and C# source-gen.
 - **[🚍 Smart Cities & Public Transit (polyxml-transit-examples)](https://github.com/polyxml/polyxml-transit-examples)**:
   Bridges live **Google GTFS-Realtime** (Protobuf/JSON) feeds with European **CEN SIRI v2.0 (EN 15531)** & **NeTEx (CEN/TS 16614)** XML standards. Demonstrates live passenger vehicle positioning and TypeScript schema validation.
 

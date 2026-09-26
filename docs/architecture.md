@@ -91,7 +91,7 @@ flowchart TD
         CODEGEN --> RS[Rust 2021/2024]
         CODEGEN --> PY[Python 3.12+]
         CODEGEN --> CPP[C++20/C++23]
-        CODEGEN --> JV[Java 21+]
+        CODEGEN --> JV[Java 22+]
         CODEGEN --> TS[TypeScript 5+]
         CODEGEN --> GO[Go 1.22+]
         CODEGEN --> CS[C# 12 / .NET 8+]

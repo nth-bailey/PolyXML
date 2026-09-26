@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>The "protoc for XML" — Modern XSD-to-Code Generator & High-Performance Streaming Runtime</strong><br>
-  <em>Python • Rust • C++20 • Java 21+ • TypeScript • Go • C# 12</em>
+  <em>Python • Rust • C++20 • Java 22+ • TypeScript • Go • C# 12</em>
 </p>
 
 <p align="center">

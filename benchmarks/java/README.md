@@ -8,7 +8,7 @@ lists, and simple-value wrappers.
 
 ## Build and verify
 
-From the repository root, with JDK 21 and Maven:
+From the repository root, with JDK 22 and Maven:
 
 ```bash
 cargo build -p polyxml-cli
