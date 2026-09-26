@@ -21,7 +21,7 @@ QUICKSTART FOR AI AGENTS & DEVELOPERS:
 3. Serialize a model instance back into XML bytes:
     >>> xml_bytes = polyxml.serialize(user, indent=2)
 
-See `AGENT_GUIDE.md` or https://nth-bailey.github.io/PolyXML/ for complete documentation.
+See `AGENT_GUIDE.md` or https://polyxml.github.io/PolyXML/ for complete documentation.
 """
 
 import importlib

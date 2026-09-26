@@ -7,16 +7,16 @@ Welcome to the PolyXML community! Here is how to find help, report issues, and p
 ## 1. Documentation
 
 Before filing an issue, check the official documentation:
-- **Documentation Website**: [https://nth-bailey.github.io/PolyXML/](https://nth-bailey.github.io/PolyXML/)
-- **Quickstart Guides**: [Quickstart Guide](https://nth-bailey.github.io/PolyXML/quickstart/)
-- **Architecture Overview**: [Architecture Design](https://nth-bailey.github.io/PolyXML/architecture/)
+- **Documentation Website**: [https://polyxml.github.io/PolyXML/](https://polyxml.github.io/PolyXML/)
+- **Quickstart Guides**: [Quickstart Guide](https://polyxml.github.io/PolyXML/quickstart/)
+- **Architecture Overview**: [Architecture Design](https://polyxml.github.io/PolyXML/architecture/)
 
 ---
 
 ## 2. GitHub Discussions
 
 For general questions, design ideas, or architectural discussions:
-- Visit [GitHub Discussions](https://github.com/nth-bailey/PolyXML/discussions).
+- Visit [GitHub Discussions](https://github.com/polyxml/PolyXML/discussions).
 - Ask questions about integrating PolyXML with specific language frameworks.
 
 ---
@@ -24,7 +24,7 @@ For general questions, design ideas, or architectural discussions:
 ## 3. Reporting Bugs
 
 If you encountered a bug, unexpected parsing behavior, or performance regression:
-- Open a bug report on [GitHub Issues](https://github.com/nth-bailey/PolyXML/issues).
+- Open a bug report on [GitHub Issues](https://github.com/polyxml/PolyXML/issues).
 - Please include a minimal XML document and the code reproducing the issue.
 
 ---

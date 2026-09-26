@@ -15,7 +15,7 @@ PolyXML includes a high-performance, polyglot XSD-to-code generator and CLI tool
 - **PolyXML Intermediate Representation (IR)**: Normalized schema representation preserving namespaces, facets, substitution groups, documentation, and cardinality.
 - **Tarjan SCC Cycle-Cutting**: Automatically identifies self-referential and mutually recursive types, calculating the minimal set of cycle-cut points to prevent infinite size allocations (`Box<T>`, pointers, `std::unique_ptr`, `z.lazy`).
 - **Simultaneous Multi-Target Compilation**: Emit models for Python, Rust, C++, Java, TypeScript, Go, and C# in a single compiler invocation.
-- **W3C Conformance Tested**: Validated against the official W3C XML Schema Test Suite (XSTS) via the [polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests) harness.
+- **W3C Conformance Tested**: Validated against the official W3C XML Schema Test Suite (XSTS) via the [polyxml-w3c-tests](https://github.com/polyxml/polyxml-w3c-tests) harness.
 
 ---
 
@@ -256,12 +256,12 @@ polyxml transcode legacy.xml --out modern.json
 
 ## 📊 W3C XML Schema Conformance
 
-PolyXML's schema compiler and runtime codecs are continuously tested against the official **W3C XML Schema 1.0 / 1.1 Test Suite (XSTS)** using our dedicated test harness repository, **[polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests)**.
+PolyXML's schema compiler and runtime codecs are continuously tested against the official **W3C XML Schema 1.0 / 1.1 Test Suite (XSTS)** using our dedicated test harness repository, **[polyxml-w3c-tests](https://github.com/polyxml/polyxml-w3c-tests)**.
 
 - **Schema Compilation Pass Rate**: **99.8% (635 / 636 groups)**
 - **Instance Validation & Round-Trip Pass Rate**: **96.4% (489 / 507 instances)**
 
-For full conformance benchmark metrics across Sun Microsystems, Microsoft, and NIST test sets, visit the [polyxml-w3c-tests repository](https://github.com/nth-bailey/polyxml-w3c-tests).
+For full conformance benchmark metrics across Sun Microsystems, Microsoft, and NIST test sets, visit the [polyxml-w3c-tests repository](https://github.com/polyxml/polyxml-w3c-tests).
 
 ---
 
@@ -269,11 +269,11 @@ For full conformance benchmark metrics across Sun Microsystems, Microsoft, and N
 
 Explore full-scale enterprise examples demonstrating `polyxml.toml` manifests and multi-target compilation in real-world production settings:
 
-- **[🛸 Defense & Aerospace Showcase (polyxml-defense-examples)](https://github.com/nth-bailey/polyxml-defense-examples)**:
+- **[🛸 Defense & Aerospace Showcase (polyxml-defense-examples)](https://github.com/polyxml/polyxml-defense-examples)**:
   Compiles the **USAF UCI v2.5** schema standard and bridges edge sensor telemetry from **Anduril Lattice** across all 7 languages.
-- **[💳 FinTech & Banking Showcase (polyxml-finance-examples)](https://github.com/nth-bailey/polyxml-finance-examples)**:
+- **[💳 FinTech & Banking Showcase (polyxml-finance-examples)](https://github.com/polyxml/polyxml-finance-examples)**:
   Compiles the **ISO 20022 `pacs.008`** schema standard and bridges instant payment webhooks (FedNow, Stripe, Plaid) across all 7 languages.
-- **[🚍 Smart Cities & Transit Showcase (polyxml-transit-examples)](https://github.com/nth-bailey/polyxml-transit-examples)**:
+- **[🚍 Smart Cities & Transit Showcase (polyxml-transit-examples)](https://github.com/polyxml/polyxml-transit-examples)**:
   Compiles the European **CEN SIRI v2.0** and **NeTEx** schemas and bridges live Google GTFS-Realtime feeds across all 7 languages.
 
 
@@ -304,5 +304,5 @@ comma-separated features; repeat `--feature` for portable completion across shel
 
 Run `./benchmarks/cli/benchmark.sh` with `hyperfine` installed. It builds the
 release CLI and measures help rendering plus argument validation and parsing of
-an empty schema. See [the benchmark methodology](https://github.com/nth-bailey/PolyXML/blob/main/benchmarks/cli/README.md)
+an empty schema. See [the benchmark methodology](https://github.com/polyxml/PolyXML/blob/main/benchmarks/cli/README.md)
 for measurement limits and output location.

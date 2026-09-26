@@ -160,7 +160,7 @@ Many enterprise teams keep `xsdata` solely for its `JsonParser` and `JsonSeriali
 
 ## 🏛️ Official W3C XSTS Conformance Tested
 
-Unlike experimental open-source compilers that panic when encountering complex enterprise schemas, PolyXML is continuously validated against the **official W3C XML Schema 1.0 / 1.1 Test Suite (XSTS)** using our dedicated testing repository, **[polyxml-w3c-tests](https://github.com/nth-bailey/polyxml-w3c-tests)**.
+Unlike experimental open-source compilers that panic when encountering complex enterprise schemas, PolyXML is continuously validated against the **official W3C XML Schema 1.0 / 1.1 Test Suite (XSTS)** using our dedicated testing repository, **[polyxml-w3c-tests](https://github.com/polyxml/polyxml-w3c-tests)**.
 
 Across more than 600 official test groups from Sun Microsystems, Microsoft, and NIST:
 - **Schema Compilation Pass Rate**: **635 / 636 groups passed (99.8%)**

@@ -2,7 +2,7 @@
   "name": "polyxml",
   "version": "0.1.0",
   "description": "High-performance, polyglot native XML data-binding engine built in Rust with C/C++ bindings",
-  "homepage": "https://github.com/nth-bailey/PolyXML",
+  "homepage": "https://github.com/polyxml/PolyXML",
   "license": "MIT",
   "supports": "(x64 | arm64) & (windows | linux | osx)",
   "dependencies": [

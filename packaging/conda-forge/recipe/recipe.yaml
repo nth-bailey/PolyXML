@@ -6,7 +6,7 @@ package:
   version: ${{ version }}
 
 source:
-  url: https://github.com/nth-bailey/PolyXML/archive/refs/tags/v${{ version }}.tar.gz
+  url: https://github.com/polyxml/PolyXML/archive/refs/tags/v${{ version }}.tar.gz
   sha256: ac4ec8256f88ccc4696c9902b288e2cb5347094e9a09421e065994c1574167e4
 
 build:
@@ -39,7 +39,7 @@ tests:
       - python -c "import polyxml; print(polyxml.__version__)"
 
 about:
-  homepage: https://github.com/nth-bailey/PolyXML
+  homepage: https://github.com/polyxml/PolyXML
   license: MIT
   license_file:
     - LICENSE
@@ -49,8 +49,8 @@ about:
     PolyXML is a high-performance, polyglot native XML data-binding engine built
     in Rust, providing streaming XML deserialization directly into Python dataclasses
     and Pydantic v2 models with zero unnecessary allocations.
-  documentation: https://nth-bailey.github.io/PolyXML/
-  repository: https://github.com/nth-bailey/PolyXML
+  documentation: https://polyxml.github.io/PolyXML/
+  repository: https://github.com/polyxml/PolyXML
 
 extra:
   recipe-maintainers:

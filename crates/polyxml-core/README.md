@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/polyxml.svg)](https://crates.io/crates/polyxml)
 [![Docs.rs](https://docs.rs/polyxml/badge.svg)](https://docs.rs/polyxml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/nth-bailey/PolyXML/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/polyxml/PolyXML/blob/main/LICENSE)
 
 **PolyXML** is a high-performance streaming XML data-binding engine and polyglot schema compiler built in Rust. It serves as the foundational native core powering the `polyxml` CLI and language bindings across Python, C/C++, Java, TypeScript, Go, and C#.
 
@@ -145,12 +145,12 @@ let val = polyxml::deserialize_with_limit(xml_bytes, schema, 64)?;
 
 ## Documentation & Repository
 
-- **Full Documentation**: [https://nth-bailey.github.io/PolyXML/](https://nth-bailey.github.io/PolyXML/)
+- **Full Documentation**: [https://polyxml.github.io/PolyXML/](https://polyxml.github.io/PolyXML/)
 - **API Reference**: [https://docs.rs/polyxml](https://docs.rs/polyxml)
-- **Source Code**: [https://github.com/nth-bailey/PolyXML](https://github.com/nth-bailey/PolyXML)
+- **Source Code**: [https://github.com/polyxml/PolyXML](https://github.com/polyxml/PolyXML)
 
 ---
 
 ## License
 
-Licensed under the [MIT License](https://github.com/nth-bailey/PolyXML/blob/main/LICENSE).
+Licensed under the [MIT License](https://github.com/polyxml/PolyXML/blob/main/LICENSE).

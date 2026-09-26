@@ -10,7 +10,7 @@ class PolyxmlConan(ConanFile):
     description = "High-performance, polyglot native XML data-binding engine built in Rust"
     license = "MIT"
     url = "https://github.com/conan-io/conan-center-index"
-    homepage = "https://github.com/nth-bailey/PolyXML"
+    homepage = "https://github.com/polyxml/PolyXML"
     topics = ("xml", "deserializer", "serializer", "data-binding", "parser", "polyglot")
     package_type = "library"
     settings = "os", "arch", "compiler", "build_type"

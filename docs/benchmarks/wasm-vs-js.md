@@ -10,7 +10,7 @@ These are exploratory measurements from 23 September 2026 on an AMD Ryzen 5
 The fixture repeats `<item id="42"><name>Ada &amp; Bob</name><active>true</active></item>`
 inside `<items>`. Its three sizes are 3,075 bytes, 1,048,643 bytes, and
 52,428,831 bytes. The scripts and exact run commands are in
-[`benchmarks/typescript-wasm`](https://github.com/nth-bailey/PolyXML/tree/main/benchmarks/typescript-wasm).
+[`benchmarks/typescript-wasm`](https://github.com/polyxml/PolyXML/tree/main/benchmarks/typescript-wasm).
 
 The table reports median end-to-end milliseconds for parsing into JavaScript
 objects. Lower is better. PolyXML includes Wasm transfer, XML to JSON

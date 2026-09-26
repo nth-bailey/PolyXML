@@ -4,11 +4,11 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc="High-performance, polyglot native XML data-binding engine built in Rust"
 arch=('x86_64' 'aarch64')
-url="https://github.com/nth-bailey/PolyXML"
+url="https://github.com/polyxml/PolyXML"
 license=('MIT')
 depends=('gcc-libs')
 makedepends=('cargo' 'cmake')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/nth-bailey/PolyXML/archive/refs/tags/v$pkgver.tar.gz")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/polyxml/PolyXML/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('ac4ec8256f88ccc4696c9902b288e2cb5347094e9a09421e065994c1574167e4')
 
 build() {

@@ -56,11 +56,11 @@ Package manager for macOS and desktop Linux developers.
 - **Formula Location**: `packaging/homebrew/Formula/polyxml.rb`
 
 ### Option A: Official Homebrew Tap (Instant)
-1. Create a GitHub repository named `homebrew-polyxml` under your account (`nth-bailey/homebrew-polyxml`).
+1. Use the [PolyXML Homebrew tap](https://github.com/polyxml/homebrew-polyxml).
 2. Place `packaging/homebrew/Formula/polyxml.rb` into `Formula/polyxml.rb` in that repo.
 3. Anyone can immediately install via:
    ```bash
-   brew install nth-bailey/polyxml/polyxml
+   brew install polyxml/polyxml/polyxml
    ```
 
 ### Option B: Submit to `Homebrew/homebrew-core`

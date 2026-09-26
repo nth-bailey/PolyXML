@@ -103,7 +103,7 @@ When storing XML dataclasses and Pydantic models in embedded transactional key-v
 The benchmark suite is reusable and version-controlled.
 
 > 🛡️ **Memory safety**: the suite entry points below run under
-> [`scripts/memcap.sh`](https://github.com/nth-bailey/PolyXML/blob/main/scripts/memcap.sh),
+> [`scripts/memcap.sh`](https://github.com/polyxml/PolyXML/blob/main/scripts/memcap.sh),
 > which caps each run at 60% of available RAM in an isolated cgroup (kernel
 > OOM-kills only the runaway build; the host stays responsive — `ulimit`
 > fallback where systemd is unavailable). Wrap any ad-hoc
@@ -135,4 +135,4 @@ python -m benchmarks.python --workload all --catalog-sizes 1000 10000 --iteratio
 mvn -f benchmarks/java/pom.xml clean package
 ```
 
-See the [Java benchmark README](https://github.com/nth-bailey/PolyXML/tree/main/benchmarks/java) for the Panama profile, workload definitions, and interpretation caveats.
+See the [Java benchmark README](https://github.com/polyxml/PolyXML/tree/main/benchmarks/java) for the Panama profile, workload definitions, and interpretation caveats.

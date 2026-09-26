@@ -5,7 +5,7 @@
 # Installs the pre-compiled PolyXML binary on Linux and macOS.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/nth-bailey/PolyXML/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/polyxml/PolyXML/main/scripts/install.sh | bash
 #
 # Environment variables:
 #   POLYXML_VERSION       Specific version to install (e.g. "0.17.0", default: latest)
@@ -13,7 +13,7 @@
 # ==============================================================================
 set -eo pipefail
 
-REPO="nth-bailey/PolyXML"
+REPO="polyxml/PolyXML"
 BIN_NAME="polyxml"
 
 # Colors

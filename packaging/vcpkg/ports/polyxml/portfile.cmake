@@ -1,6 +1,6 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
-    REPO nth-bailey/PolyXML
+    REPO polyxml/PolyXML
     REF "v${VERSION}"
     SHA512 7e30417433494e02d93df729adc5e27ee6a84d1ef682bf1dd101ece71b09256a8bd019bfa8cbabb48474a46d6ef49622232c75840f0d2747e8832592d7bfa495
     HEAD_REF main

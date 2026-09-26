@@ -17,7 +17,7 @@ PolyXML delivers high-throughput native XML processing for modern C++20 applicat
 include(FetchContent)
 FetchContent_Declare(
     polyxml
-    GIT_REPOSITORY https://github.com/nth-bailey/PolyXML.git
+    GIT_REPOSITORY https://github.com/polyxml/PolyXML.git
     GIT_TAG        main
 )
 FetchContent_MakeAvailable(polyxml)

@@ -11,12 +11,12 @@ Unified developer command-line interface and polyglot schema compiler toolchain 
 ### 1. Universal One-Line Installer (Linux & macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nth-bailey/PolyXML/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/polyxml/PolyXML/main/scripts/install.sh | bash
 ```
 
 ### 2. Direct Packages (Debian / Ubuntu & Fedora / RHEL)
 
-Download pre-built packages from [GitHub Releases](https://github.com/nth-bailey/PolyXML/releases):
+Download pre-built packages from [GitHub Releases](https://github.com/polyxml/PolyXML/releases):
 
 ```bash
 # Debian / Ubuntu / Mint / Pop!_OS (.deb)
@@ -29,7 +29,7 @@ sudo dnf install ./polyxml.x86_64.rpm
 ### 3. Homebrew (macOS & Linux)
 
 ```bash
-brew install nth-bailey/polyxml/polyxml
+brew install polyxml/polyxml/polyxml
 ```
 
 ### 4. Cargo / Cargo-Binstall
@@ -180,9 +180,9 @@ style = "record-struct"
 ## 🌐 Production Reference Repositories
 
 Explore full-scale repositories using PolyXML CLI manifests across all 7 languages:
-- **[🛸 Defense & Aerospace](https://github.com/nth-bailey/polyxml-defense-examples)**: Anduril Lattice SDK ↔ USAF UCI v2.5 XML
-- **[💳 FinTech & Banking](https://github.com/nth-bailey/polyxml-finance-examples)**: Instant Payments ↔ ISO 20022 pacs.008 XML
-- **[🚍 Smart Cities & Transit](https://github.com/nth-bailey/polyxml-transit-examples)**: Google GTFS-Realtime ↔ CEN SIRI v2.0 & NeTEx XML
+- **[🛸 Defense & Aerospace](https://github.com/polyxml/polyxml-defense-examples)**: Anduril Lattice SDK ↔ USAF UCI v2.5 XML
+- **[💳 FinTech & Banking](https://github.com/polyxml/polyxml-finance-examples)**: Instant Payments ↔ ISO 20022 pacs.008 XML
+- **[🚍 Smart Cities & Transit](https://github.com/polyxml/polyxml-transit-examples)**: Google GTFS-Realtime ↔ CEN SIRI v2.0 & NeTEx XML
 
 
 ## Shell completion

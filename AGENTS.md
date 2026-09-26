@@ -12,7 +12,7 @@ ultra-fast bidirectional XML serialization, deserialization, and multi-language 
 7 modern ecosystems: **Rust**, **Python** (dataclasses & Pydantic v2), **C++20**, **Java 21+**, **TypeScript 5+**, **Go 1.22+**, and **C# 12 / .NET 8+**.
 
 - **Technology**: Rust 2021, PyO3 (`abi3-py312`), `quick-xml`, `lexical-core`, `smallvec`, `minijinja`.
-- **Repository**: `nth-bailey/PolyXML`
+- **Repository**: `polyxml/PolyXML`
 - **Supported Python**: `Python >= 3.12` exclusively.
 - **Maintainer**: Bailey Nguyen (`bailey.tan.nguyen@gmail.com`).
 
@@ -48,7 +48,7 @@ When contributing or refactoring, strictly maintain the following invariants:
    - All cyclic and self-referential types must be detected and broken via Tarjan's Strongly Connected Components algorithm (`is_cycle_cut = true`) with minimal cut points (`Box<T>`, pointers, `std::unique_ptr`, `z.lazy`).
 
 7. **Standalone W3C Conformance Benchmarks**:
-   - Deep W3C XSTS conformance testing is maintained in the dedicated companion repository [`polyxml-w3c-tests`](https://github.com/nth-bailey/polyxml-w3c-tests) to keep the main repository CI fast. Any compiler changes should be verified against `polyxml-w3c-tests`.
+   - Deep W3C XSTS conformance testing is maintained in the dedicated companion repository [`polyxml-w3c-tests`](https://github.com/polyxml/polyxml-w3c-tests) to keep the main repository CI fast. Any compiler changes should be verified against `polyxml-w3c-tests`.
 
 
 ---
@@ -161,4 +161,3 @@ When working in this repository:
 1. **Consult & Use Skills**: When working on specific subsystems, refer to the corresponding skill in `.agents/skills/`.
 2. **Keep Skills Up to Date**: If you discover a bug, an undocumented toolchain requirement, or an improved workflow while working on a task, **you MUST update the relevant `SKILL.md`** so subsequent agents benefit from the fix.
 3. **Capture New Workflows**: When introducing a new complex, multi-step, or repeatable workflow, create a new skill directory in `.agents/skills/<skill_name>/SKILL.md` following standard frontmatter conventions.
-

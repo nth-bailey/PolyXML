@@ -17,7 +17,7 @@ If you discover a security vulnerability in `PolyXML` (such as memory safety bug
 Instead, report security issues via:
 
 1. **GitHub Security Advisories** (Preferred):
-   - Visit the [Security tab](https://github.com/nth-bailey/PolyXML/security/advisories) on GitHub and click **"Report a vulnerability"**.
+   - Visit the [Security tab](https://github.com/polyxml/PolyXML/security/advisories) on GitHub and click **"Report a vulnerability"**.
 
 2. **Email**:
    - Send an email to [bailey.tan.nguyen@gmail.com](mailto:bailey.tan.nguyen@gmail.com) with the subject line `[SECURITY] PolyXML vulnerability report`.

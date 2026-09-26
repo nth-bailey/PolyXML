@@ -1,7 +1,7 @@
 # polyxml-c
 
 [![Crates.io](https://img.shields.io/crates/v/polyxml-c.svg)](https://crates.io/crates/polyxml-c)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/nth-bailey/PolyXML/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/polyxml/PolyXML/blob/main/LICENSE)
 
 **polyxml-c** provides the standard C-ABI shared and static library (`libpolyxml`) and C headers (`polyxml.h`) for **PolyXML**.
 
@@ -66,4 +66,4 @@ int main(void) {
 
 ## License
 
-Licensed under the [MIT License](https://github.com/nth-bailey/PolyXML/blob/main/LICENSE).
+Licensed under the [MIT License](https://github.com/polyxml/PolyXML/blob/main/LICENSE).
