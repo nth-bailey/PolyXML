@@ -5,9 +5,9 @@ description: Use PolyXML's Rust XML/JSON core from Node.js, Bun, and browsers th
 
 # WebAssembly Runtime
 
-The `polyxml-wasm` workspace crate builds the `@polyxml/wasm` npm package from
-the same Rust core used by the native bindings. It works without a native Node
-addon. Build the package from source with `./crates/polyxml-wasm/build.sh`.
+Install the published package with `npm install @polyxml/wasm`. It uses the
+same Rust core as the native bindings and works without a native Node addon.
+To build it from source, run `./crates/polyxml-wasm/build.sh`.
 
 ```js
 import { createPolyXml } from '@polyxml/wasm'

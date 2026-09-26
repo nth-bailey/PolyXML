@@ -133,6 +133,7 @@ Production repositories across **all 7 languages**:
 | **Rust (C-ABI)** | [crates.io](https://crates.io/crates/polyxml-c) | `cargo add polyxml-c` | C-ABI Shared Lib |
 | **Python** | [PyPI](https://pypi.org/project/polyxml/) | `pip install polyxml` | PyO3 (`abi3-py312`) |
 | **TypeScript / Node** | [npm](https://www.npmjs.com/package/@polyxml/node) | `npm install @polyxml/node` | `napi-rs` Native Addon |
+| **WebAssembly** | [npm](https://www.npmjs.com/package/@polyxml/wasm) | `npm install @polyxml/wasm` | Browser, Node.js & Bun |
 | **Java** | [Maven Central](https://central.sonatype.com/artifact/io.github.polyxml/polyxml) | `<groupId>io.github.polyxml</groupId>` · `<artifactId>polyxml</artifactId>` | Java 22+ Panama FFI |
 | **Go** | [Go Reference](https://pkg.go.dev/github.com/polyxml/PolyXML/bindings/go) | `go get github.com/polyxml/PolyXML/bindings/go` | Cgo (`polyxml.h`) |
 | **Modern C++20 / C** | [Conan](conan/) / [vcpkg](packaging/vcpkg/) (`polyxml`) | `conan install` / `vcpkg install polyxml` | Header-Only C++20 & Native Lib |

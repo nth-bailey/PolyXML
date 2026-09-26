@@ -1,5 +1,9 @@
 ## [0.23.2](https://github.com/polyxml/PolyXML/compare/v0.23.1...v0.23.2) (2026-09-26)
 
+### Packages
+
+* Published [`@polyxml/wasm`](https://www.npmjs.com/package/@polyxml/wasm) to npm for browsers, Node.js, and Bun.
+
 
 ### Bug Fixes
 
