@@ -1,5 +1,5 @@
 ---
-title: PolyXML — High-Performance Polyglot XML Engine
+title: Overview
 description: Ultra-fast streaming XML data-binding engine in Rust with native bindings for Rust, Python, C++, Go, Java, and TypeScript.
 ---
 
